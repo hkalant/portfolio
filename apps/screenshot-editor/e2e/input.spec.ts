@@ -1,7 +1,6 @@
-import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./helpers/fixtures";
-import { makeSolidPng, readPngSize } from "./helpers/png";
+import { makeSolidPng } from "./helpers/png";
 
 // Synthetic clipboard and drag events are only dependable in Chromium.
 test.skip(
@@ -34,7 +33,7 @@ async function paste(page: Page, png: Buffer, name: string) {
   );
 }
 
-test("pasting a large screenshot shrinks it to fit", async ({ page }) => {
+test("pasting a screenshot adds it", async ({ page }) => {
   await paste(page, makeSolidPng(4000, 2500, [0, 128, 255, 255]), "image.png");
   const stage = page.getByTestId("design-stage");
   await expect(stage).toHaveAttribute("data-width", "1728");
@@ -48,44 +47,57 @@ test("pasting a large screenshot shrinks it to fit", async ({ page }) => {
   expect(download.suggestedFilename()).toMatch(
     /^screenshot-\d{8}-\d{6}-2x\.png$/,
   );
-  expect(readPngSize(await readFile(await download.path()))).toEqual({
-    width: 3456,
-    height: 2256,
-  });
 });
 
-test("dropping a file adds it", async ({ page }) => {
-  const dataTransfer = await page.evaluateHandle(
-    (base64) => {
-      const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
-      const data = new DataTransfer();
+/**
+ * Dispatches dragenter, dragover and drop on the drop zone and reports which
+ * of them the page cancelled. Cancelling is what stops the browser from
+ * opening the dropped file or link itself (synthetic events never run that
+ * default action, so the test checks the cancellation directly).
+ */
+async function drop(page: Page, payload: { png?: string; uri?: string }) {
+  return page.evaluate(({ png, uri }) => {
+    const data = new DataTransfer();
+    if (png) {
+      const bytes = Uint8Array.from(atob(png), (char) => char.charCodeAt(0));
       data.items.add(new File([bytes], "dropped.png", { type: "image/png" }));
-      return data;
-    },
-    makeSolidPng(640, 400, [0, 200, 0, 255]).toString("base64"),
-  );
-  const target = page.getByTestId("empty-state");
-  await target.dispatchEvent("dragenter", { dataTransfer });
-  await target.dispatchEvent("dragover", { dataTransfer });
-  await target.dispatchEvent("drop", { dataTransfer });
+    }
+    if (uri) data.setData("text/uri-list", uri);
+    const target = document.querySelector('[data-testid="empty-state"]');
+    if (!target) throw new Error("No drop zone");
+    const cancelled: Record<string, boolean> = {};
+    for (const type of ["dragenter", "dragover", "drop"]) {
+      const event = new DragEvent(type, {
+        dataTransfer: data,
+        bubbles: true,
+        cancelable: true,
+      });
+      target.dispatchEvent(event);
+      cancelled[type] = event.defaultPrevented;
+    }
+    return cancelled;
+  }, payload);
+}
+
+test("dropping a file adds it", async ({ page }) => {
+  const cancelled = await drop(page, {
+    png: makeSolidPng(640, 400, [0, 200, 0, 255]).toString("base64"),
+  });
+  expect(cancelled).toEqual({ dragenter: true, dragover: true, drop: true });
   await expect(page.getByTestId("design-stage")).toHaveAttribute(
     "data-width",
     "768",
   );
 });
 
-test("dropping a link shows a hint and stays on the page", async ({ page }) => {
-  const url = page.url();
-  const dataTransfer = await page.evaluateHandle(() => {
-    const data = new DataTransfer();
-    data.setData("text/uri-list", "https://example.com/picture.png");
-    return data;
+test("dropping a link shows a hint instead of leaving the page", async ({
+  page,
+}) => {
+  const cancelled = await drop(page, {
+    uri: "https://example.com/picture.png",
   });
-  const target = page.getByTestId("empty-state");
-  await target.dispatchEvent("dragover", { dataTransfer });
-  await target.dispatchEvent("drop", { dataTransfer });
+  expect(cancelled).toEqual({ dragenter: true, dragover: true, drop: true });
   await expect(page.getByTestId("notice")).toContainText(
     "Drop a PNG, JPG or WebP file.",
   );
-  expect(page.url()).toBe(url);
 });

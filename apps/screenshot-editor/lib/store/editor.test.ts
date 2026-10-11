@@ -94,7 +94,10 @@ describe("editor store", () => {
 
   it("shows and dismisses errors", () => {
     state().showError("Nope");
-    expect(state().notice).toEqual({ kind: "error", message: "Nope" });
+    expect(state().notice).toMatchObject({ kind: "error", message: "Nope" });
+    const first = state().notice?.id;
+    state().showError("Nope");
+    expect(state().notice?.id).not.toBe(first);
     state().dismissNotice();
     expect(state().notice).toBeNull();
   });

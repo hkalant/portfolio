@@ -7,9 +7,33 @@ import {
   makeSolidPng,
   readPngSize,
   samplePixels,
+  type Rgba,
 } from "./helpers/png";
 
 const RED = [255, 0, 0, 255] as const;
+
+/** Each channel within `tolerance` of the #rrggbb colour. */
+function expectColor(actual: Rgba, hex: string, tolerance = 12) {
+  const expected = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  expected.forEach((channel, i) =>
+    expect(
+      Math.abs(actual[i] - channel),
+      `channel ${i} of ${actual} vs ${hex}`,
+    ).toBeLessThanOrEqual(tolerance),
+  );
+}
+
+/** Opens the system file picker through a button, the way a user does. */
+async function chooseFile(
+  page: Page,
+  button: string | RegExp,
+  buffer: Buffer,
+  name = "fixture.png",
+) {
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: button }).click();
+  await (await chooser).setFiles({ name, mimeType: "image/png", buffer });
+}
 
 async function upload(
   page: Page,
@@ -53,7 +77,11 @@ test.beforeEach(async ({ page }) => {
 test("uploads a screenshot and exports it at 2x with rounded corners", async ({
   page,
 }) => {
-  await upload(page, makeSolidPng(1200, 750, [...RED]));
+  await chooseFile(
+    page,
+    /click to add a screenshot/,
+    makeSolidPng(1200, 750, [...RED]),
+  );
   // 1200 x 750 plus 64px default padding on each side.
   await expectDesignSize(page, 1328, 878);
 
@@ -94,14 +122,40 @@ test("padding changes the canvas size", async ({ page }) => {
   await expectDesignSize(page, 1200, 750);
 });
 
-test("gradient presets can be picked", async ({ page }) => {
+test("the chosen gradient and angle are what gets drawn", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, [...RED]));
   const lavender = page.getByRole("button", { name: "Lavender" });
-  const mist = page.getByRole("button", { name: "Mist" });
   await expect(lavender).toHaveAttribute("aria-pressed", "true");
+
+  // At 135deg the top-left corner gets the first colour stop.
+  const [lavenderCorner] = await samplePixels(
+    page,
+    (await exportPng(page)).png,
+    [[4, 4]],
+  );
+  expectColor(lavenderCorner, "#c471f5");
+
+  // At 0deg the gradient runs bottom to top: the top gets the last stop.
+  const angle = await setSlider(page, "Angle", "Home");
+  await expect(angle).toHaveAttribute("aria-valuenow", "0");
+  const turned = await exportPng(page);
+  const { height } = readPngSize(turned.png);
+  const [top, bottom] = await samplePixels(page, turned.png, [
+    [4, 4],
+    [4, height - 5],
+  ]);
+  expectColor(top, "#fa71cd");
+  expectColor(bottom, "#c471f5");
+
+  // A preset brings its own colours and angle.
+  const mist = page.getByRole("button", { name: "Mist" });
   await mist.click();
   await expect(mist).toHaveAttribute("aria-pressed", "true");
   await expect(lavender).toHaveAttribute("aria-pressed", "false");
+  const [mistCorner] = await samplePixels(page, (await exportPng(page)).png, [
+    [4, 4],
+  ]);
+  expectColor(mistCorner, "#e0eafc");
 });
 
 test("the shadow is drawn below a screenshot with rounded corners", async ({
@@ -165,8 +219,27 @@ test("replacing the image keeps the style", async ({ page }) => {
   await page.getByRole("tab", { name: "Style" }).click();
   await setSlider(page, "Padding", "Home");
   await expectDesignSize(page, 400, 300);
-  await upload(page, makeSolidPng(800, 600, [0, 0, 255, 255]), "second.png");
+  await chooseFile(
+    page,
+    "Replace image",
+    makeSolidPng(800, 600, [0, 0, 255, 255]),
+    "second.png",
+  );
   await expectDesignSize(page, 800, 600);
+});
+
+test("a large screenshot is downscaled and still exports sharp", async ({
+  page,
+}) => {
+  // Longer than 3200px, so it is downscaled when loaded.
+  await upload(page, makeSolidPng(4000, 2500, [0, 128, 255, 255]), "wide.png");
+  await expectDesignSize(page, 1728, 1128);
+  const { name, png } = await exportPng(page);
+  expect(name).toBe("wide-2x.png");
+  expect(readPngSize(png)).toEqual({ width: 3456, height: 2256 });
+  const [center] = await samplePixels(page, png, [[1728, 1128]]);
+  expectColor(center, "#0080ff", 4);
+  expect(center[3]).toBe(255);
 });
 
 test("unsupported files are refused with a message", async ({ page }) => {

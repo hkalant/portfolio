@@ -32,7 +32,7 @@ export function ToolRail() {
           <Tabs.Trigger
             key={id}
             value={id}
-            className="flex w-16 flex-col items-center gap-1 rounded-lg py-2 text-[11px] text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[state=active]:bg-accent data-[state=active]:text-foreground"
+            className="flex w-16 flex-col items-center gap-1 rounded-lg py-2 text-[11px] text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring data-[state=active]:bg-accent data-[state=active]:text-foreground"
           >
             <Icon className="size-5" aria-hidden />
             {label}
@@ -41,7 +41,12 @@ export function ToolRail() {
       </Tabs.List>
       <div className="w-80 overflow-y-auto border-r bg-background">
         {TOOLS.map(({ id, label }) => (
-          <Tabs.Content key={id} value={id} className="p-5 outline-none">
+          <Tabs.Content
+            key={id}
+            value={id}
+            tabIndex={-1}
+            className="p-5 outline-none"
+          >
             <h2 className="mb-5 text-sm font-semibold">{label}</h2>
             {id === "background" ? <BackgroundPanel /> : <StylePanel />}
           </Tabs.Content>

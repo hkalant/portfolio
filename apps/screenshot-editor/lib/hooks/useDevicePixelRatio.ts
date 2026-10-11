@@ -9,7 +9,13 @@ import { useEffect, useState } from "react";
  * is updated here too; remount the Stage (key={ratio}) to apply it.
  */
 export function useDevicePixelRatio(): number {
-  const [ratio, setRatio] = useState(() => window.devicePixelRatio || 1);
+  const [ratio, setRatio] = useState(() => {
+    // The ratio may have changed while no Stage was mounted (e.g. on the empty
+    // state). Sync Konva before the Stage creates its canvases.
+    const current = window.devicePixelRatio || 1;
+    Konva.pixelRatio = current;
+    return current;
+  });
 
   useEffect(() => {
     const query = window.matchMedia(`(resolution: ${ratio}dppx)`);

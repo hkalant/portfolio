@@ -27,7 +27,7 @@ export function TopBar({ onReplace, onExport }: Props) {
     <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4">
       <Link
         href="/"
-        className="flex items-center gap-2 rounded-md font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="flex items-center gap-2 rounded-md font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
       >
         <Logo className="size-6" />
         Screenshot Editor
@@ -49,7 +49,11 @@ export function TopBar({ onReplace, onExport }: Props) {
           {canvas.width * EXPORT_SCALE} × {canvas.height * EXPORT_SCALE} px
         </span>
       )}
-      <Button size="sm" onClick={onExport} disabled={!image || exporting}>
+      <Button
+        size="sm"
+        onClick={onExport}
+        disabled={!image || exporting || loading}
+      >
         {exporting ? (
           <LoaderCircle className="animate-spin" aria-hidden />
         ) : (

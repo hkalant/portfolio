@@ -31,7 +31,7 @@ export function PresetGrid({ label, presets, selectedId, onSelect }: Props) {
               aria-pressed={selected}
               onClick={() => onSelect(preset.id)}
               className={cn(
-                "aspect-square rounded-lg ring-offset-2 ring-offset-background transition-[box-shadow,transform] outline-none hover:scale-[1.04] focus-visible:ring-[3px] focus-visible:ring-ring",
+                "aspect-square rounded-lg ring-offset-2 ring-offset-background transition-[box-shadow,transform] outline-none hover:scale-[1.04] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring focus-visible:outline-solid",
                 selected && "ring-2 ring-primary",
               )}
               style={{

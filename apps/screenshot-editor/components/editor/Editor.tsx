@@ -5,7 +5,7 @@ import { useCallback, useRef, type ChangeEvent } from "react";
 import sample from "@/assets/samples/sample-screenshot.png";
 import { computeLayout } from "@/lib/design/layout";
 import { EXPORT_SCALE } from "@/lib/design/limits";
-import { exportDesignPng } from "@/lib/export/exportImage";
+import { exportDesignPng, nextPaint } from "@/lib/export/exportImage";
 import { useWindowFileDrop } from "@/lib/hooks/useWindowFileDrop";
 import { useWindowPaste } from "@/lib/hooks/useWindowPaste";
 import { ACCEPT_ATTR, IMAGE_MESSAGES, pickImageFile } from "@/lib/image/accept";
@@ -47,14 +47,21 @@ export default function Editor() {
   };
 
   const onExport = useCallback(async () => {
-    const state = useEditorStore.getState();
-    const image = selectActiveImage(state);
-    const stage = stageRef.current;
-    const layer = layerRef.current;
-    if (!image || !stage || !layer || exportingRef.current) return;
+    const initial = useEditorStore.getState();
+    // Not while an image is loading: the canvas is about to change.
+    if (exportingRef.current || initial.loading || !selectActiveImage(initial))
+      return;
     exportingRef.current = true;
-    state.setExporting(true);
+    initial.setExporting(true);
     try {
+      await nextPaint();
+      // Read everything after the paint, so the size, the file name and the
+      // drawn canvas all describe the same design.
+      const state = useEditorStore.getState();
+      const image = selectActiveImage(state);
+      const stage = stageRef.current;
+      const layer = layerRef.current;
+      if (state.loading || !image || !stage || !layer) return;
       const shot = selectShot(state);
       const { canvas } = computeLayout(image, shot.padding, shot.radius);
       await exportDesignPng({

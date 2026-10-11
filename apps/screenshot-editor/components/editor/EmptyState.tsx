@@ -26,7 +26,7 @@ export function EmptyState({ loading, onUpload, onSample }: Props) {
           type="button"
           onClick={onUpload}
           disabled={loading}
-          className="flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-muted-foreground/25 bg-background/60 px-8 py-14 text-center transition-colors outline-none hover:border-muted-foreground/45 hover:bg-background focus-visible:ring-[3px] focus-visible:ring-ring/60 disabled:cursor-progress"
+          className="flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-muted-foreground/25 bg-background/60 px-8 py-14 text-center transition-colors outline-none hover:border-muted-foreground/45 hover:bg-background focus-visible:ring-[3px] focus-visible:ring-ring disabled:cursor-progress"
         >
           <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
             {loading ? (

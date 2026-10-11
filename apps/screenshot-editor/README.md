@@ -8,19 +8,19 @@ This is milestone 1 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 
 Run these from `apps/screenshot-editor/`. Use Node 22 (see `.nvmrc`).
 
-| Command | What it does |
-|---|---|
-| `npm install` | Install dependencies |
-| `npm run dev` | Development server at http://localhost:3000 (the editor is at `/editor/`) |
-| `npm run build` | Static export into `out/` |
-| `npm run preview` | Serve `out/` the way Bitbucket would (see below) |
-| `npm run lint` | ESLint (must stay on ESLint 9 for `eslint-config-next`) |
-| `npm run typecheck` | Generate route types, then `tsc --noEmit` |
-| `npm run format` / `format:check` | Prettier |
-| `npm test` | Unit tests (Vitest) |
-| `npm run test:e2e` | Browser tests (Playwright) against the built `out/` folder |
-| `npm run test:publish` | Tests the Bitbucket deploy script against local git repos |
-| `npm run make:sample` | Re-render the sample screenshot in `assets/samples/` |
+| Command                           | What it does                                                              |
+| --------------------------------- | ------------------------------------------------------------------------- |
+| `npm install`                     | Install dependencies                                                      |
+| `npm run dev`                     | Development server at http://localhost:3000 (the editor is at `/editor/`) |
+| `npm run build`                   | Static export into `out/`                                                 |
+| `npm run preview`                 | Serve `out/` the way Bitbucket would (see below)                          |
+| `npm run lint`                    | ESLint (must stay on ESLint 9 for `eslint-config-next`)                   |
+| `npm run typecheck`               | Generate route types, then `tsc --noEmit`                                 |
+| `npm run format` / `format:check` | Prettier                                                                  |
+| `npm test`                        | Unit tests (Vitest)                                                       |
+| `npm run test:e2e`                | Browser tests (Playwright) against the built `out/` folder                |
+| `npm run test:publish`            | Tests the Bitbucket deploy script against local git repos                 |
+| `npm run make:sample`             | Re-render the sample screenshot in `assets/samples/`                      |
 
 Always run ESLint and TypeScript through these scripts. Global installs of newer versions (ESLint 10, TypeScript 6+) behave differently.
 
@@ -56,20 +56,20 @@ Two GitHub Actions workflows in the repository root handle this:
 
 ### One-time setup
 
-1. **Find your workspace ID.** It is the part after `bitbucket.org/` in your workspace URL (also under *Workspace settings*).
+1. **Find your workspace ID.** It is the part after `bitbucket.org/` in your workspace URL (also under _Workspace settings_).
 2. **Create the website repository.** In that workspace, create a repository named exactly `<workspace-id>.bitbucket.io`. It can be empty. Bitbucket serves its files at `https://<workspace-id>.bitbucket.io/`.
-3. **Create a repository access token** for that repository: *Repository settings → Security → Access tokens*. Give it the **Repositories: Write** permission and copy it (it is shown once). If you set an expiry date, renew the token before it expires. Do not use an app password: Atlassian has deprecated them.
-4. **Add the settings to GitHub.** In `hkalant/portfolio` go to *Settings → Secrets and variables → Actions* and add:
+3. **Create a repository access token** for that repository: _Repository settings → Security → Access tokens_. Give it the **Repositories: Write** permission and copy it (it is shown once). If you set an expiry date, renew the token before it expires. Do not use an app password: Atlassian has deprecated them.
+4. **Add the settings to GitHub.** In `hkalant/portfolio` go to _Settings → Secrets and variables → Actions_ and add:
 
-   | Name | Kind | Required | Value |
-   |---|---|---|---|
-   | `BITBUCKET_TOKEN` | Repository **secret** | Yes | The access token from step 3 |
-   | `BITBUCKET_WORKSPACE` | Repository **variable** | Yes | The workspace ID from step 1 |
-   | `BITBUCKET_SITE_SUBFOLDER` | Variable | No | Folder and URL path for the app. Default `screenshot-editor` |
-   | `BITBUCKET_PAGES_BRANCH` | Variable | No | Branch Bitbucket serves. Default: the repository's default branch, or `main` if it is empty |
-   | `BITBUCKET_GIT_USERNAME` | Variable | No | Git user name for the token. Default `x-token-auth` (right for repository access tokens) |
+   | Name                       | Kind                    | Required | Value                                                                                       |
+   | -------------------------- | ----------------------- | -------- | ------------------------------------------------------------------------------------------- |
+   | `BITBUCKET_TOKEN`          | Repository **secret**   | Yes      | The access token from step 3                                                                |
+   | `BITBUCKET_WORKSPACE`      | Repository **variable** | Yes      | The workspace ID from step 1                                                                |
+   | `BITBUCKET_SITE_SUBFOLDER` | Variable                | No       | Folder and URL path for the app. Default `screenshot-editor`                                |
+   | `BITBUCKET_PAGES_BRANCH`   | Variable                | No       | Branch Bitbucket serves. Default: the repository's default branch, or `main` if it is empty |
+   | `BITBUCKET_GIT_USERNAME`   | Variable                | No       | Git user name for the token. Default `x-token-auth` (right for repository access tokens)    |
 
-5. **Deploy.** Merge to `main`, or run *Deploy to Bitbucket* from the Actions tab on `main`. Then open `https://<workspace-id>.bitbucket.io/screenshot-editor/`; the editor is at `…/screenshot-editor/editor/`. Share links with the trailing slash.
+5. **Deploy.** Merge to `main`, or run _Deploy to Bitbucket_ from the Actions tab on `main`. Then open `https://<workspace-id>.bitbucket.io/screenshot-editor/`; the editor is at `…/screenshot-editor/editor/`. Share links with the trailing slash.
 
 Until both `BITBUCKET_TOKEN` and `BITBUCKET_WORKSPACE` exist, the deploy job is skipped with a notice and the run stays green. If only one of them is set, the run fails and names the missing one.
 
@@ -85,32 +85,32 @@ Until both `BITBUCKET_TOKEN` and `BITBUCKET_WORKSPACE` exist, the deploy job is 
 
 The Atlassian documentation could not be checked while this was written, so these are from memory. The post-deploy check reports the uncertain ones on the first real deploy.
 
-| Claim | Confidence |
-|---|---|
-| A repository named `<workspace-id>.bitbucket.io` is published at `https://<workspace-id>.bitbucket.io/`, one site per workspace, over HTTPS | High |
-| Subfolders are served, and `/folder/` returns `folder/index.html` | Medium-high |
-| `/screenshot-editor` without the trailing slash redirects to `/screenshot-editor/` | Unknown; always link with the slash |
-| The site is served from the repository's main (default) branch | Medium. Set `BITBUCKET_PAGES_BRANCH` if not |
-| A private website repository still publishes a public site | Low. If nothing appears, make the repository public |
-| No Jekyll-style processing, so the `_next/` folder is served as is | Medium-high |
-| Files get correct content types (`.js`, `.css`, `.woff2`, `.txt`) | Medium |
-| Custom domains are not supported | Medium-high |
-| Git over HTTPS with a repository access token uses the user name `x-token-auth` and the token as password | High |
-| Repository access tokens are available on the Free plan | Medium |
-| App passwords are deprecated (no new ones since September 2025; existing ones stopped working around June 2026) | Medium on the dates |
-| SSH access keys on a repository are read-only, so they cannot push | High |
-| Workspace IDs containing `_` work as `bitbucket.io` host names | Low; the deploy warns about them |
-| Changes appear within seconds to minutes | Unknown |
+| Claim                                                                                                                                       | Confidence                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| A repository named `<workspace-id>.bitbucket.io` is published at `https://<workspace-id>.bitbucket.io/`, one site per workspace, over HTTPS | High                                                |
+| Subfolders are served, and `/folder/` returns `folder/index.html`                                                                           | Medium-high                                         |
+| `/screenshot-editor` without the trailing slash redirects to `/screenshot-editor/`                                                          | Unknown; always link with the slash                 |
+| The site is served from the repository's main (default) branch                                                                              | Medium. Set `BITBUCKET_PAGES_BRANCH` if not         |
+| A private website repository still publishes a public site                                                                                  | Low. If nothing appears, make the repository public |
+| No Jekyll-style processing, so the `_next/` folder is served as is                                                                          | Medium-high                                         |
+| Files get correct content types (`.js`, `.css`, `.woff2`, `.txt`)                                                                           | Medium                                              |
+| Custom domains are not supported                                                                                                            | Medium-high                                         |
+| Git over HTTPS with a repository access token uses the user name `x-token-auth` and the token as password                                   | High                                                |
+| Repository access tokens are available on the Free plan                                                                                     | Medium                                              |
+| App passwords are deprecated (no new ones since September 2025; existing ones stopped working around June 2026)                             | Medium on the dates                                 |
+| SSH access keys on a repository are read-only, so they cannot push                                                                          | High                                                |
+| Workspace IDs containing `_` work as `bitbucket.io` host names                                                                              | Low; the deploy warns about them                    |
+| Changes appear within seconds to minutes                                                                                                    | Unknown                                             |
 
 ### Troubleshooting
 
-| Symptom | Likely cause |
-|---|---|
-| Deploy job shows as skipped | `BITBUCKET_TOKEN` or `BITBUCKET_WORKSPACE` is missing, or the run was not on `main` |
-| `403` or authentication error on push | Wrong token permission, expired token, or the token belongs to another repository |
+| Symptom                                              | Likely cause                                                                                                           |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Deploy job shows as skipped                          | `BITBUCKET_TOKEN` or `BITBUCKET_WORKSPACE` is missing, or the run was not on `main`                                    |
+| `403` or authentication error on push                | Wrong token permission, expired token, or the token belongs to another repository                                      |
 | Live check warns that the new version never appeared | Bitbucket serves a different branch (set `BITBUCKET_PAGES_BRANCH`), the repository is private, or it is still updating |
-| Blank page or missing styles | The build has the wrong base path; check `NEXT_PUBLIC_BASE_PATH` in the build log |
-| Old version still showing | Browser or CDN cache; reload, or wait a few minutes |
+| Blank page or missing styles                         | The build has the wrong base path; check `NEXT_PUBLIC_BASE_PATH` in the build log                                      |
+| Old version still showing                            | Browser or CDN cache; reload, or wait a few minutes                                                                    |
 
 ## Project layout
 

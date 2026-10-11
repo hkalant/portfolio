@@ -69,11 +69,15 @@ export function downloadBlob(blob: Blob, filename: string) {
 }
 
 /** Lets the browser paint (e.g. a disabled Export button) before the heavy render. */
-const nextPaint = () =>
+export const nextPaint = () =>
   new Promise<void>((resolve) =>
     requestAnimationFrame(() => window.setTimeout(resolve, 0)),
   );
 
+/**
+ * Renders and downloads the design. The render happens synchronously, before
+ * the first await, so `size` and the drawn layer come from the same moment.
+ */
 export async function exportDesignPng(options: {
   stage: Konva.Stage;
   layer: Konva.Layer;
@@ -81,7 +85,6 @@ export async function exportDesignPng(options: {
   scale: number;
   sourceName: string | null;
 }): Promise<string> {
-  await nextPaint();
   const canvas = renderLayerToCanvas(
     options.stage,
     options.layer,

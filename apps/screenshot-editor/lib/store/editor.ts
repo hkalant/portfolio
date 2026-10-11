@@ -9,7 +9,8 @@ import { clamp } from "@/lib/utils";
 
 export type PanelId = "background" | "style";
 
-export type Notice = { kind: "error"; message: string };
+/** `id` changes with every notice, so repeating a message still re-announces it. */
+export type Notice = { id: number; kind: "error"; message: string };
 
 export type EditorState = {
   design: Design;
@@ -125,7 +126,10 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   setActivePanel: (panel) => set({ activePanel: panel }),
   setLoading: (loading) => set({ loading }),
   setExporting: (exporting) => set({ exporting }),
-  showError: (message) => set({ notice: { kind: "error", message } }),
+  showError: (message) =>
+    set((state) => ({
+      notice: { id: (state.notice?.id ?? 0) + 1, kind: "error", message },
+    })),
   dismissNotice: () => set({ notice: null }),
 }));
 
