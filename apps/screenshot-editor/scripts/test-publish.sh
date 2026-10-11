@@ -464,7 +464,9 @@ case_rejected_push_is_retried() {
   local bare before tip
   bare="$(new_remote flaky)"
   seed "$bare" main "${owner_files[@]}"
-  # Reject the first push, as when someone else pushed in between.
+  # Reject the first push, as when someone else pushed in between. (hooks/ only exists when
+  # git has templates, so create it.)
+  mkdir -p "$bare/hooks"
   cat > "$bare/hooks/pre-receive" << EOF
 #!/bin/sh
 if [ ! -e "$bare/rejected-once" ]; then

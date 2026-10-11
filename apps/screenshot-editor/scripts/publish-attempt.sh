@@ -48,7 +48,9 @@ work="$(mktemp -d "${TMPDIR:-/tmp}/publish-attempt.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 repo_dir="$work/repo"
 
-git init --quiet --template= "$repo_dir"
+# Hooks off for init too: newer git (2.5x) creates HEAD through a ref transaction, which
+# runs a reference-transaction hook from the global core.hooksPath before any local config.
+git -c core.hooksPath=/dev/null init --quiet --template= "$repo_dir"
 cd "$repo_dir"
 # Local config of this throwaway repository wins over the global config of the machine:
 # no hooks, no commit signing, a fixed bot identity.
