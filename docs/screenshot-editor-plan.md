@@ -1,9 +1,9 @@
 # Plan: Screenshot beautifier + mockup web app (Pika.style → Shots.so)
 
 ## Context
-A web app in the style of **pika.style** (make one screenshot look good: background, padding, frame, shadow, size presets, export) and **shots.so** (device mockups, 3D tilt, layouts with several images). Nothing is built yet; this document is the feature and layout plan.
+A web app in the style of **pika.style** (make one screenshot look good: background, padding, frame, shadow, size presets, export) and **shots.so** (device mockups, 3D tilt, layouts with several images). This document is the feature and layout plan. Milestones M0 and M1 are built in [`apps/screenshot-editor/`](../apps/screenshot-editor/).
 
-Decisions: **both, in phases** · **Next.js + TypeScript + Tailwind** · **runs entirely in the browser, no accounts** for now.
+Decisions: **both, in phases** · **Next.js + TypeScript + Tailwind** · **runs entirely in the browser, no accounts** for now · **static export hosted at `https://<workspace>.bitbucket.io/screenshot-editor/`**, deployed by GitHub Actions.
 
 Note: the feature list was written from existing knowledge of both products, without checking the live sites, so check it against them before building.
 
@@ -107,7 +107,8 @@ type Template = { id: string; name: string; thumbnail: string; design: DeepParti
 ### Libraries
 Next.js (App Router; the editor page is client-only and loaded with `dynamic(..., { ssr: false })`), Tailwind, **shadcn/ui** (Radix-based: Slider, Popover, Tabs, Tooltip, Sheet for the mobile bottom sheet), `react-colorful` (color picker), `lucide-react` (icons), `fast-average-color` or `node-vibrant` (for "From image"), Vitest, Playwright.
 
-### Folder structure (when you build it)
+### Folder structure
+Paths are relative to `apps/screenshot-editor/`. M1 built the parts it needs; the rest arrive with later milestones.
 ```
 app/
   page.tsx                 # landing page: hero, example outputs, "Open editor"
@@ -133,8 +134,8 @@ Draw your own simplified **SVG device frames**, or use a set whose license allow
 ---
 
 ## 4. Milestones
-1. **M0 Setup**: Next.js, Tailwind, shadcn/ui, zustand, react-konva, ESLint/Prettier, Vitest, Playwright, deploy to Vercel.
-2. **M1 Core loop (MVP)**: upload or paste → gradient background, padding, corner radius, shadow → PNG export at 2×. Already useful on its own.
+1. **M0 Setup** (built): Next.js, Tailwind, shadcn-style components, zustand, react-konva, ESLint/Prettier, Vitest, Playwright; static export deployed to a Bitbucket website subfolder (`<workspace>.bitbucket.io/screenshot-editor/`) by GitHub Actions.
+2. **M1 Core loop (MVP)** (built): upload or paste → gradient background, padding, corner radius, shadow → PNG export at 2×. Already useful on its own. Browser tests run in Chromium locally and in Chromium, Firefox and WebKit in CI.
 3. **M2 Full styling**: size presets, all background types, window and browser frames, border, inset, alignment and drag, copy to clipboard, JPEG/WebP, undo/redo, autosave, shortcuts, mobile layout.
 4. **M3 Content**: text, annotations and redaction, watermark and brand kit, templates gallery, saved presets, landing page.
 5. **M4 Phase 2a**: 2D device mockups and layouts with several images.
