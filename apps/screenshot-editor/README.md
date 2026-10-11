@@ -75,10 +75,11 @@ Until both `BITBUCKET_TOKEN` and `BITBUCKET_WORKSPACE` exist, the deploy job is 
 
 ### What a deploy does
 
-- Builds the site with `NEXT_PUBLIC_BASE_PATH=/screenshot-editor` and refuses to publish a build made without that prefix.
+- Builds the site with `NEXT_PUBLIC_BASE_PATH=/screenshot-editor` and refuses to publish a build made without that prefix, or an incomplete one (a page or script it links to is missing).
 - Fetches the website repository, replaces the contents of `screenshot-editor/` with the new build, and writes `screenshot-editor/version.json` with the commit it came from.
 - Keeps old files under `screenshot-editor/_next/static/`, so visitors with an old page cached don't hit missing scripts. This makes the repository grow slowly. To clean up, delete `screenshot-editor/_next/static/` in the Bitbucket repository and run the deploy again.
-- Commits as `github-actions[bot]` and pushes without forcing. If the same build is already deployed, it makes no commit.
+- Commits as `github-actions[bot]` and pushes without forcing. If the same build is already deployed, it makes no commit. If the push fails (for example because you pushed to the site repository at the same moment), it starts again from the new tip, up to three times.
+- Re-running an old workflow run never publishes over a newer deploy: if `main` has changed the app or the workflows since, that run skips publishing.
 - Afterwards it checks the live site: it waits up to 5 minutes for `version.json` to show the new commit, then checks that the pages and their scripts and styles load with the right content types. If the new version never appears, the job only warns, because Bitbucket may take a while or serve a different branch.
 
 ### Bitbucket facts this setup relies on

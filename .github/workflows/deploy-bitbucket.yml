@@ -1,0 +1,171 @@
+name: Deploy to Bitbucket
+
+# Publishes apps/screenshot-editor to https://<workspace>.bitbucket.io/<subfolder>/ by
+# committing the static export into <subfolder>/ of the Bitbucket repository
+# <workspace>.bitbucket.io. Nothing outside that folder is changed.
+#
+# Setup (Settings > Secrets and variables > Actions):
+#   Secret   BITBUCKET_TOKEN           Repository access token of <workspace>.bitbucket.io with write access.
+#   Variable BITBUCKET_WORKSPACE       The Bitbucket workspace ID.
+#   Optional variables:
+#     BITBUCKET_SITE_SUBFOLDER  Folder to publish into (default: screenshot-editor).
+#     BITBUCKET_PAGES_BRANCH    Branch Bitbucket serves (default: the repository's default branch, else main).
+#     BITBUCKET_GIT_USERNAME    Git username for the token (default: x-token-auth).
+# With neither the secret nor the workspace set, the deploy is skipped and the run stays green.
+# Only runs for main publish, and a re-run of an older run never publishes over a newer build.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/screenshot-editor/**
+      - .github/workflows/ci.yml
+      - .github/workflows/deploy-bitbucket.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Runs for main go one at a time, in order; a newer pending run replaces an older pending one,
+# and a run that is pushing to Bitbucket is never cancelled. Runs for other refs never
+# publish, so each gets its own group: a manual run on a branch cannot replace a pending
+# main run.
+concurrency:
+  group: ${{ github.ref == 'refs/heads/main' && 'deploy-bitbucket' || format('deploy-bitbucket-{0}', github.run_id) }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    with:
+      site_subfolder: ${{ vars.BITBUCKET_SITE_SUBFOLDER || 'screenshot-editor' }}
+
+  config:
+    name: Check deploy settings
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      # Secrets cannot be used in a job's `if`, so this step decides. It only sees whether
+      # the token is set, never the token itself.
+      - name: Check the Bitbucket secret and variables
+        id: check
+        env:
+          HAS_TOKEN: ${{ secrets.BITBUCKET_TOKEN != '' }}
+          WORKSPACE: ${{ vars.BITBUCKET_WORKSPACE }}
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          note() { printf '%s\n' "$1" >> "$GITHUB_STEP_SUMMARY"; }
+          note "### Bitbucket deploy"
+          if [ "$HAS_TOKEN" != true ] && [ -z "$WORKSPACE" ]; then
+            message="Deploy to Bitbucket is not set up, so it was skipped. To turn it on, add the repository secret BITBUCKET_TOKEN (a repository access token of <workspace>.bitbucket.io with write access) and the repository variable BITBUCKET_WORKSPACE under Settings > Secrets and variables > Actions."
+            echo "::notice title=Bitbucket deploy skipped::$message"
+            note "$message"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$HAS_TOKEN" != true ]; then
+            message="The repository variable BITBUCKET_WORKSPACE is set but the secret BITBUCKET_TOKEN is missing. Add the secret, or remove the variable to turn the deploy off."
+            echo "::error title=Bitbucket deploy misconfigured::$message"
+            note "$message"
+            exit 1
+          fi
+          if [ -z "$WORKSPACE" ]; then
+            message="The secret BITBUCKET_TOKEN is set but the repository variable BITBUCKET_WORKSPACE is missing. Add the variable, or remove the secret to turn the deploy off."
+            echo "::error title=Bitbucket deploy misconfigured::$message"
+            note "$message"
+            exit 1
+          fi
+          note "Deploy is set up for workspace \`$WORKSPACE\`."
+          if [ "$REF" != refs/heads/main ]; then
+            message="This run is for $REF; only runs for refs/heads/main deploy, so the deploy job is skipped."
+            echo "::notice title=Bitbucket deploy skipped::$message"
+            note "$message"
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Publish to Bitbucket
+    needs: [ci, config]
+    if: needs.config.outputs.enabled == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the deploy scripts
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: apps/screenshot-editor/scripts
+
+      # Concurrency orders first attempts only. A re-run of an older run ("Re-run failed jobs")
+      # must not publish its older build over a newer deploy, so stop when main has moved on
+      # in a path that starts this workflow: the run for that newer commit publishes it. A
+      # newer commit that changes none of those paths starts no run and builds the same site,
+      # so this run still publishes. Trees are compared, not commits, for exactly that case.
+      - name: Check that this build is still the newest
+        id: newest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2016 # $owner and the rest are GraphQL variables, not shell ones.
+          query='query($owner: String!, $name: String!, $built: String!, $main: String!) {
+            repository(owner: $owner, name: $name) {
+              built: object(expression: $built) { oid }
+              main: object(expression: $main) { oid }
+            }
+          }'
+          changed=()
+          for path in apps/screenshot-editor .github/workflows/ci.yml .github/workflows/deploy-bitbucket.yml; do
+            oids="$(gh api graphql -f query="$query" \
+              -f owner="${GITHUB_REPOSITORY%%/*}" -f name="${GITHUB_REPOSITORY#*/}" \
+              -f built="$GITHUB_SHA:$path" -f main="refs/heads/main:$path" \
+              --jq '"\(.data.repository.built.oid // "none") \(.data.repository.main.oid // "none")"')"
+            built="${oids% *}"
+            on_main="${oids#* }"
+            if [ "$built" = none ]; then
+              echo "::error::Could not read $path at $GITHUB_SHA through the GitHub API."
+              exit 1
+            fi
+            if [ "$built" != "$on_main" ]; then
+              changed+=("$path")
+            fi
+          done
+          if [ "${#changed[@]}" -gt 0 ]; then
+            message="main has moved on since $GITHUB_SHA and changes ${changed[*]}, so this older build was not published; the run for the newer commit publishes it. If no such run started, run this workflow on main from the Actions tab."
+            echo "::notice title=Bitbucket deploy skipped::$message"
+            printf '### Bitbucket deploy\n\n%s\n' "$message" >> "$GITHUB_STEP_SUMMARY"
+            echo "newest=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "The app and workflow files of $GITHUB_SHA are the same as on main; publishing."
+            echo "newest=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download the site built by CI
+        if: steps.newest.outputs.newest == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: site
+          path: site
+
+      - name: Publish into the Bitbucket repository
+        if: steps.newest.outputs.newest == 'true'
+        env:
+          BITBUCKET_TOKEN: ${{ secrets.BITBUCKET_TOKEN }}
+          BITBUCKET_WORKSPACE: ${{ vars.BITBUCKET_WORKSPACE }}
+          SITE_SUBFOLDER: ${{ vars.BITBUCKET_SITE_SUBFOLDER || 'screenshot-editor' }}
+          BITBUCKET_PAGES_BRANCH: ${{ vars.BITBUCKET_PAGES_BRANCH }}
+          BITBUCKET_GIT_USERNAME: ${{ vars.BITBUCKET_GIT_USERNAME }}
+        run: bash apps/screenshot-editor/scripts/publish-bitbucket.sh site
+
+      - name: Check the live site
+        if: steps.newest.outputs.newest == 'true'
+        env:
+          BITBUCKET_WORKSPACE: ${{ vars.BITBUCKET_WORKSPACE }}
+          SITE_SUBFOLDER: ${{ vars.BITBUCKET_SITE_SUBFOLDER || 'screenshot-editor' }}
+          BITBUCKET_PAGES_BRANCH: ${{ vars.BITBUCKET_PAGES_BRANCH }}
+          BITBUCKET_GIT_USERNAME: ${{ vars.BITBUCKET_GIT_USERNAME }}
+        run: bash apps/screenshot-editor/scripts/check-live.sh site
