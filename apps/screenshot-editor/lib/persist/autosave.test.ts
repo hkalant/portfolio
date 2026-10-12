@@ -93,6 +93,18 @@ describe("saveSnapshot", () => {
     expect(record).not.toHaveProperty("blob");
   });
 
+  it("doesn't write an older design over a newer one, or delete its images", async () => {
+    const { map, storage } = memoryStorage();
+    const images = { a: fakeImage("a"), b: fakeImage("b") };
+    // The page closed while this save waited: the newer design uses B.
+    saveSnapshotNow(storage, designWith("b"), images);
+    expect(
+      await saveSnapshot(storage, designWith("a"), images, () => false),
+    ).toBe(true);
+    expect(map.get(DESIGN_KEY)).toMatchObject({ design: designWith("b") });
+    expect(map.has(imageKey("b"))).toBe(true);
+  });
+
   it("reports failing storage", async () => {
     const { storage } = memoryStorage(true);
     expect(

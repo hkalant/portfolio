@@ -3,6 +3,7 @@ import {
   chooseFile,
   expectColor,
   expectDesignSize,
+  expectEmptyState,
   exportImage,
   openTab,
   RED,
@@ -14,7 +15,7 @@ import { brightness, isRed, makeSolidPng, samplePixels } from "./helpers/png";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("./editor/");
-  await expect(page.getByTestId("empty-state")).toBeVisible();
+  await expectEmptyState(page);
 });
 
 const backgroundType = (page: Page, name: string) =>

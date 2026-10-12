@@ -125,7 +125,9 @@ export function useAutosave() {
       }
       saving = true;
       const { design, images, revision } = store.getState();
-      if (await saveSnapshot(storage, design, images))
+      // A flush while this save waits may have written a newer design.
+      const isCurrent = () => revision >= writtenRevision;
+      if (await saveSnapshot(storage, design, images, isCurrent))
         writtenRevision = Math.max(writtenRevision, revision);
       else storageWorks = false;
       saving = false;

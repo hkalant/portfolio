@@ -1,12 +1,18 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
-import { expectDesignSize, RED, setSlider, upload } from "./helpers/editor";
+import {
+  expectDesignSize,
+  expectEmptyState,
+  RED,
+  setSlider,
+  upload,
+} from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
 import { makeSolidPng, readPngSize } from "./helpers/png";
 
 test("the theme can be switched and is remembered", async ({ page }) => {
   await page.goto("./editor/");
-  await expect(page.getByTestId("empty-state")).toBeVisible();
+  await expectEmptyState(page);
   const html = page.locator("html");
   const toggle = page.getByRole("button", { name: /^Theme:/ });
   await expect(toggle).toHaveAccessibleName("Theme: System");
@@ -25,7 +31,7 @@ test("the theme can be switched and is remembered", async ({ page }) => {
 test("the system theme follows the operating system", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("./editor/");
-  await expect(page.getByTestId("empty-state")).toBeVisible();
+  await expectEmptyState(page);
   await expect(page.locator("html")).toHaveClass(/\bdark\b/);
   await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("html")).not.toHaveClass(/\bdark\b/);
@@ -63,7 +69,7 @@ test.describe("on a phone", () => {
     page,
   }) => {
     await page.goto("./editor/");
-    await expect(page.getByTestId("empty-state")).toBeVisible();
+    await expectEmptyState(page);
     await upload(page, makeSolidPng(1200, 750, RED));
     await expectDesignSize(page, 1328, 878);
 
@@ -147,7 +153,7 @@ test.describe("on a phone", () => {
       insets: { top: 0, bottom: 21, left: 47, right: 47 },
     });
     await page.goto("./editor/");
-    await expect(page.getByTestId("empty-state")).toBeVisible();
+    await expectEmptyState(page);
     const header = (await page.locator("header").boundingBox())!;
     expect(header.x).toBe(47);
     expect(header.x + header.width).toBe(844 - 47);

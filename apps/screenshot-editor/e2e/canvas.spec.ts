@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import {
   chooseCanvasSize,
   expectDesignSize,
+  expectEmptyState,
   exportButton,
   exportImage,
   openTab,
@@ -22,7 +23,7 @@ import {
 
 test.beforeEach(async ({ page }) => {
   await page.goto("./editor/");
-  await expect(page.getByTestId("empty-state")).toBeVisible();
+  await expectEmptyState(page);
 });
 
 /** The autosaved design, read straight from IndexedDB. */
@@ -149,7 +150,7 @@ test("undo and redo with the buttons and the keyboard", async ({ page }) => {
   // Undoing the upload goes back to the empty state; redo brings it back.
   await undo.click();
   await undo.click();
-  await expect(page.getByTestId("empty-state")).toBeVisible();
+  await expectEmptyState(page);
   await expect(undo).toBeDisabled();
   await redo.click();
   await expectDesignSize(page, 1328, 878);
@@ -167,7 +168,7 @@ test("Delete removes the screenshot and undo brings it back", async ({
   await stage(page).click();
   await expect(page.locator("[data-design-canvas]")).toBeFocused();
   await page.keyboard.press("Delete");
-  await expect(page.getByTestId("empty-state")).toBeVisible();
+  await expectEmptyState(page);
   await page.keyboard.press("ControlOrMeta+z");
   await expectDesignSize(page, 528, 428);
 });
@@ -234,7 +235,7 @@ test("a tab left untouched doesn't overwrite another tab's work", async ({
   // A second tab opens while nothing is saved, and is never touched.
   const other = await page.context().newPage();
   await other.goto("./editor/");
-  await expect(other.getByTestId("empty-state")).toBeVisible();
+  await expectEmptyState(other);
 
   await upload(page, makeSolidPng(1200, 750, RED));
   await expect.poll(savedImageId).toEqual(expect.any(String));

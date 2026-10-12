@@ -61,11 +61,16 @@ type LoadImage = (
  * to an image that isn't stored. Reading the keys each time (rather than
  * remembering what this tab wrote) keeps this right when another tab saved in
  * between. Images the design no longer uses are deleted. False if storage failed.
+ *
+ * `isCurrent` is asked just before the design is written: when a newer design
+ * was saved meanwhile (by saveSnapshotNow as the page closed), this older one
+ * is neither written over it nor allowed to delete the images it uses.
  */
 export async function saveSnapshot(
   storage: AutosaveStorage,
   design: Design,
   images: Record<string, LoadedImage>,
+  isCurrent: () => boolean = () => true,
 ): Promise<boolean> {
   const ids = referencedImageIds(design);
   const stored = new Set((await storage.keys()) ?? []);
@@ -75,6 +80,7 @@ export async function saveSnapshot(
     if (!(await storage.write(imageKey(id), await imageRecord(image))))
       return false;
   }
+  if (!isCurrent()) return true;
   const saved: SavedDesign = { design, savedAt: Date.now() };
   if (!(await storage.write(DESIGN_KEY, saved))) return false;
 

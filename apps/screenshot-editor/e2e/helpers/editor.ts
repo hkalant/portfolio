@@ -78,6 +78,16 @@ export async function setSlider(page: Page, name: string, key: "Home" | "End") {
   return slider;
 }
 
+/**
+ * Waits for the empty editor. A fresh page shows "Restoring…" until storage
+ * answers, which the editor waits up to 5 s for (slower in WebKit on CI).
+ */
+export async function expectEmptyState(page: Page) {
+  await expect(page.getByTestId("empty-state")).toBeVisible({
+    timeout: 10_000,
+  });
+}
+
 export async function openTab(
   page: Page,
   name: "Background" | "Frame" | "Style",

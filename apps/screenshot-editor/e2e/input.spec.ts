@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./helpers/fixtures";
+import { expectEmptyState } from "./helpers/editor";
 import { makeSolidPng } from "./helpers/png";
 
 // Synthetic clipboard and drag events are only dependable in Chromium.
@@ -10,7 +11,7 @@ test.skip(
 
 test.beforeEach(async ({ page }) => {
   await page.goto("./editor/");
-  await expect(page.getByTestId("empty-state")).toBeVisible();
+  await expectEmptyState(page);
 });
 
 async function paste(page: Page, png: Buffer, name: string) {

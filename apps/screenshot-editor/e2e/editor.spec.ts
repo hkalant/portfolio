@@ -3,6 +3,7 @@ import {
   chooseFile,
   expectColor,
   expectDesignSize,
+  expectEmptyState,
   exportPng,
   openTab,
   RED,
@@ -20,7 +21,7 @@ import {
 
 test.beforeEach(async ({ page }) => {
   await page.goto("./editor/");
-  await expect(page.getByTestId("empty-state")).toBeVisible();
+  await expectEmptyState(page);
 });
 
 test("uploads a screenshot and exports it at 2x with rounded corners", async ({
@@ -196,7 +197,7 @@ test("unsupported files are refused with a message", async ({ page }) => {
   await expect(page.getByTestId("notice")).toContainText(
     "Unsupported file type",
   );
-  await expect(page.getByTestId("empty-state")).toBeVisible();
+  await expectEmptyState(page);
 });
 
 test.describe("broken images", () => {
@@ -208,6 +209,6 @@ test.describe("broken images", () => {
     await expect(page.getByTestId("notice")).toContainText(
       "Couldn't read that image",
     );
-    await expect(page.getByTestId("empty-state")).toBeVisible();
+    await expectEmptyState(page);
   });
 });
