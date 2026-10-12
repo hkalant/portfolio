@@ -137,6 +137,18 @@ describe("migrateDesign", () => {
     expect(migrateDesign(saved)?.backgroundFx).toEqual({ blur: 3 });
   });
 
+  it("keeps the size of a removed size preset as a custom size", () => {
+    const saved = {
+      ...createDefaultDesign(),
+      canvas: { preset: "dribbble", width: 1600, height: 1200 },
+    };
+    expect(migrateDesign(saved)?.canvas).toEqual({
+      preset: "custom",
+      width: 1600,
+      height: 1200,
+    });
+  });
+
   it("returns null for anything invalid", () => {
     expect(migrateDesign(null)).toBeNull();
     expect(migrateDesign({ version: 3 })).toBeNull();

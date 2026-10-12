@@ -6,7 +6,7 @@ This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 
 ## Features
 
-- **Canvas sizes:** Auto (the screenshot plus padding), presets for X, LinkedIn, Open Graph, Instagram, stories, Product Hunt, Dribbble and YouTube, or a custom size up to 4000 × 4000.
+- **Canvas sizes:** Auto (the screenshot plus padding), presets for X, LinkedIn, Open Graph, Instagram, stories and YouTube, or a custom size up to 4000 × 4000.
 - **Backgrounds:** gradients (linear or radial), solid colours, mesh gradients, built-in wallpapers, your own image (with blur), a gradient made from the screenshot's colours, or transparent.
 - **Frames:** macOS window, browser, Windows window, minimal bar and glass, each light or dark, with a window title or address.
 - **Style:** padding, scale, position (drag, arrow keys or a 9-point grid), rotation, corner radius, shadow presets or a custom shadow, border, and an inset around the screenshot.

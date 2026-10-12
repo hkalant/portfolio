@@ -24,8 +24,6 @@ export const SIZE_PRESETS = [
     height: 1350,
   },
   { id: "story", label: "Story", width: 1080, height: 1920 },
-  { id: "product-hunt", label: "Product Hunt", width: 1270, height: 760 },
-  { id: "dribbble", label: "Dribbble shot", width: 1600, height: 1200 },
   { id: "youtube", label: "YouTube thumbnail", width: 1280, height: 720 },
 ] as const satisfies readonly SizePreset[];
 
