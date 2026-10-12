@@ -39,7 +39,9 @@ export const SIZE_PRESET_IDS = SIZE_PRESETS.map((preset) => preset.id) as [
 /** Limits for a custom canvas size, per side. */
 export const CUSTOM_SIZE = { min: 100, max: 4000 } as const;
 
-export function getSizePreset(id: string): SizePreset | undefined {
+export function getSizePreset(
+  id: string,
+): (typeof SIZE_PRESETS)[number] | undefined {
   return SIZE_PRESETS.find((preset) => preset.id === id);
 }
 

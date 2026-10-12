@@ -7,9 +7,16 @@ import { currentPlatform, pasteShortcutLabel } from "@/lib/platform";
 
 const subscribe = () => () => {};
 
-type Props = { loading: boolean; onUpload: () => void; onSample: () => void };
+type Props = {
+  loading: boolean;
+  /** The last design is being read from storage. */
+  restoring?: boolean;
+  onUpload: () => void;
+  onSample: () => void;
+};
 
-export function EmptyState({ loading, onUpload, onSample }: Props) {
+export function EmptyState({ loading, restoring, onUpload, onSample }: Props) {
+  const busy = loading || restoring;
   const pasteKey = useSyncExternalStore(
     subscribe,
     () => pasteShortcutLabel(currentPlatform()),
@@ -25,26 +32,28 @@ export function EmptyState({ loading, onUpload, onSample }: Props) {
         <button
           type="button"
           onClick={onUpload}
-          disabled={loading}
+          disabled={busy}
           className="flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-muted-foreground/25 bg-background/60 px-8 py-14 text-center transition-colors outline-none hover:border-muted-foreground/45 hover:bg-background focus-visible:ring-[3px] focus-visible:ring-ring disabled:cursor-progress"
         >
           <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            {loading ? (
+            {busy ? (
               <LoaderCircle className="size-6 animate-spin" aria-hidden />
             ) : (
               <ImagePlus className="size-6" aria-hidden />
             )}
           </span>
           <span className="text-base font-medium">
-            {loading
-              ? "Loading image…"
-              : "Drop, paste or click to add a screenshot"}
+            {restoring
+              ? "Restoring your last design…"
+              : loading
+                ? "Loading image…"
+                : "Drop, paste or click to add a screenshot"}
           </span>
           <span className="text-sm text-muted-foreground">
             Paste with {pasteKey} · PNG, JPG or WebP · up to 50 MB
           </span>
         </button>
-        <Button variant="ghost" size="sm" onClick={onSample} disabled={loading}>
+        <Button variant="ghost" size="sm" onClick={onSample} disabled={busy}>
           Try a sample image
         </Button>
       </div>

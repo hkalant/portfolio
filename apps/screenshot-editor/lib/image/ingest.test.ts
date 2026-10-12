@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useEditorStore } from "@/lib/store/editor";
 import { IMAGE_MESSAGES } from "./accept";
 import { ingestFile } from "./ingest";
+import { fakeImage } from "@/lib/testing/fakeImage";
 import { ImageLoadError, loadImageFromBlob, type LoadedImage } from "./load";
 
 vi.mock("./load", async (importOriginal) => ({
@@ -20,15 +21,6 @@ function deferred<T>() {
   });
   return { promise, resolve, reject };
 }
-
-const fakeImage = (id: string): LoadedImage => ({
-  id,
-  name: `${id}.png`,
-  source: {} as HTMLImageElement,
-  width: 100,
-  height: 50,
-  release: vi.fn(),
-});
 
 const png = (name: string) => new File(["x"], name, { type: "image/png" });
 const state = () => useEditorStore.getState();
@@ -88,6 +80,23 @@ describe("ingestFile", () => {
     await firstDone;
     expect(state().design.layers[0].imageId).toBeNull();
     expect(stale.release).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps screenshot and background loads apart", async () => {
+    const shot = deferred<LoadedImage>();
+    load
+      .mockReturnValueOnce(shot.promise)
+      .mockResolvedValueOnce(fakeImage("bg"));
+    const shotDone = ingestFile(png("a.png"));
+    // A background upload must not cancel the screenshot still loading.
+    await ingestFile(png("bg.png"), "background");
+    shot.resolve(fakeImage("a"));
+    await shotDone;
+    expect(state().design.layers[0].imageId).toBe("a");
+    expect(state().design.background).toEqual({
+      kind: "image",
+      source: { type: "upload", imageId: "bg" },
+    });
   });
 
   it("explains why an image could not be loaded", async () => {

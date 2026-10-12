@@ -1,18 +1,11 @@
 "use client";
 
-import { Palette, SlidersHorizontal } from "lucide-react";
 import { Tabs } from "radix-ui";
 import type { PanelId } from "@/lib/store/editor";
 import { useEditorStore } from "@/lib/store/editor";
-import { BackgroundPanel } from "./panels/BackgroundPanel";
-import { StylePanel } from "./panels/StylePanel";
+import { PANELS } from "./panels/registry";
 
-const TOOLS: readonly { id: PanelId; label: string; icon: typeof Palette }[] = [
-  { id: "background", label: "Background", icon: Palette },
-  { id: "style", label: "Style", icon: SlidersHorizontal },
-];
-
-/** The icon rail and the settings panel for the selected tool. */
+/** The icon rail and the settings panel for the selected tool (desktop layout). */
 export function ToolRail() {
   const activePanel = useEditorStore((state) => state.activePanel);
   const setActivePanel = useEditorStore((state) => state.setActivePanel);
@@ -28,7 +21,7 @@ export function ToolRail() {
         aria-label="Tools"
         className="flex w-20 flex-col items-center gap-1 border-r bg-background py-3"
       >
-        {TOOLS.map(({ id, label, icon: Icon }) => (
+        {PANELS.map(({ id, label, icon: Icon }) => (
           <Tabs.Trigger
             key={id}
             value={id}
@@ -39,8 +32,8 @@ export function ToolRail() {
           </Tabs.Trigger>
         ))}
       </Tabs.List>
-      <div className="w-80 overflow-y-auto border-r bg-background">
-        {TOOLS.map(({ id, label }) => (
+      <div className="w-72 overflow-y-auto border-r bg-background lg:w-80">
+        {PANELS.map(({ id, label, Component }) => (
           <Tabs.Content
             key={id}
             value={id}
@@ -48,7 +41,7 @@ export function ToolRail() {
             className="p-5 outline-none"
           >
             <h2 className="mb-5 text-sm font-semibold">{label}</h2>
-            {id === "background" ? <BackgroundPanel /> : <StylePanel />}
+            <Component />
           </Tabs.Content>
         ))}
       </div>

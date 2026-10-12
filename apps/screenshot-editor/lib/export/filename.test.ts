@@ -15,6 +15,15 @@ describe("exportFilename", () => {
     );
   });
 
+  it("uses the export format's extension and scale", () => {
+    expect(exportFilename("Dashboard.png", 3, now, "jpg")).toBe(
+      "dashboard-3x.jpg",
+    );
+    expect(exportFilename(null, 1, now, "webp")).toBe(
+      "screenshot-20261011-090507-1x.webp",
+    );
+  });
+
   it("strips accents and other non-ASCII characters", () => {
     expect(exportFilename("Écran d’accueil.jpg", 2, now)).toBe(
       "ecran-d-accueil-2x.png",

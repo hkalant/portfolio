@@ -4,6 +4,8 @@ import { useEditorStore } from "@/lib/store/editor";
 import { LabeledSlider } from "../controls/LabeledSlider";
 import { PresetGrid } from "../controls/PresetGrid";
 
+// Placeholder from the foundation phase (the M1 panel). The backgrounds work
+// replaces it with every background kind.
 export function BackgroundPanel() {
   const background = useEditorStore((state) => state.design.background);
   const applyGradientPreset = useEditorStore(
@@ -16,18 +18,24 @@ export function BackgroundPanel() {
       <PresetGrid
         label="Gradient"
         presets={GRADIENT_PRESETS}
-        selectedId={background.presetId}
+        selectedId={
+          background.kind === "linear" || background.kind === "radial"
+            ? background.presetId
+            : null
+        }
         onSelect={applyGradientPreset}
       />
-      <LabeledSlider
-        label="Angle"
-        value={background.angle}
-        min={ANGLE.min}
-        max={ANGLE.max}
-        step={ANGLE.step}
-        unit="°"
-        onChange={setGradientAngle}
-      />
+      {background.kind === "linear" && (
+        <LabeledSlider
+          label="Angle"
+          value={background.angle}
+          min={ANGLE.min}
+          max={ANGLE.max}
+          step={ANGLE.step}
+          unit="°"
+          onChange={setGradientAngle}
+        />
+      )}
     </div>
   );
 }

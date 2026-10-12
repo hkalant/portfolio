@@ -1,29 +1,42 @@
 import { DEFAULT_GRADIENT } from "./gradients";
-import { PADDING, RADIUS } from "./limits";
-import type { Design } from "./schema";
+import { PADDING, RADIUS, ROTATION, SHOT_SCALE } from "./limits";
+import type { Background, Design, ShotStyle } from "./schema";
 import { DEFAULT_SHADOW, SHADOW_PRESETS } from "./shadows";
 
 export const SHOT_LAYER_ID = "shot-1";
 
+export function defaultBackground(): Background {
+  return {
+    kind: "linear",
+    presetId: DEFAULT_GRADIENT.id,
+    angle: DEFAULT_GRADIENT.angle,
+    stops: DEFAULT_GRADIENT.stops.map((stop) => ({ ...stop })),
+  };
+}
+
+/** Every style setting of the screenshot layer, as "Reset style" restores them. */
+export function defaultShotStyle(): ShotStyle {
+  return {
+    padding: PADDING.default,
+    scale: SHOT_SCALE.default,
+    position: { x: 0.5, y: 0.5 },
+    rotation: ROTATION.default,
+    radius: RADIUS.default,
+    shadow: { ...SHADOW_PRESETS[DEFAULT_SHADOW] },
+    border: { width: 0, color: "#ffffff", opacity: 0.6 },
+    inset: { size: 0, color: "auto" },
+    frame: { kind: "none", theme: "light", title: "", url: "" },
+  };
+}
+
 export function createDefaultDesign(): Design {
   return {
-    version: 1,
+    version: 2,
     canvas: { preset: "auto" },
-    background: {
-      kind: "linear",
-      presetId: DEFAULT_GRADIENT.id,
-      angle: DEFAULT_GRADIENT.angle,
-      stops: DEFAULT_GRADIENT.stops.map((stop) => ({ ...stop })),
-    },
+    background: defaultBackground(),
+    backgroundFx: { noise: 0, blur: 0 },
     layers: [
-      {
-        id: SHOT_LAYER_ID,
-        kind: "shot",
-        imageId: null,
-        padding: PADDING.default,
-        radius: RADIUS.default,
-        shadow: { ...SHADOW_PRESETS[DEFAULT_SHADOW] },
-      },
+      { id: SHOT_LAYER_ID, kind: "shot", imageId: null, ...defaultShotStyle() },
     ],
   };
 }

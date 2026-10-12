@@ -47,6 +47,18 @@
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Shown behind a transparent design. */
+@utility checkerboard {
+  background-color: #ffffff;
+  background-image: conic-gradient(
+    #e5e7eb 25%,
+    transparent 0 50%,
+    #e5e7eb 0 75%,
+    transparent 0
+  );
+  background-size: 16px 16px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
