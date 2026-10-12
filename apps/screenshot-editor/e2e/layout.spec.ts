@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import type { Page } from "@playwright/test";
 import { expectDesignSize, RED, setSlider, upload } from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
 import { makeSolidPng, readPngSize } from "./helpers/png";
@@ -29,6 +30,31 @@ test("the system theme follows the operating system", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("html")).not.toHaveClass(/\bdark\b/);
 });
+
+/** A one-finger swipe from one point to another, as real touch events. */
+async function swipe(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+) {
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (
+    type: "touchStart" | "touchMove" | "touchEnd",
+    point?: { x: number; y: number },
+  ) =>
+    cdp.send("Input.dispatchTouchEvent", {
+      type,
+      touchPoints: point ? [{ ...point, id: 1 }] : [],
+    });
+  await touch("touchStart", from);
+  for (let step = 1; step <= 5; step += 1)
+    await touch("touchMove", {
+      x: from.x + ((to.x - from.x) * step) / 5,
+      y: from.y + ((to.y - from.y) * step) / 5,
+    });
+  await touch("touchEnd");
+  await cdp.detach();
+}
 
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
@@ -68,5 +94,56 @@ test.describe("on a phone", () => {
       width: 2160,
       height: 3840,
     });
+  });
+
+  test("a swipe on a slider's track doesn't change it, but its thumb drags", async ({
+    page,
+  }) => {
+    await page.goto("./editor/");
+    await upload(page, makeSolidPng(1200, 750, RED));
+    await page.getByRole("button", { name: "Style", exact: true }).click();
+    const slider = page.getByRole("slider", { name: "Padding" });
+    await slider.scrollIntoViewIfNeeded();
+    const value = await slider.getAttribute("aria-valuenow");
+    const measure = async () => {
+      const thumb = (await slider.boundingBox())!;
+      const track = (await page
+        .locator("[data-slot=slider]")
+        .filter({ has: slider })
+        .boundingBox())!;
+      return { thumb, track, y: thumb.y + thumb.height / 2 };
+    };
+
+    // Starting well to the right of the thumb, on the track: the panel
+    // scrolls instead.
+    let { thumb, track, y } = await measure();
+    const start = { x: track.x + track.width - 8, y };
+    await swipe(page, start, { x: start.x - 40, y: y - 120 });
+    await expect(slider).toHaveAttribute("aria-valuenow", value!);
+    expect((await measure()).y).not.toBe(y);
+
+    await slider.scrollIntoViewIfNeeded();
+    ({ thumb, track, y } = await measure());
+    await swipe(
+      page,
+      { x: thumb.x + thumb.width / 2, y },
+      { x: track.x + track.width, y },
+    );
+    await expect(slider).not.toHaveAttribute("aria-valuenow", value!);
+  });
+
+  test("the editor stays clear of side notches in landscape", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Emulation.setSafeAreaInsetsOverride", {
+      insets: { top: 0, bottom: 21, left: 47, right: 47 },
+    });
+    await page.goto("./editor/");
+    await expect(page.getByTestId("empty-state")).toBeVisible();
+    const header = (await page.locator("header").boundingBox())!;
+    expect(header.x).toBe(47);
+    expect(header.x + header.width).toBe(844 - 47);
   });
 });

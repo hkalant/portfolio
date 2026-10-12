@@ -248,6 +248,17 @@ describe("computePreviewScale", () => {
     ).toBe(0.5);
   });
 
+  it("shrinks a large canvas into a small container without clipping it", () => {
+    // 86 / 4000: under the old 5% floor, which drew the canvas too big.
+    expect(
+      computePreviewScale(
+        { width: 150, height: 150 },
+        { width: 4000, height: 4000 },
+      ),
+    ).toBeCloseTo(0.0215);
+    expect(MIN_PREVIEW_SCALE).toBeLessThanOrEqual(0.01);
+  });
+
   it("returns the minimum for tiny or unmeasured containers", () => {
     expect(
       computePreviewScale({ width: 0, height: 0 }, { width: 100, height: 100 }),

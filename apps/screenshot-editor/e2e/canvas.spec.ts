@@ -89,9 +89,42 @@ test("canvas size presets and custom sizes", async ({ page }) => {
   await width.fill("100");
   await width.press("Enter");
   await expectDesignSize(page, 159, 100);
+  // Growing back keeps the locked ratio, not the rounded 159 × 100 one.
+  await width.fill("1000");
+  await width.press("Enter");
+  await expectDesignSize(page, 1000, 630);
 
   await page.getByRole("radio", { name: /^Auto/ }).click();
   await expectDesignSize(page, 1328, 878);
+});
+
+test("the export button keeps focus while it exports", async ({ page }) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  const button = exportButton(page);
+  await expect(button).toBeEnabled();
+  await button.focus();
+  await expect(button).toBeFocused();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.keyboard.press("Enter"),
+  ]);
+  await download.path();
+  await expect(button).not.toHaveAttribute("aria-disabled");
+  await expect(button).toBeFocused();
+});
+
+test("a short workspace hides the size readout and fits the canvas", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await expect(page.getByTestId("size-readout")).not.toHaveClass(/sr-only/);
+  await page.setViewportSize({ width: 1280, height: 200 });
+  await expect(page.getByTestId("size-readout")).toHaveClass(/sr-only/);
+  const box = await stage(page).boundingBox();
+  const main = await page.locator("main").boundingBox();
+  expect(box && main).toBeTruthy();
+  expect(box!.y).toBeGreaterThanOrEqual(main!.y);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(main!.y + main!.height);
 });
 
 test("undo and redo with the buttons and the keyboard", async ({ page }) => {

@@ -63,6 +63,24 @@ describe("lockedSize", () => {
     });
   });
 
+  it("uses the ratio it was locked at, so rounding doesn't drift", () => {
+    // 1000 × 630 locked, then shrunk to 159 × 100: that size's own ratio is
+    // a little off, and growing back from it would give 1000 × 629.
+    const shrunk = { width: 159, height: 100 };
+    expect(lockedSize(shrunk, "width", 1000)).toEqual({
+      width: 1000,
+      height: 629,
+    });
+    expect(lockedSize(shrunk, "width", 1000, 1000 / 630)).toEqual({
+      width: 1000,
+      height: 630,
+    });
+    expect(lockedSize(shrunk, "height", 630, 1000 / 630)).toEqual({
+      width: 1000,
+      height: 630,
+    });
+  });
+
   it("keeps an extreme ratio at its only possible size", () => {
     const strip = { width: 4000, height: 100 };
     expect(lockedSize(strip, "width", 500)).toEqual({
