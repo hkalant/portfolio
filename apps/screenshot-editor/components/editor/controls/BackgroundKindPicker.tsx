@@ -55,13 +55,13 @@ export function BackgroundKindPicker({ value, onChange }: Props) {
         const choice = CHOICES.find((option) => option.value === next);
         if (choice) onChange(choice.value);
       }}
-      className="grid grid-cols-3 gap-1 p-1"
+      className="grid grid-cols-3 gap-1 rounded-lg p-1"
     >
       {CHOICES.map(({ value: option, label, icon: Icon }) => (
         <ToggleGroupItem
           key={option}
           value={option}
-          className="h-auto flex-col gap-1 px-1 py-2"
+          className="h-auto flex-col gap-1 rounded-md px-1 py-2"
         >
           <Icon className="size-4" aria-hidden />
           {label}
