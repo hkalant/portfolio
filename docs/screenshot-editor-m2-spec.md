@@ -224,12 +224,13 @@ DesignLayout = {
 - Each image is written once per id. Image keys the design no longer uses are deleted.
 
 **`useAutosave()`:**
-- Saves 600 ms after the last change to `revision`.
+- Saves 600 ms after the last change to `revision`, and at least every 3 s during a steady run of edits.
+- When the page is hidden or closed (`visibilitychange`, `pagehide`), an unsaved change is written at once: the design and any images not yet stored go in one transaction committed straight away, since a closing page never gets replies to reads.
 - On first mount it restores before the empty state appears, setting `restoring` (the editor shows "Restoring your last design…").
 - Missing images fall back: no screenshot, or the default background.
 - A restore is skipped if the user changed anything while it ran (`revision` moved).
 
-**Failure handling:** IndexedDB that is missing or failing (private windows, quota) never breaks the editor and logs no console errors. Autosave just turns itself off.
+**Failure handling:** IndexedDB that is missing, failing (private windows, quota) or never answering (a read during the restore times out after 5 s) never breaks the editor and logs no console errors. Autosave just turns itself off.
 
 History isn't persisted. The sample image is saved like any other image.
 
