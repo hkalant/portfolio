@@ -24,7 +24,6 @@ export const OPACITY = { min: 0, max: 1, step: 0.01 } as const;
 export const SHADOW_OFFSET = { min: -100, max: 100, step: 1 } as const;
 export const SHADOW_BLUR = { min: 0, max: 120, step: 1 } as const;
 
-export const NOISE = { min: 0, max: 1, step: 0.01 } as const;
 export const BLUR = { min: 0, max: 40, step: 1 } as const;
 
 /** Window title and address bar text. */

@@ -14,7 +14,6 @@ import {
   BORDER_WIDTH,
   INSET,
   MAX_FRAME_TEXT,
-  NOISE,
   PADDING,
   RADIUS,
   ROTATION,
@@ -110,7 +109,6 @@ export type EditorState = {
   setFromImage: () => void;
   setFromImageAngle: (degrees: number) => void;
   setTransparent: () => void;
-  setNoise: (amount: number) => void;
   setBlur: (pixels: number) => void;
 
   setCanvasPreset: (id: string) => void;
@@ -439,20 +437,6 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       }, "from-image-angle"),
 
     setTransparent: () => setBackgroundTo({ kind: "transparent" }),
-
-    setNoise: (amount) => {
-      if (!finite(amount)) return;
-      commit(
-        (design) => ({
-          ...design,
-          backgroundFx: {
-            ...design.backgroundFx,
-            noise: round(clamp(amount, NOISE.min, NOISE.max), 2),
-          },
-        }),
-        "noise",
-      );
-    },
 
     setBlur: (pixels) => {
       if (!finite(pixels)) return;

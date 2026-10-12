@@ -67,9 +67,8 @@ describe("editor store: style", () => {
     expect(shot().border).toMatchObject({ width: 24, opacity: 1 });
     state().setInset({ size: -3 });
     expect(shot().inset.size).toBe(0);
-    state().setNoise(5);
     state().setBlur(-1);
-    expect(state().design.backgroundFx).toEqual({ noise: 1, blur: 0 });
+    expect(state().design.backgroundFx).toEqual({ blur: 0 });
     state().setCustomSize(50, 9000);
     expect(state().design.canvas).toEqual({
       preset: "custom",

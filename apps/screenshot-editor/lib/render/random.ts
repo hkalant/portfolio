@@ -1,4 +1,4 @@
-// Seeded randomness, so wallpapers and the noise tile come out the same every
+// Seeded randomness, so wallpapers come out the same every
 // time they are drawn, at any size.
 
 /** A mulberry32 generator: small, fast and good enough for pictures. Numbers in [0, 1). */

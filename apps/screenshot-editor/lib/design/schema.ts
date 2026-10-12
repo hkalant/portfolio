@@ -4,7 +4,6 @@ import {
   BORDER_WIDTH,
   INSET,
   MAX_FRAME_TEXT,
-  NOISE,
   PADDING,
   RADIUS,
   ROTATION,
@@ -61,7 +60,6 @@ export const backgroundSchema = z.discriminatedUnion("kind", [
 ]);
 
 export const backgroundFxSchema = z.object({
-  noise: z.number().min(NOISE.min).max(NOISE.max),
   blur: z.number().min(BLUR.min).max(BLUR.max),
 });
 

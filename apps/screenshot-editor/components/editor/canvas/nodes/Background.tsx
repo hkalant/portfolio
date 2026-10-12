@@ -24,7 +24,6 @@ import { getBlurredImage, roundBlurSigma } from "@/lib/render/blur";
 import { coverCrop, coverScale, sourceSize } from "@/lib/render/cover";
 import { fromImageStops } from "@/lib/render/fromImage";
 import { drawMesh } from "@/lib/render/mesh";
-import { getNoiseTile, noiseOpacity } from "@/lib/render/noise";
 import { getWallpaperCanvas } from "@/lib/render/wallpaper";
 
 type Props = {
@@ -43,7 +42,7 @@ type Source = HTMLImageElement | HTMLCanvasElement;
 // down and the export renders it at up to 4x, so nothing here may depend on
 // the on-screen size.
 
-/** The design's background, with noise on top. Draws nothing when transparent. */
+/** The design's background. Draws nothing when transparent. */
 export function BackgroundNode({
   canvas,
   background,
@@ -61,7 +60,6 @@ export function BackgroundNode({
         screenshot={screenshot}
         backgroundImage={backgroundImage}
       />
-      {fx.noise > 0 && <Noise canvas={canvas} amount={fx.noise} />}
     </Group>
   );
 }
@@ -287,32 +285,4 @@ function FromImageFill({
     );
   }, [screenshot.source]);
   return <LinearFill canvas={canvas} angle={angle} stops={stops} />;
-}
-
-function Noise({ canvas, amount }: { canvas: Size; amount: number }) {
-  const tile = useMemo(() => getNoiseTile(), []);
-  if (!tile) return null;
-  return (
-    <Rect
-      width={canvas.width}
-      height={canvas.height}
-      // Konva draws any canvas as a pattern; its config type only names <img>.
-      fillPatternImage={tile as unknown as HTMLImageElement}
-      fillPatternRepeat="repeat"
-      opacity={noiseOpacity(amount)}
-      // Enlarged (an export's pixel ratio), a smoothed tile turns soft and
-      // faint, so it is sampled nearest there. Shrunk (the zoomed-out
-      // preview), it stays smoothed like the export seen at that size.
-      sceneFunc={(context, shape) => {
-        const { a, b } = context._context.getTransform();
-        if (Math.hypot(a, b) > 1)
-          context._context.imageSmoothingEnabled = false;
-        context.beginPath();
-        context.rect(0, 0, shape.width(), shape.height());
-        context.closePath();
-        context.fillStrokeShape(shape);
-      }}
-      listening={false}
-    />
-  );
 }

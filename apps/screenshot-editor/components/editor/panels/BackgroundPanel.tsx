@@ -128,9 +128,7 @@ export function BackgroundPanel() {
       {background.kind === "fromImage" && (
         <FromImageControls angle={background.angle} />
       )}
-      {choice !== "none" && (
-        <EffectsControls fx={fx} showBlur={choice === "image"} />
-      )}
+      {choice === "image" && <EffectsControls fx={fx} />}
     </div>
   );
 }
@@ -367,15 +365,8 @@ function FromImageControls({ angle }: { angle: number }) {
   );
 }
 
-function EffectsControls({
-  fx,
-  showBlur,
-}: {
-  fx: BackgroundFx;
-  showBlur: boolean;
-}) {
+function EffectsControls({ fx }: { fx: BackgroundFx }) {
   const headingId = useId();
-  const setNoise = useEditorStore((state) => state.setNoise);
   const setBlur = useEditorStore((state) => state.setBlur);
   return (
     <section aria-labelledby={headingId} className="space-y-5 border-t pt-5">
@@ -386,25 +377,14 @@ function EffectsControls({
         Effects
       </h3>
       <LabeledSlider
-        label="Noise"
-        value={Math.round(fx.noise * 100)}
-        min={0}
-        max={100}
-        step={1}
-        unit="%"
-        onChange={(percent) => setNoise(percent / 100)}
+        label="Blur"
+        value={fx.blur}
+        min={BLUR.min}
+        max={BLUR.max}
+        step={BLUR.step}
+        unit="px"
+        onChange={setBlur}
       />
-      {showBlur && (
-        <LabeledSlider
-          label="Blur"
-          value={fx.blur}
-          min={BLUR.min}
-          max={BLUR.max}
-          step={BLUR.step}
-          unit="px"
-          onChange={setBlur}
-        />
-      )}
     </section>
   );
 }

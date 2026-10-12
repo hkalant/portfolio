@@ -7,7 +7,7 @@ This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 ## Features
 
 - **Canvas sizes:** Auto (the screenshot plus padding), presets for X, LinkedIn, Open Graph, Instagram, stories, Product Hunt, Dribbble and YouTube, or a custom size up to 4000 × 4000.
-- **Backgrounds:** gradients (linear or radial), solid colours, mesh gradients, built-in wallpapers, your own image (with blur), a gradient made from the screenshot's colours, or transparent; optional noise.
+- **Backgrounds:** gradients (linear or radial), solid colours, mesh gradients, built-in wallpapers, your own image (with blur), a gradient made from the screenshot's colours, or transparent.
 - **Frames:** macOS window, browser, Windows window, minimal bar and glass, each light or dark, with a window title or address.
 - **Style:** padding, scale, position (drag, arrow keys or a 9-point grid), rotation, corner radius, shadow presets or a custom shadow, border, and an inset around the screenshot.
 - **Export:** PNG, JPEG or WebP at 1× to 4×, or copy a PNG to the clipboard. Exports larger than the browser allows are reduced to the largest size it can make, and the editor says so.
@@ -146,7 +146,7 @@ components/ui/          Small shadcn-style components on Radix primitives
 lib/design/             Design model (zod schema, migration), presets, frames, layout maths
 lib/store/              Zustand store with its own undo history
 lib/image/              File checks, loading, downscaling, intake, colour sampling
-lib/render/             Canvas drawing helpers (mesh, wallpapers, blur, noise, frames)
+lib/render/             Canvas drawing helpers (mesh, wallpapers, blur, frames)
 lib/export/             Export, copy, size limits and file names
 lib/persist/            Autosave (IndexedDB) and preferences (localStorage)
 lib/hooks/              Browser hooks (resize, paste, drop, pixel ratio, shortcuts, autosave, theme)

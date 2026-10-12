@@ -128,7 +128,13 @@ describe("migrateDesign", () => {
       rotation: 0,
       frame: { kind: "none" },
     });
-    expect(migrated?.backgroundFx).toEqual({ noise: 0, blur: 0 });
+    expect(migrated?.backgroundFx).toEqual({ blur: 0 });
+  });
+
+  it("drops the removed noise setting from saved designs", () => {
+    const design = createDefaultDesign();
+    const saved = { ...design, backgroundFx: { noise: 0.4, blur: 3 } };
+    expect(migrateDesign(saved)?.backgroundFx).toEqual({ blur: 3 });
   });
 
   it("returns null for anything invalid", () => {

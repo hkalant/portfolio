@@ -80,8 +80,6 @@ test("built-in wallpapers draw without errors", async ({ page }) => {
   await expect(first).toHaveAttribute("aria-pressed", "true");
   const corner = await cornerPixel(page);
   expect(corner[3]).toBe(255);
-  await setSlider(page, "Noise", "End");
-  expect((await cornerPixel(page))[3]).toBe(255);
 });
 
 test("JPEG exports fill transparency with white", async ({ page }) => {

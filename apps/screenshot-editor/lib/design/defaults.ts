@@ -34,7 +34,7 @@ export function createDefaultDesign(): Design {
     version: 2,
     canvas: { preset: "auto" },
     background: defaultBackground(),
-    backgroundFx: { noise: 0, blur: 0 },
+    backgroundFx: { blur: 0 },
     layers: [
       { id: SHOT_LAYER_ID, kind: "shot", imageId: null, ...defaultShotStyle() },
     ],
