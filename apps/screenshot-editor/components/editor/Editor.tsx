@@ -53,7 +53,7 @@ export default function Editor() {
   // twice. The canvas keeps its place in the tree in both, so crossing the
   // breakpoint doesn't remount the stage.
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
       {desktop ? (
         <TopBar onReplace={openFilePicker} />
       ) : (

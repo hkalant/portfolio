@@ -40,21 +40,20 @@ export const SIZE_PRESET_IDS = SIZE_PRESETS.map((preset) => preset.id) as [
 export const CUSTOM_SIZE = { min: 100, max: 4000 } as const;
 
 /**
- * A custom size with `side` set to `value` and the other side following the
- * current aspect ratio. The typed side is limited so both sides stay within
- * CUSTOM_SIZE: clamping each side on its own would change the ratio.
+ * A custom size with `side` set to `value` and the other side following
+ * `aspect` (width / height; by default the current size's). The typed side is
+ * limited so both sides stay within CUSTOM_SIZE: clamping each side on its
+ * own would change the ratio.
  */
 export function lockedSize(
   current: { width: number; height: number },
   side: "width" | "height",
   value: number,
+  aspect = current.width / current.height,
 ): { width: number; height: number } {
   const { min, max } = CUSTOM_SIZE;
   // The typed side per unit of the other side.
-  const ratio =
-    side === "width"
-      ? current.width / current.height
-      : current.height / current.width;
+  const ratio = side === "width" ? aspect : 1 / aspect;
   const typed = Math.round(
     Math.min(Math.max(value, min, min * ratio), max, max * ratio),
   );

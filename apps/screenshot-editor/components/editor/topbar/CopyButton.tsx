@@ -13,9 +13,8 @@ const subscribe = () => () => {};
 export function CopyButton() {
   const image = useEditorStore(selectActiveImage);
   // As for Export: copying waits for the restore (runCopy ignores it until then).
-  const busy = useEditorStore(
-    (state) => state.loading || state.exporting || state.restoring,
-  );
+  const busy = useEditorStore((state) => state.loading || state.restoring);
+  const exporting = useEditorStore((state) => state.exporting);
   const supported = useSyncExternalStore(subscribe, canCopyImages, () => false);
   if (!supported) return null;
   return (
@@ -25,6 +24,9 @@ export function CopyButton() {
       // Straight from the click: the clipboard write must start in the gesture.
       onClick={runCopy}
       disabled={!image || busy}
+      // Busy but focusable while a copy or export runs (runCopy ignores clicks).
+      aria-disabled={exporting || undefined}
+      className="aria-disabled:opacity-50"
       aria-label="Copy image"
       title="Copy image"
     >

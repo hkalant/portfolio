@@ -1,5 +1,5 @@
 import { Slider as SliderPrimitive } from "radix-ui";
-import type * as React from "react";
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -13,8 +13,15 @@ function Slider({
   className,
   thumbLabel,
   onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root> & { thumbLabel: string }) {
+  // A touch that started off the thumb. The browser still captures it to the
+  // slider, and Radix moves the value on every captured move, so its moves
+  // and its end are cancelled too (Radix skips cancelled events).
+  const ignored = React.useRef<number | null>(null);
   return (
     <SliderPrimitive.Root
       data-slot="slider"
@@ -26,9 +33,25 @@ function Slider({
         const onThumb =
           event.target instanceof Element &&
           event.target.closest("[data-slot=slider-thumb]");
-        // Radix skips its own handling once the event is cancelled.
-        if (event.pointerType === "touch" && !onThumb) event.preventDefault();
-        else onPointerDown?.(event);
+        if (event.pointerType === "touch" && !onThumb) {
+          ignored.current = event.pointerId;
+          event.preventDefault();
+        } else onPointerDown?.(event);
+      }}
+      onPointerMove={(event) => {
+        if (event.pointerId === ignored.current) event.preventDefault();
+        else onPointerMove?.(event);
+      }}
+      onPointerUp={(event) => {
+        if (event.pointerId !== ignored.current) return onPointerUp?.(event);
+        ignored.current = null;
+        event.preventDefault();
+      }}
+      onPointerCancel={(event) => {
+        if (event.pointerId !== ignored.current)
+          return onPointerCancel?.(event);
+        ignored.current = null;
+        event.preventDefault();
       }}
       {...props}
     >

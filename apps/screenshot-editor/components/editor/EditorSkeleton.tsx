@@ -6,7 +6,7 @@
 export function EditorSkeleton() {
   return (
     <div
-      className="flex h-dvh flex-col overflow-hidden bg-background"
+      className="flex h-dvh flex-col overflow-hidden bg-background pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]"
       aria-busy="true"
       aria-label="Loading editor"
     >

@@ -163,7 +163,8 @@ export function alignedPosition(
 
 export type Alignment = "start" | "center" | "end";
 
-export const MIN_PREVIEW_SCALE = 0.05;
+// Low enough that a 4000 px canvas still fits a cramped phone workspace.
+export const MIN_PREVIEW_SCALE = 0.01;
 
 /** How much to shrink the design so it fits the workspace with a margin. Never above 1. */
 export function computePreviewScale(

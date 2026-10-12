@@ -15,6 +15,9 @@ import { DesignStage } from "./DesignStage";
 // Room kept free at the bottom of the workspace for the size readout: two
 // lines, since a capped export's note wraps in a narrow workspace.
 const READOUT_SPACE = 40;
+// Below this workspace height (a phone in landscape with a panel open) the
+// readout would crowd out the canvas, so only screen readers get it.
+const READOUT_MIN_HEIGHT = 160;
 
 type Props = {
   onUpload: () => void;
@@ -53,8 +56,9 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
     );
   }
 
+  const readoutSpace = size.height >= READOUT_MIN_HEIGHT ? READOUT_SPACE : 0;
   const scale = computePreviewScale(
-    { width: size.width, height: size.height - READOUT_SPACE },
+    { width: size.width, height: size.height - readoutSpace },
     layout.canvas,
     size.width < 480 ? 16 : 32,
   );
@@ -66,7 +70,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
       {size.width > 0 && (
         <div
           className="flex h-full items-center justify-center"
-          style={{ paddingBottom: READOUT_SPACE }}
+          style={{ paddingBottom: readoutSpace }}
         >
           <div
             {...{ [CANVAS_FOCUS_ATTRIBUTE]: "" }}
@@ -86,7 +90,10 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
         </div>
       )}
       <p
-        className="absolute inset-x-0 bottom-2 px-3 text-center text-xs/4 text-balance text-muted-foreground tabular-nums"
+        className={cn(
+          "absolute inset-x-0 bottom-2 px-3 text-center text-xs/4 text-balance text-muted-foreground tabular-nums",
+          readoutSpace === 0 && "sr-only",
+        )}
         data-testid="size-readout"
       >
         {width} × {height} · {Math.round(scale * 100)}% · exports{" "}

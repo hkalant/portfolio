@@ -81,8 +81,8 @@ export async function runExport(): Promise<void> {
  * from a click or key handler: the clipboard write has to start in the gesture.
  */
 export function runCopy(): void {
-  const { showError, showInfo } = useEditorStore.getState();
-  if (!currentTarget()) return;
+  const { showError, showInfo, exporting: busy } = useEditorStore.getState();
+  if (busy || !currentTarget()) return;
   if (!canCopyImages()) {
     showError(COPY_FAILED);
     return;

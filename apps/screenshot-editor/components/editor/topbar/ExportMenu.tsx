@@ -21,6 +21,7 @@ import {
 import { readJsonPreference, writePreference } from "@/lib/persist/preferences";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { useDesignLayout } from "@/lib/store/hooks";
+import { cn } from "@/lib/utils";
 import { LabeledSlider } from "../controls/LabeledSlider";
 import { Segmented } from "../controls/Segmented";
 
@@ -127,8 +128,11 @@ function ExportButton({ className }: { className?: string }) {
     <Button
       size="sm"
       onClick={() => void runExport()}
-      disabled={!canExport}
-      className={className}
+      // Busy but not disabled while exporting, so the button keeps keyboard
+      // focus (runExport ignores clicks until the export is done).
+      disabled={!canExport && !exporting}
+      aria-disabled={exporting || undefined}
+      className={cn("aria-disabled:opacity-50", className)}
     >
       {exporting ? (
         <LoaderCircle className="animate-spin" aria-hidden />

@@ -40,8 +40,30 @@ const dimensions = ({ width, height }: Size) => `${width} × ${height}`;
 // these options when they close.
 const useAspectLock = create<{
   locked: boolean;
-  setLocked: (locked: boolean) => void;
-}>()((set) => ({ locked: false, setLocked: (locked) => set({ locked }) }));
+  // The ratio taken when the lock went on, and the size a locked edit last
+  // produced. Recomputing the ratio from rounded sizes would let it drift.
+  aspect: number;
+  appliedTo: Size | null;
+  setLocked: (locked: boolean, size: Size) => void;
+}>()((set) => ({
+  locked: false,
+  aspect: 1,
+  appliedTo: null,
+  setLocked: (locked, size) =>
+    set({ locked, aspect: size.width / size.height, appliedTo: size }),
+}));
+
+/** The size for a locked edit, keeping the ratio the lock was turned on with. */
+function lockedEdit(size: Size, side: "width" | "height", value: number) {
+  const { aspect, appliedTo } = useAspectLock.getState();
+  // A size changed some other way (undo, a preset) brings its own ratio.
+  const same =
+    appliedTo?.width === size.width && appliedTo.height === size.height;
+  const ratio = same ? aspect : size.width / size.height;
+  const next = lockedSize(size, side, value, ratio);
+  useAspectLock.setState({ aspect: ratio, appliedTo: next });
+  return next;
+}
 
 /** The canvas size choices, as a panel (the mobile Size tab shows this). */
 export function SizeOptions({ onPick }: { onPick?: () => void }) {
@@ -122,7 +144,7 @@ function CustomSizeFields({
 }: {
   size: Size;
   locked: boolean;
-  onLockedChange: (locked: boolean) => void;
+  onLockedChange: (locked: boolean, size: Size) => void;
   onChange: (width: number, height: number) => void;
 }) {
   const id = useId();
@@ -140,7 +162,7 @@ function CustomSizeFields({
     const value = Number.parseInt(typed, 10);
     if (!Number.isFinite(value) || value <= 0) return;
     const next = locked
-      ? lockedSize(size, changed, value)
+      ? lockedEdit(size, changed, value)
       : { ...size, [changed]: value };
     onChange(next.width, next.height);
   };
@@ -176,7 +198,7 @@ function CustomSizeFields({
           aria-pressed={locked}
           aria-label="Lock aspect ratio"
           title="Lock aspect ratio"
-          onClick={() => onLockedChange(!locked)}
+          onClick={() => onLockedChange(!locked, size)}
           className={cn(
             "flex size-9 shrink-0 items-center justify-center rounded-md border text-muted-foreground outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring",
             locked && "bg-accent text-foreground",
