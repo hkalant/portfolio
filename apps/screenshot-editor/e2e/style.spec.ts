@@ -19,7 +19,7 @@ test.beforeEach(async ({ page }) => {
 
 const backgroundType = (page: Page, name: string) =>
   page
-    .getByRole("group", { name: "Background type" })
+    .getByRole("radiogroup", { name: "Background type" })
     .getByRole("radio", { name, exact: true });
 
 async function cornerPixel(page: Page) {
@@ -99,7 +99,7 @@ test("window frames add a title bar above the screenshot", async ({ page }) => {
   await openTab(page, "Frame");
   const frame = (name: string) =>
     page
-      .getByRole("group", { name: "Frame" })
+      .getByRole("radiogroup", { name: "Frame", exact: true })
       .getByRole("radio", { name, exact: true });
 
   await frame("macOS").click();

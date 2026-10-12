@@ -62,7 +62,12 @@ export function DesignStage({ image, layout, scale }: Props) {
       data-width={layout.canvas.width}
       data-height={layout.canvas.height}
       className="shadow-[0_1px_2px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.08)]"
-      style={{ width, height }}
+      // A touch on a draggable shot moves it instead of panning the page.
+      style={{
+        width,
+        height,
+        touchAction: layout.draggable ? "none" : undefined,
+      }}
     >
       <Stage
         key={pixelRatio}

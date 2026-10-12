@@ -1,4 +1,13 @@
+import { Line } from "react-konva";
+import { create } from "zustand";
 import type { Size } from "@/lib/design/layout";
+import { EXPORT_HIDDEN } from "@/lib/export/exportImage";
+import { NO_GUIDES, type CentreGuides } from "@/lib/render/snap";
+
+/** The centre lines shown while a dragged shot is snapped to them. Not part of the design. */
+export const useGuides = create<CentreGuides>()(() => ({ ...NO_GUIDES }));
+
+const GUIDE_COLOR = "#ff00c8";
 
 type Props = {
   canvas: Size;
@@ -6,9 +15,25 @@ type Props = {
   zoom: number;
 };
 
-// Placeholder from the foundation phase. The frames work draws the snap guides
-// here (named EXPORT_HIDDEN so exports leave them out).
-export function GuidesNode(props: Props) {
-  void props;
-  return null;
+export function GuidesNode({ canvas, zoom }: Props) {
+  const vertical = useGuides((state) => state.vertical);
+  const horizontal = useGuides((state) => state.horizontal);
+  const { width, height } = canvas;
+  const line = {
+    stroke: GUIDE_COLOR,
+    strokeWidth: 1 / zoom,
+    listening: false,
+    // Exports leave these out.
+    name: EXPORT_HIDDEN,
+  };
+  return (
+    <>
+      {vertical && (
+        <Line points={[width / 2, 0, width / 2, height]} {...line} />
+      )}
+      {horizontal && (
+        <Line points={[0, height / 2, width, height / 2]} {...line} />
+      )}
+    </>
+  );
 }
