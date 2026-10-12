@@ -40,7 +40,7 @@ export function MobileTabs() {
   return (
     <nav
       aria-label="Tools"
-      className="shrink-0 border-t bg-background pb-[env(safe-area-inset-bottom)]"
+      className="shrink-0 border-t bg-background pb-(--safe-area-bottom)"
     >
       <div className="flex px-1">
         {MOBILE_PANELS.map(({ id, label, icon: Icon }) => {

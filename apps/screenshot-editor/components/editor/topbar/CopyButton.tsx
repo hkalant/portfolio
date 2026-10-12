@@ -12,7 +12,10 @@ const subscribe = () => () => {};
 /** Copies the design as a PNG. Hidden where browsers can't put images on the clipboard. */
 export function CopyButton() {
   const image = useEditorStore(selectActiveImage);
-  const busy = useEditorStore((state) => state.loading || state.exporting);
+  // As for Export: copying waits for the restore (runCopy ignores it until then).
+  const busy = useEditorStore(
+    (state) => state.loading || state.exporting || state.restoring,
+  );
   const supported = useSyncExternalStore(subscribe, canCopyImages, () => false);
   if (!supported) return null;
   return (

@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
 import { EmptyState } from "../EmptyState";
 import { DesignStage } from "./DesignStage";
 
-// Room kept free at the bottom of the workspace for the size readout.
+// Room kept free at the bottom of the workspace for the size readout: two
+// lines, since a capped export's note wraps in a narrow workspace.
 const READOUT_SPACE = 40;
 
 type Props = {
@@ -85,7 +86,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
         </div>
       )}
       <p
-        className="absolute inset-x-0 bottom-3 truncate px-3 text-center text-xs text-muted-foreground tabular-nums"
+        className="absolute inset-x-0 bottom-2 px-3 text-center text-xs/4 text-balance text-muted-foreground tabular-nums"
         data-testid="size-readout"
       >
         {width} × {height} · {Math.round(scale * 100)}% · exports{" "}

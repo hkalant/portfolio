@@ -17,6 +17,8 @@ export type AutosaveStorage = {
   write: (key: string, value: unknown) => Promise<boolean>;
   remove: (key: string) => Promise<boolean>;
   keys: () => Promise<string[] | null>;
+  /** Writes entries in one go without waiting (see saveSnapshotNow). */
+  writeNow?: (entries: [string, unknown][]) => boolean;
 };
 
 type LoadImage = (
@@ -55,6 +57,32 @@ export async function saveSnapshot(
   return true;
 }
 
+/**
+ * Saves the design at once, for a page that is being hidden or closed, where
+ * saveSnapshot's first read would never get its answer. The design goes in
+ * one transaction with the images it uses that aren't in `storedIds` (those
+ * known to be saved already). Images no longer used are left for the next
+ * saveSnapshot to delete. False if this storage can't write this way.
+ */
+export function saveSnapshotNow(
+  storage: AutosaveStorage,
+  design: Design,
+  images: Record<string, LoadedImage>,
+  storedIds: ReadonlySet<string>,
+): boolean {
+  if (!storage.writeNow) return false;
+  const entries: [string, unknown][] = [];
+  for (const id of referencedImageIds(design)) {
+    const image = images[id];
+    if (!image || storedIds.has(id)) continue;
+    const record: SavedImage = { blob: image.blob, name: image.name };
+    entries.push([imageKey(id), record]);
+  }
+  const saved: SavedDesign = { design, savedAt: Date.now() };
+  entries.push([DESIGN_KEY, saved]);
+  return storage.writeNow(entries);
+}
+
 function isSavedImage(value: unknown): value is SavedImage {
   const record = value as Partial<SavedImage> | null | undefined;
   return (
@@ -80,17 +108,23 @@ export async function restoreSnapshot(
 
   const images: LoadedImage[] = [];
   const missing = new Set<string>();
-  for (const id of referencedImageIds(design)) {
-    const record = await storage.read(imageKey(id));
-    if (!isSavedImage(record)) {
-      missing.add(id);
-      continue;
+  try {
+    for (const id of referencedImageIds(design)) {
+      const record = await storage.read(imageKey(id));
+      if (!isSavedImage(record)) {
+        missing.add(id);
+        continue;
+      }
+      try {
+        images.push(await loadImage(record.blob, record.name, { id }));
+      } catch {
+        missing.add(id);
+      }
     }
-    try {
-      images.push(await loadImage(record.blob, record.name, { id }));
-    } catch {
-      missing.add(id);
-    }
+  } catch (error) {
+    // A read failed (storage stopped answering): free what was decoded.
+    for (const image of images) image.release();
+    throw error;
   }
 
   const [shot] = design.layers;

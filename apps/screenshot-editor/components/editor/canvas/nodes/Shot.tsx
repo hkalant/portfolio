@@ -119,13 +119,19 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
   const shadow = shadowProps(shot.shadow);
   const { border, frame } = shot;
   const size = { width: box.width, height: box.height };
+  const clipToOutline = (context: Konva.Context) =>
+    roundedRectPath(context, box.width, box.height, box.radius);
   const borderBox = insideStroke(size, box.radius, border.width);
+  // Clipped: once the width passes twice the radius the stroke's path has
+  // square corners, and its outer edge would leave the rounded outline.
   const borderNode = borderBox && (
-    <Rect
-      {...borderBox}
-      stroke={hexToRgba(border.color, border.opacity)}
-      listening={false}
-    />
+    <Group clipFunc={clipToOutline} listening={false}>
+      <Rect
+        {...borderBox}
+        stroke={hexToRgba(border.color, border.opacity)}
+        listening={false}
+      />
+    </Group>
   );
   const imageNode = (withShadow: boolean) => (
     <KonvaImage
@@ -201,28 +207,31 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
           {...shadow}
           listening={draggable}
         />
-        {chrome && (
-          <Group
-            clipFunc={(context) =>
-              roundedRectPath(context, box.width, box.height, box.radius)
-            }
-            listening={false}
-          >
-            <ChromeNode frame={frame} rect={chrome} unit={box.unit} />
-          </Group>
-        )}
-        {insetSize > 0 && frame.kind !== "none" && (
-          <Rect
-            x={content.x}
-            y={content.y}
-            width={content.width}
-            height={content.height}
-            cornerRadius={contentRadii(box)}
-            fill={insetColor}
-            listening={false}
-          />
-        )}
-        {imageNode(false)}
+        {/* Clipped to the outline: under a title bar the content's top
+            corners are square, and a radius taller than the bar would
+            otherwise let them stick out past the rounded window. */}
+        <Group clipFunc={clipToOutline} listening={draggable}>
+          {chrome && (
+            <ChromeNode
+              frame={frame}
+              rect={chrome}
+              unit={box.unit}
+              cornerRadius={box.radius}
+            />
+          )}
+          {insetSize > 0 && frame.kind !== "none" && (
+            <Rect
+              x={content.x}
+              y={content.y}
+              width={content.width}
+              height={content.height}
+              cornerRadius={contentRadii(box)}
+              fill={insetColor}
+              listening={false}
+            />
+          )}
+          {imageNode(false)}
+        </Group>
       </>
     );
   }

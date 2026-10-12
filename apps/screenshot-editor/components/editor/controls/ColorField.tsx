@@ -44,7 +44,14 @@ export function ColorField({
   return (
     <div className={cn("flex items-center justify-between gap-3", className)}>
       {!hideLabel && <span className="text-sm font-medium">{label}</span>}
-      <Popover onOpenChange={(open) => !open && sealHistory()}>
+      <Popover
+        onOpenChange={(open) => {
+          // Escape closes without a blur, so text typed and abandoned is
+          // dropped here instead of reappearing (and applying) next time.
+          setDraft(null);
+          if (!open) sealHistory();
+        }}
+      >
         <PopoverTrigger
           aria-label={`${label}: ${value}`}
           title={label}

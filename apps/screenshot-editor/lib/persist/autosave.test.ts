@@ -8,6 +8,7 @@ import {
   imageKey,
   restoreSnapshot,
   saveSnapshot,
+  saveSnapshotNow,
   type AutosaveStorage,
 } from "./autosave";
 
@@ -22,6 +23,10 @@ function memoryStorage(failWrites = false) {
     }),
     remove: async (key: string) => map.delete(key),
     keys: async () => [...map.keys()],
+    writeNow: vi.fn((entries: [string, unknown][]) => {
+      for (const [key, value] of entries) map.set(key, value);
+      return true;
+    }),
   };
   return { map, storage };
 }
@@ -87,7 +92,53 @@ describe("saveSnapshot", () => {
   });
 });
 
+describe("saveSnapshotNow", () => {
+  it("writes the design with only the images not known to be stored, in one go", () => {
+    const { map, storage } = memoryStorage();
+    const images = { a: fakeImage("a"), bg: fakeImage("bg") };
+    expect(
+      saveSnapshotNow(storage, designWith("a", "bg"), images, new Set(["a"])),
+    ).toBe(true);
+    expect(storage.writeNow).toHaveBeenCalledTimes(1);
+    expect([...map.keys()].sort()).toEqual([DESIGN_KEY, imageKey("bg")]);
+    expect(map.get(DESIGN_KEY)).toMatchObject({
+      design: designWith("a", "bg"),
+    });
+  });
+
+  it("can't save without an immediate write", () => {
+    const { storage } = memoryStorage();
+    delete storage.writeNow;
+    expect(saveSnapshotNow(storage, designWith(null), {}, new Set())).toBe(
+      false,
+    );
+  });
+});
+
 describe("restoreSnapshot", () => {
+  it("frees decoded images when storage stops answering part-way", async () => {
+    const { map, storage } = memoryStorage();
+    map.set(DESIGN_KEY, { design: designWith("a", "bg"), savedAt: 1 });
+    map.set(imageKey("a"), { blob: new Blob(["a"]), name: "a.png" });
+    const decoded: LoadedImage[] = [];
+    const failingRead: AutosaveStorage = {
+      ...storage,
+      read: async <T>(key: string) => {
+        if (key === imageKey("bg")) throw new Error("timed out");
+        return storage.read<T>(key);
+      },
+    };
+    await expect(
+      restoreSnapshot(failingRead, async (blob, name, options) => {
+        const image = { ...fakeImage(options.id), release: vi.fn() };
+        decoded.push(image);
+        return image;
+      }),
+    ).rejects.toThrow("timed out");
+    expect(decoded).toHaveLength(1);
+    expect(decoded[0].release).toHaveBeenCalled();
+  });
+
   it("restores the design and decodes its images with their ids", async () => {
     const { storage } = memoryStorage();
     const design = designWith("a", "bg");

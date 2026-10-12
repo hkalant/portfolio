@@ -10,6 +10,7 @@ import {
   selectActiveImage,
   selectBackgroundImage,
   selectCanRedo,
+  selectLastBackgroundUpload,
   selectCanUndo,
   selectShot,
   useEditorStore,
@@ -156,6 +157,22 @@ describe("editor store: style", () => {
     expect(selectBackgroundImage(state())).toBe(upload);
     state().setTransparent();
     expect(state().design.background).toEqual({ kind: "transparent" });
+  });
+
+  it("keeps the last uploaded background available after switching away", () => {
+    expect(selectLastBackgroundUpload(state())).toBeNull();
+    const first = fakeImage("bg-1");
+    const second = fakeImage("bg-2");
+    state().setBackgroundImage(first);
+    later();
+    state().setBackgroundImage(second);
+    later();
+    state().setWallpaper("glow");
+    expect(selectBackgroundImage(state())).toBeNull();
+    expect(selectLastBackgroundUpload(state())).toBe(second);
+    later();
+    state().setTransparent();
+    expect(selectLastBackgroundUpload(state())).toBe(second);
   });
 
   it("copies shadow presets, ignores the empty toggle value, and marks edits custom", () => {

@@ -3,6 +3,7 @@
 import { ChevronDown, Link2, Link2Off, Maximize2 } from "lucide-react";
 import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui";
 import { useId, useState } from "react";
+import { create } from "zustand";
 import {
   Popover,
   PopoverContent,
@@ -14,6 +15,7 @@ import {
   aspectLabel,
   CUSTOM_SIZE,
   getSizePreset,
+  lockedSize,
   SIZE_PRESETS,
 } from "@/lib/design/sizes";
 import { useEditorStore } from "@/lib/store/editor";
@@ -34,14 +36,20 @@ const itemClass =
 
 const dimensions = ({ width, height }: Size) => `${width} × ${height}`;
 
+// The aspect lock outlives the menu and the mobile panel, which unmount
+// these options when they close.
+const useAspectLock = create<{
+  locked: boolean;
+  setLocked: (locked: boolean) => void;
+}>()((set) => ({ locked: false, setLocked: (locked) => set({ locked }) }));
+
 /** The canvas size choices, as a panel (the mobile Size tab shows this). */
 export function SizeOptions({ onPick }: { onPick?: () => void }) {
   const canvas = useEditorStore((state) => state.design.canvas);
   const setCanvasPreset = useEditorStore((state) => state.setCanvasPreset);
   const setCustomSize = useEditorStore((state) => state.setCustomSize);
   const layout = useDesignLayout();
-  // Kept here: the fields below remount whenever the size changes.
-  const [locked, setLocked] = useState(false);
+  const { locked, setLocked } = useAspectLock();
 
   const onValueChange = (value: string) => {
     // Radix reports "" when the active item is clicked again.
@@ -131,14 +139,10 @@ function CustomSizeFields({
     if (typed === undefined) return;
     const value = Number.parseInt(typed, 10);
     if (!Number.isFinite(value) || value <= 0) return;
-    const ratio = size.width / size.height;
-    let width = changed === "width" ? value : size.width;
-    let height = changed === "height" ? value : size.height;
-    if (locked) {
-      if (changed === "width") height = Math.round(width / ratio);
-      else width = Math.round(height * ratio);
-    }
-    onChange(width, height);
+    const next = locked
+      ? lockedSize(size, changed, value)
+      : { ...size, [changed]: value };
+    onChange(next.width, next.height);
   };
 
   const field = (name: "width" | "height", label: string) => (

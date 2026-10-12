@@ -3,6 +3,7 @@ import {
   aspectLabel,
   getSizePreset,
   isSizePresetId,
+  lockedSize,
   SIZE_PRESETS,
 } from "./sizes";
 
@@ -31,5 +32,42 @@ describe("size presets", () => {
     expect(aspectLabel(1200, 627)).toBe("1.91:1");
     expect(aspectLabel(1270, 760)).toBe("1.67:1");
     expect(aspectLabel(760, 1270)).toBe("1:1.67");
+  });
+});
+
+describe("lockedSize", () => {
+  const wide = { width: 1600, height: 900 };
+
+  it("follows the ratio from the typed side", () => {
+    expect(lockedSize(wide, "width", 800)).toEqual({ width: 800, height: 450 });
+    expect(lockedSize(wide, "height", 450)).toEqual({
+      width: 800,
+      height: 450,
+    });
+  });
+
+  it("limits the typed side so the ratio survives the size limits", () => {
+    expect(lockedSize(wide, "width", 100)).toEqual({ width: 178, height: 100 });
+    expect(lockedSize(wide, "height", 3000)).toEqual({
+      width: 4000,
+      height: 2250,
+    });
+    const story = { width: 1080, height: 1920 };
+    expect(lockedSize(story, "width", 3000)).toEqual({
+      width: 2250,
+      height: 4000,
+    });
+    expect(lockedSize(story, "height", 50)).toEqual({
+      width: 100,
+      height: 178,
+    });
+  });
+
+  it("keeps an extreme ratio at its only possible size", () => {
+    const strip = { width: 4000, height: 100 };
+    expect(lockedSize(strip, "width", 500)).toEqual({
+      width: 4000,
+      height: 100,
+    });
   });
 });

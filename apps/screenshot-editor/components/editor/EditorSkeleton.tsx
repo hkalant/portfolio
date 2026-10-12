@@ -18,7 +18,7 @@ export function EditorSkeleton() {
           Loading editor…
         </div>
       </div>
-      <div className="h-[calc(3.5rem+env(safe-area-inset-bottom))] shrink-0 border-t md:hidden" />
+      <div className="h-[calc(3.5rem+var(--safe-area-bottom))] shrink-0 border-t md:hidden" />
     </div>
   );
 }

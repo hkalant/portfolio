@@ -43,10 +43,12 @@ export function LabeledSlider({
         step={step}
         disabled={disabled}
         onValueChange={([next]) => onChange(next)}
-        // One drag is one undo step, however slow, and the next drag is another.
+        // One drag is one undo step, however slow, and the next drag is
+        // another. Arrow-key steps are not sealed: quick ones merge by key,
+        // so holding an arrow is one step too.
         onPointerDown={beginGesture}
         onPointerUp={sealHistory}
-        onValueCommit={sealHistory}
+        onPointerCancel={sealHistory}
       />
     </div>
   );

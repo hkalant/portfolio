@@ -192,16 +192,27 @@ export type ChromeLayout = {
   separator: Box;
 };
 
+/**
+ * How far a rounded corner of `radius` reaches in from the side, `y` px below
+ * the top. Title-bar controls move in by this much to stay clear of it.
+ */
+export function cornerClearance(radius: number, y: number): number {
+  const dy = radius - Math.max(0, y);
+  if (!(radius > 0) || dy <= 0) return 0;
+  return radius - Math.sqrt(radius * radius - dy * dy);
+}
+
 function rowOfDots(
   barHeight: number,
   unit: number,
   spec: { radius: number; gap: number; left: number },
   colors: readonly string[],
+  edge = 0,
 ): Dot[] {
   const radius = spec.radius * unit;
   const pitch = 2 * radius + spec.gap * unit;
   return colors.map((color, i) => ({
-    x: spec.left * unit + radius + i * pitch,
+    x: edge + spec.left * unit + radius + i * pitch,
     y: barHeight / 2,
     radius,
     color,
@@ -213,16 +224,21 @@ export function trafficLightsEnd(unit: number): number {
   return (LIGHTS.left + 6 * LIGHTS.radius + 2 * LIGHTS.gap) * unit;
 }
 
-export function trafficLights(barHeight: number, unit: number): Dot[] {
-  return rowOfDots(barHeight, unit, LIGHTS, TRAFFIC_LIGHT_COLORS);
+export function trafficLights(
+  barHeight: number,
+  unit: number,
+  edge = 0,
+): Dot[] {
+  return rowOfDots(barHeight, unit, LIGHTS, TRAFFIC_LIGHT_COLORS, edge);
 }
 
 /** The address pill, centred and about 60 % wide, clear of the traffic lights. */
 export function addressPill(
   bar: Size,
   unit: number,
+  edge = 0,
 ): (Box & { cornerRadius: number }) | null {
-  const side = trafficLightsEnd(unit) + 16 * unit;
+  const side = edge + trafficLightsEnd(unit) + 16 * unit;
   const width = Math.min(bar.width * 0.6, bar.width - 2 * side);
   if (width < 48 * unit) return null;
   const height = Math.max(0, Math.min(28 * unit, bar.height - 12 * unit));
@@ -235,13 +251,22 @@ export function addressPill(
   };
 }
 
-/** The title-bar parts of a frame, or null for frames without one. */
+/**
+ * The title-bar parts of a frame, or null for frames without one.
+ * `cornerRadius` is the window's outer radius: the controls keep clear of it.
+ */
 export function chromeLayout(
   kind: FrameKind,
   bar: Size,
   unit: number,
   theme: FrameTheme,
+  cornerRadius = 0,
 ): ChromeLayout | null {
+  // Measured at the top of the tallest control, the traffic lights.
+  const edge = cornerClearance(
+    cornerRadius,
+    bar.height / 2 - LIGHTS.radius * unit,
+  );
   const hairline = unit;
   const separator = {
     x: 0,
@@ -254,10 +279,10 @@ export function chromeLayout(
 
   switch (kind) {
     case "macos": {
-      const margin = trafficLightsEnd(unit) + 12 * unit;
+      const margin = edge + trafficLightsEnd(unit) + 12 * unit;
       return {
         ...empty,
-        dots: trafficLights(bar.height, unit),
+        dots: trafficLights(bar.height, unit, edge),
         // Symmetric margins keep the title centred on the window.
         title: fitText({
           x: margin,
@@ -273,25 +298,25 @@ export function chromeLayout(
     case "browser":
       return {
         ...empty,
-        dots: trafficLights(bar.height, unit),
-        address: addressPill(bar, unit),
+        dots: trafficLights(bar.height, unit, edge),
+        address: addressPill(bar, unit, edge),
         separator,
       };
     case "windows": {
       const half = 5 * unit;
       const centreY = bar.height / 2;
       const centreX = (index: number) =>
-        bar.width - (index + 0.5) * CAPTION * unit;
+        bar.width - edge - (index + 0.5) * CAPTION * unit;
       const close = centreX(0);
       const maximise = centreX(1);
       const minimise = centreX(2);
-      const left = 14 * unit;
+      const left = edge + 14 * unit;
       return {
         ...empty,
         title: fitText({
           x: left,
           y: 0,
-          width: bar.width - 3 * CAPTION * unit - left - 8 * unit,
+          width: bar.width - edge - 3 * CAPTION * unit - left - 8 * unit,
           height: bar.height,
           align: "left",
           fontSize: 12 * unit,
@@ -321,6 +346,7 @@ export function chromeLayout(
           unit,
           DOTS,
           Array<string>(3).fill(framePalette(theme).dot),
+          edge,
         ),
         separator,
       };

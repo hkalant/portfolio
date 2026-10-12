@@ -742,5 +742,23 @@ export const selectBackgroundImage = (
   return state.images[background.source.imageId] ?? null;
 };
 
+/**
+ * The newest uploaded background still in memory: the current one, or one
+ * from the undo history, so the user can go back to it after trying others.
+ */
+export const selectLastBackgroundUpload = (
+  state: EditorState,
+): LoadedImage | null => {
+  const designs = [...state.past, state.design];
+  for (let i = designs.length - 1; i >= 0; i -= 1) {
+    const { background } = designs[i];
+    if (background.kind !== "image" || background.source.type !== "upload")
+      continue;
+    const image = state.images[background.source.imageId];
+    if (image) return image;
+  }
+  return null;
+};
+
 export const selectCanUndo = (state: EditorState) => state.past.length > 0;
 export const selectCanRedo = (state: EditorState) => state.future.length > 0;

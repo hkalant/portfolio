@@ -76,10 +76,19 @@ test("canvas size presets and custom sizes", async ({ page }) => {
   await width.press("Enter");
   await expectDesignSize(page, 1000, 630);
 
-  await page.getByRole("button", { name: "Lock aspect ratio" }).click();
+  const lock = page.getByRole("button", { name: "Lock aspect ratio" });
+  await lock.click();
   await width.fill("2000");
   await width.press("Enter");
   await expectDesignSize(page, 2000, 1260);
+
+  // The lock survives closing the menu, and keeps the ratio at the limits.
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: /^Canvas size/ }).click();
+  await expect(lock).toHaveAttribute("aria-pressed", "true");
+  await width.fill("100");
+  await width.press("Enter");
+  await expectDesignSize(page, 159, 100);
 
   await page.getByRole("radio", { name: /^Auto/ }).click();
   await expectDesignSize(page, 1328, 878);
@@ -151,6 +160,33 @@ test("the design is restored after a reload", async ({ page }) => {
   const { data } = await exportImage(page);
   const [center] = await samplePixels(page, data, [[1200, 750]]);
   expect(isRed(center)).toBe(true);
+});
+
+test("an edit made just before a reload is kept", async ({ page }) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await expect
+    .poll(async () => {
+      const design = (await savedDesign(page)) as {
+        layers?: { imageId?: string | null }[];
+      } | null;
+      return design?.layers?.[0]?.imageId ?? null;
+    })
+    .toEqual(expect.any(String));
+
+  await openTab(page, "Style");
+  const padding = page.getByRole("slider", { name: "Padding" });
+  await padding.focus();
+  for (let i = 0; i < 5; i += 1) await padding.press("ArrowRight");
+  await expectDesignSize(page, 1368, 918);
+  // Quick arrow-key steps on a slider are one undo step.
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expectDesignSize(page, 1328, 878);
+  await page.getByRole("button", { name: "Redo" }).click();
+  await expectDesignSize(page, 1368, 918);
+
+  // Straight away, well inside the save delay.
+  await page.reload();
+  await expectDesignSize(page, 1368, 918);
 });
 
 test("exports JPEG and WebP at other scales and remembers the choice", async ({

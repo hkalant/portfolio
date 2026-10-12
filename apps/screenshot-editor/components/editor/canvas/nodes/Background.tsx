@@ -300,6 +300,15 @@ function Noise({ canvas, amount }: { canvas: Size; amount: number }) {
       fillPatternImage={tile as unknown as HTMLImageElement}
       fillPatternRepeat="repeat"
       opacity={noiseOpacity(amount)}
+      // Enlarged by an export's pixel ratio, a smoothed tile turns soft and
+      // faint. Nearest sampling keeps the grain as strong as in the preview.
+      sceneFunc={(context, shape) => {
+        context._context.imageSmoothingEnabled = false;
+        context.beginPath();
+        context.rect(0, 0, shape.width(), shape.height());
+        context.closePath();
+        context.fillStrokeShape(shape);
+      }}
       listening={false}
     />
   );

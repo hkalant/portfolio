@@ -72,7 +72,7 @@ export function SwatchGrid({
               className={cn(
                 "bg-cover bg-center ring-offset-2 ring-offset-background transition-[box-shadow,transform] outline-none hover:scale-[1.04] focus-visible:ring-[3px] focus-visible:ring-ring",
                 shape === "dot"
-                  ? "aspect-square rounded-full border border-black/10"
+                  ? "aspect-square rounded-full border border-black/10 dark:border-white/15"
                   : cn(aspect, "rounded-lg"),
                 selected && "ring-2 ring-primary",
               )}

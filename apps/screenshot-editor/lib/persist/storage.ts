@@ -1,4 +1,12 @@
-import { createStore, del, get, keys, set, type UseStore } from "idb-keyval";
+import {
+  createStore,
+  del,
+  get,
+  keys,
+  promisifyRequest,
+  set,
+  type UseStore,
+} from "idb-keyval";
 
 // IndexedDB is per origin, and every app on <workspace>.bitbucket.io shares
 // one, so the database has the app's own name.
@@ -64,5 +72,29 @@ export async function listKeys(): Promise<string[] | null> {
     return (await keys(db)).map(String);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Writes every entry in one transaction and commits it straight away, for a
+ * page that is being hidden or closed: started from that event, it still
+ * lands when the page is gone before any reply could arrive (an ordinary
+ * write waits for the page's next task, which an unload never runs). Best
+ * effort: false only when there is no storage to write to.
+ */
+export function writeNow(entries: [string, unknown][]): boolean {
+  const db = getStore();
+  if (!db) return false;
+  try {
+    db("readwrite", (objectStore) => {
+      for (const [key, value] of entries) objectStore.put(value, key);
+      const { transaction } = objectStore;
+      // Older browsers lack commit(); their transaction commits on its own.
+      transaction.commit?.();
+      return promisifyRequest(transaction);
+    }).catch(() => {});
+    return true;
+  } catch {
+    return false;
   }
 }

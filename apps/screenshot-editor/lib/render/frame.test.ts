@@ -8,6 +8,7 @@ import {
   addressPill,
   chromeLayout,
   contentRadii,
+  cornerClearance,
   framePalette,
   hasShadow,
   insideStroke,
@@ -233,6 +234,43 @@ describe("chromeLayout", () => {
     expect(
       chromeLayout("macos", { width: 150, height: 34 }, 1, "light")?.title,
     ).toBeNull();
+  });
+
+  it("keeps every control inside a corner radius taller than the bar", () => {
+    const radius = 64;
+    const small = { width: 600, height: 20 };
+    // Inside the rounded outline: within radius - r of the corner's centre.
+    const inside = (x: number, y: number, r: number) => {
+      const cx = Math.min(Math.max(x, radius), small.width - radius);
+      return Math.hypot(x - cx, y - radius) <= radius - r + 1e-9 || y >= radius;
+    };
+    for (const kind of ["macos", "browser", "minimal"] as const) {
+      const parts = chromeLayout(kind, small, 0.6, "light", radius)!;
+      expect(parts.dots).toHaveLength(3);
+      for (const dot of parts.dots)
+        expect(inside(dot.x, dot.y, dot.radius)).toBe(true);
+    }
+    const win = chromeLayout("windows", small, 0.6, "light", radius)!;
+    const [x1, y1, x2, y2] = win.captions!.close[0];
+    expect(inside(x2, Math.min(y1, y2), 0)).toBe(true);
+    expect(inside(x1, Math.min(y1, y2), 0)).toBe(true);
+    // A small radius changes nothing.
+    expect(chromeLayout("macos", bar, 1, "light", 10)).toEqual(
+      chromeLayout("macos", bar, 1, "light"),
+    );
+  });
+});
+
+describe("cornerClearance", () => {
+  it("is how far the corner curve reaches in at a height", () => {
+    expect(cornerClearance(0, 0)).toBe(0);
+    expect(cornerClearance(20, 0)).toBe(20);
+    expect(cornerClearance(20, 20)).toBe(0);
+    expect(cornerClearance(20, 30)).toBe(0);
+    expect(cornerClearance(20, -5)).toBe(20);
+    expect(cornerClearance(64, 4)).toBeCloseTo(
+      64 - Math.sqrt(64 ** 2 - 60 ** 2),
+    );
   });
 });
 

@@ -25,7 +25,7 @@ import { meshCss } from "@/lib/render/mesh";
 import { imageThumbnail, wallpaperThumbnail } from "@/lib/render/wallpaper";
 import {
   selectActiveImage,
-  selectBackgroundImage,
+  selectLastBackgroundUpload,
   useEditorStore,
 } from "@/lib/store/editor";
 import {
@@ -85,9 +85,13 @@ function chooseKind(choice: BackgroundChoice) {
     case "mesh":
       state.applyMeshPreset(DEFAULT_MESH.id);
       break;
-    case "image":
-      state.setWallpaper(DEFAULT_WALLPAPER.id);
+    case "image": {
+      // Back to the last uploaded background, if there is one.
+      const upload = selectLastBackgroundUpload(state);
+      if (upload) state.setBackgroundImage(upload);
+      else state.setWallpaper(DEFAULT_WALLPAPER.id);
       break;
+    }
     case "fromImage":
       state.setFromImage();
       break;
@@ -237,7 +241,11 @@ function ImageControls({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const setWallpaper = useEditorStore((state) => state.setWallpaper);
-  const upload = useEditorStore(selectBackgroundImage);
+  const setBackgroundImage = useEditorStore(
+    (state) => state.setBackgroundImage,
+  );
+  // Stays in the grid after picking a wallpaper, so it can be picked again.
+  const upload = useEditorStore(selectLastBackgroundUpload);
   const wallpaperSwatches = useMemo(
     () =>
       WALLPAPERS.map((wallpaper): Swatch => {
@@ -289,6 +297,8 @@ function ImageControls({
         aspect="aspect-[4/3]"
         onSelect={(id) => {
           if (id !== UPLOAD_TILE_ID) setWallpaper(id);
+          else if (upload && background.source.type !== "upload")
+            setBackgroundImage(upload);
         }}
       />
       <Button

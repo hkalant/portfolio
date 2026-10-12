@@ -89,12 +89,14 @@ type Props = {
   rect: Box;
   /** layout.shot.unit: the size of one detail unit in canvas px. */
   unit: number;
+  /** The window's outer corner radius, which the controls keep clear of. */
+  cornerRadius: number;
 };
 
 /** The title or address bar of a window frame. */
-export function ChromeNode({ frame, rect, unit }: Props) {
+export function ChromeNode({ frame, rect, unit, cornerRadius }: Props) {
   const fontReady = useFrameFont();
-  const parts = chromeLayout(frame.kind, rect, unit, frame.theme);
+  const parts = chromeLayout(frame.kind, rect, unit, frame.theme, cornerRadius);
   if (!parts) return null;
   const palette = framePalette(frame.theme);
   const { address, captions, title } = parts;

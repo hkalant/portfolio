@@ -5,6 +5,9 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  /* Space the tab bar keeps clear of a phone's home indicator. A host page
+     that already pads its frame by the inset sets this to 0. */
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --muted: oklch(0.97 0 0);

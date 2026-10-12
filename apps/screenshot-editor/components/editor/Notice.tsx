@@ -31,7 +31,9 @@ export function Notice() {
       data-testid="notice"
       data-kind={notice.kind}
       className={cn(
-        "fixed left-1/2 z-50 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-3 rounded-lg border bg-background py-2.5 pr-2 pl-4 text-sm shadow-lg",
+        // Centred between 16px gutters. (Centring with left-1/2 would cap
+        // the width at half the screen and wrap short messages on phones.)
+        "fixed inset-x-4 z-50 mx-auto flex w-fit items-center gap-3 rounded-lg border bg-background py-2.5 pr-2 pl-4 text-sm shadow-lg",
         // 56px tab bar plus a 16px gap.
         desktop
           ? "bottom-6"

@@ -46,7 +46,12 @@ export function MobilePanel() {
           <X aria-hidden />
         </Button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      {/* Keyed by tab, so each tab opens at its top rather than at the
+          previous tab's scroll position. */}
+      <div
+        key={id}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+      >
         <div className="mx-auto w-full max-w-lg p-4">
           <Component />
         </div>
