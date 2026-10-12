@@ -82,7 +82,7 @@ export async function openTab(
   page: Page,
   name: "Background" | "Frame" | "Style",
 ) {
-  await page.getByRole("tab", { name }).click();
+  await page.getByRole("combobox", { name: "Tool" }).selectOption(name);
 }
 
 /** Picks a canvas size from the top bar's size menu. */

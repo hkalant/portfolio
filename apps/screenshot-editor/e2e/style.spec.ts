@@ -69,7 +69,7 @@ test("solid, transparent and uploaded backgrounds are what gets exported", async
   expect((await cornerPixel(page))[3]).toBe(255);
 
   await backgroundType(page, "Gradient").click();
-  await expect(page.getByRole("button", { name: "Lavender" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Brookes" })).toBeVisible();
 });
 
 test("built-in wallpapers draw without errors", async ({ page }) => {
@@ -124,7 +124,7 @@ test("window frames add a title bar above the screenshot", async ({ page }) => {
   await expectDesignSize(page, 1128, 776);
   await page.getByLabel("Address").fill("example.com");
   await frame("Glass").click();
-  await expectDesignSize(page, 1160, 760);
+  await expectDesignSize(page, 1148, 748);
   await frame("None").click();
   await expectDesignSize(page, 1128, 728);
 });

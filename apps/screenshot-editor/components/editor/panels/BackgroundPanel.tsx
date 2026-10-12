@@ -2,11 +2,7 @@ import { ImageUp } from "lucide-react";
 import { useId, useMemo, useRef, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { defaultBackground } from "@/lib/design/defaults";
-import {
-  GRADIENT_PRESETS,
-  toCssLinearGradient,
-  toCssRadialGradient,
-} from "@/lib/design/gradients";
+import { GRADIENT_PRESETS, toCssLinearGradient } from "@/lib/design/gradients";
 import { ANGLE, BLUR } from "@/lib/design/limits";
 import { DEFAULT_MESH, MESH_PRESETS } from "@/lib/design/meshes";
 import type {
@@ -35,7 +31,6 @@ import {
 } from "../controls/BackgroundKindPicker";
 import { ColorField } from "../controls/ColorField";
 import { LabeledSlider } from "../controls/LabeledSlider";
-import { Segmented } from "../controls/Segmented";
 import { SwatchGrid, type Swatch } from "../controls/SwatchGrid";
 
 const SOLID_COLORS: readonly { name: string; color: string }[] = [
@@ -51,10 +46,11 @@ const SOLID_COLORS: readonly { name: string; color: string }[] = [
   { name: "Pink", color: "#ec4899" },
 ];
 
-const GRADIENT_STYLES = [
-  { value: "linear", label: "Linear" },
-  { value: "radial", label: "Radial" },
-] as const;
+const GRADIENT_SWATCHES: readonly Swatch[] = GRADIENT_PRESETS.map((preset) => ({
+  id: preset.id,
+  name: preset.name,
+  style: { backgroundImage: toCssLinearGradient(preset.angle, preset.stops) },
+}));
 
 const MESH_SWATCHES: readonly Swatch[] = MESH_PRESETS.map((preset) => ({
   id: preset.id,
@@ -141,23 +137,8 @@ function GradientControls({
   const applyGradientPreset = useEditorStore(
     (state) => state.applyGradientPreset,
   );
-  const setGradientKind = useEditorStore((state) => state.setGradientKind);
   const setGradientAngle = useEditorStore((state) => state.setGradientAngle);
   const setGradientStop = useEditorStore((state) => state.setGradientStop);
-  const radial = background.kind === "radial";
-  const swatches = useMemo(
-    () =>
-      GRADIENT_PRESETS.map((preset) => ({
-        id: preset.id,
-        name: preset.name,
-        style: {
-          backgroundImage: radial
-            ? toCssRadialGradient(preset.stops)
-            : toCssLinearGradient(preset.angle, preset.stops),
-        },
-      })),
-    [radial],
-  );
   const { stops } = background;
   const last = stops.length - 1;
 
@@ -165,15 +146,9 @@ function GradientControls({
     <>
       <SwatchGrid
         label="Presets"
-        swatches={swatches}
+        swatches={GRADIENT_SWATCHES}
         selectedId={background.presetId}
         onSelect={applyGradientPreset}
-      />
-      <Segmented
-        label="Gradient style"
-        value={background.kind}
-        options={GRADIENT_STYLES}
-        onChange={setGradientKind}
       />
       {background.kind === "linear" && (
         <LabeledSlider

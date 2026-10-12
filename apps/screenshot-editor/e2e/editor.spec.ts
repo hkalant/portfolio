@@ -4,6 +4,7 @@ import {
   expectColor,
   expectDesignSize,
   exportPng,
+  openTab,
   RED,
   setSlider,
   stage,
@@ -52,7 +53,7 @@ test("uploads a screenshot and exports it at 2x with rounded corners", async ({
   expect(isRed(background)).toBe(false);
   expect(isRed(roundedCorner)).toBe(false);
 
-  await page.getByRole("tab", { name: "Style" }).click();
+  await openTab(page, "Style");
   const radius = await setSlider(page, "Corner radius", "Home");
   await expect(radius).toHaveAttribute("aria-valuenow", "0");
   const square = await exportPng(page);
@@ -62,7 +63,7 @@ test("uploads a screenshot and exports it at 2x with rounded corners", async ({
 
 test("padding changes the canvas size", async ({ page }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
-  await page.getByRole("tab", { name: "Style" }).click();
+  await openTab(page, "Style");
   const padding = await setSlider(page, "Padding", "End");
   await expect(padding).toHaveAttribute("aria-valuenow", "200");
   await expectDesignSize(page, 1600, 1150);
@@ -72,16 +73,16 @@ test("padding changes the canvas size", async ({ page }) => {
 
 test("the chosen gradient and angle are what gets drawn", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
-  const lavender = page.getByRole("button", { name: "Lavender" });
-  await expect(lavender).toHaveAttribute("aria-pressed", "true");
+  const brookes = page.getByRole("button", { name: "Brookes" });
+  await expect(brookes).toHaveAttribute("aria-pressed", "true");
 
   // At 135deg the top-left corner gets the first colour stop.
-  const [lavenderCorner] = await samplePixels(
+  const [brookesCorner] = await samplePixels(
     page,
     (await exportPng(page)).png,
     [[4, 4]],
   );
-  expectColor(lavenderCorner, "#c471f5");
+  expectColor(brookesCorner, "#424a52");
 
   // At 0deg the gradient runs bottom to top: the top gets the last stop.
   const angle = await setSlider(page, "Angle", "Home");
@@ -92,14 +93,14 @@ test("the chosen gradient and angle are what gets drawn", async ({ page }) => {
     [4, 4],
     [4, height - 5],
   ]);
-  expectColor(top, "#fa71cd");
-  expectColor(bottom, "#c471f5");
+  expectColor(top, "#d10373");
+  expectColor(bottom, "#424a52");
 
   // A preset brings its own colours and angle.
   const mist = page.getByRole("button", { name: "Mist" });
   await mist.click();
   await expect(mist).toHaveAttribute("aria-pressed", "true");
-  await expect(lavender).toHaveAttribute("aria-pressed", "false");
+  await expect(brookes).toHaveAttribute("aria-pressed", "false");
   const [mistCorner] = await samplePixels(page, (await exportPng(page)).png, [
     [4, 4],
   ]);
@@ -111,7 +112,7 @@ test("the shadow is drawn below a screenshot with rounded corners", async ({
 }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
   await page.getByRole("button", { name: "Mist" }).click(); // light background, so the shadow shows
-  await page.getByRole("tab", { name: "Style" }).click();
+  await openTab(page, "Style");
 
   // 20 export px below the bottom edge of the image, horizontally centred.
   const probe: [number, number] = [1328, (64 + 750) * 2 + 20];
@@ -145,7 +146,7 @@ test("clicking the active shadow option again keeps it selected", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(400, 300, RED));
-  await page.getByRole("tab", { name: "Style" }).click();
+  await openTab(page, "Style");
   const floating = page.getByRole("radio", { name: "Floating" });
   await floating.click();
   await floating.click();
@@ -164,7 +165,7 @@ test("the sample image loads", async ({ page }) => {
 
 test("replacing the image keeps the style", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
-  await page.getByRole("tab", { name: "Style" }).click();
+  await openTab(page, "Style");
   await setSlider(page, "Padding", "Home");
   await expectDesignSize(page, 400, 300);
   await chooseFile(

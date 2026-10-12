@@ -11,7 +11,7 @@ describe("frameMetrics", () => {
     });
     expect(frameMetrics("glass", 1000)).toMatchObject({
       chromeTop: 0,
-      ring: 16,
+      ring: 10,
     });
     expect(frameMetrics("browser", 1000)).toMatchObject({
       chromeTop: 48,

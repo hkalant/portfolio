@@ -23,7 +23,7 @@ const BASE: Record<FrameKind, { chromeTop: number; ring: number }> = {
   browser: { chromeTop: 48, ring: 0 },
   windows: { chromeTop: 34, ring: 0 },
   minimal: { chromeTop: 22, ring: 0 },
-  glass: { chromeTop: 0, ring: 16 },
+  glass: { chromeTop: 0, ring: 10 },
 };
 
 export type FrameMetrics = {

@@ -12,7 +12,6 @@ export function EditorSkeleton() {
     >
       <div className="h-13 shrink-0 border-b md:h-14 md:rounded-xl md:border-b-0 md:glass" />
       <div className="flex min-h-0 flex-1 md:gap-2">
-        <div className="hidden w-20 shrink-0 rounded-xl md:block md:glass" />
         <div className="hidden w-72 shrink-0 rounded-xl md:block md:glass lg:w-80" />
         <div className="flex min-w-0 flex-1 items-center justify-center bg-workspace text-sm text-muted-foreground md:bg-transparent">
           Loading editor…

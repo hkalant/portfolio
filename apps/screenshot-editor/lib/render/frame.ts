@@ -33,6 +33,8 @@ export type FramePalette = {
   dot: string;
   /** Glass ring. */
   ringFill: string;
+  /** The ring's edge: bright at the top, fading to `ringStroke` at the bottom. */
+  ringHighlight: string;
   ringStroke: string;
 };
 
@@ -47,7 +49,8 @@ const PALETTES: Record<FrameTheme, FramePalette> = {
     pillText: "#55555c",
     dot: "#cfcfd4",
     ringFill: "rgba(255, 255, 255, 0.28)",
-    ringStroke: "rgba(255, 255, 255, 0.6)",
+    ringHighlight: "rgba(255, 255, 255, 0.95)",
+    ringStroke: "rgba(255, 255, 255, 0.45)",
   },
   dark: {
     body: "#1c1c1f",
@@ -59,7 +62,8 @@ const PALETTES: Record<FrameTheme, FramePalette> = {
     pillText: "#c4c4ca",
     dot: "#55555c",
     ringFill: "rgba(0, 0, 0, 0.3)",
-    ringStroke: "rgba(255, 255, 255, 0.16)",
+    ringHighlight: "rgba(255, 255, 255, 0.45)",
+    ringStroke: "rgba(255, 255, 255, 0.12)",
   },
 };
 

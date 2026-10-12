@@ -130,9 +130,9 @@ describe("computeLayout on an auto canvas", () => {
       { width: 1000, height: 600 },
       design({ frame: frame("glass"), radius: 24 }),
     );
-    expect(shot.width).toBe(1032);
-    expect(shot.image).toEqual({ x: 16, y: 16, width: 1000, height: 600 });
-    expect(shot.imageRadii).toEqual([8, 8, 8, 8]);
+    expect(shot.width).toBe(1020);
+    expect(shot.image).toEqual({ x: 10, y: 10, width: 1000, height: 600 });
+    expect(shot.imageRadii).toEqual([14, 14, 14, 14]);
   });
 
   it("sizes frame chrome by the screenshot's width", () => {

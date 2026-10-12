@@ -157,7 +157,7 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
     body = imageNode(true);
   } else if (frame.kind === "glass") {
     const ring = framePalette(frame.theme);
-    const hairline = insideStroke(size, box.radius, box.unit);
+    const hairline = insideStroke(size, box.radius, 1.5 * box.unit);
     const { content } = box;
     body = (
       <>
@@ -170,7 +170,19 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
           listening={draggable}
         />
         {hairline && (
-          <Rect {...hairline} stroke={ring.ringStroke} listening={false} />
+          // A specular edge, lit from above.
+          <Rect
+            {...hairline}
+            strokeLinearGradientStartPoint={{ x: 0, y: 0 }}
+            strokeLinearGradientEndPoint={{ x: 0, y: hairline.height }}
+            strokeLinearGradientColorStops={[
+              0,
+              ring.ringHighlight,
+              1,
+              ring.ringStroke,
+            ]}
+            listening={false}
+          />
         )}
         {insetSize > 0 ? (
           <>

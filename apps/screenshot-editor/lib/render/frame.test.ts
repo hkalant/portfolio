@@ -107,8 +107,8 @@ describe("contentRadii", () => {
         frame: frame("glass"),
       }),
     ).shot;
-    // Ring 16 at unit 1.
-    expect(contentRadii(glass)).toEqual([24, 24, 24, 24]);
+    // Ring 10 at unit 1.
+    expect(contentRadii(glass)).toEqual([30, 30, 30, 30]);
     const small = { ...glass, radius: 8 };
     expect(contentRadii(small)).toEqual([0, 0, 0, 0]);
   });

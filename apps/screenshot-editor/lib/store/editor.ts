@@ -100,7 +100,6 @@ export type EditorState = {
   setBackground: (background: Background) => void;
   setBackgroundImage: (image: LoadedImage) => void;
   applyGradientPreset: (id: string) => void;
-  setGradientKind: (kind: "linear" | "radial") => void;
   setGradientAngle: (degrees: number) => void;
   setGradientStop: (index: number, color: string) => void;
   setSolidColor: (color: string) => void;
@@ -335,44 +334,17 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     applyGradientPreset: (id) => {
       const preset = getGradientPreset(id);
       if (!preset) return;
-      commit((design) => {
-        const stops = preset.stops.map((stop) => ({ ...stop }));
-        const background: Background =
-          design.background.kind === "radial"
-            ? { kind: "radial", presetId: preset.id, stops }
-            : {
-                kind: "linear",
-                presetId: preset.id,
-                angle: preset.angle,
-                stops,
-              };
-        return { ...design, background };
-      });
+      // Always linear: an older design with a radial gradient turns linear here.
+      commit((design) => ({
+        ...design,
+        background: {
+          kind: "linear",
+          presetId: preset.id,
+          angle: preset.angle,
+          stops: preset.stops.map((stop) => ({ ...stop })),
+        },
+      }));
     },
-
-    setGradientKind: (kind) =>
-      commit((design) => {
-        const current = design.background;
-        const fromGradient =
-          current.kind === "linear" || current.kind === "radial";
-        if (current.kind === kind) return null;
-        const stops = fromGradient
-          ? current.stops.map((stop) => ({ ...stop }))
-          : DEFAULT_GRADIENT.stops.map((stop) => ({ ...stop }));
-        const presetId = fromGradient ? current.presetId : DEFAULT_GRADIENT.id;
-        const background: Background =
-          kind === "radial"
-            ? { kind: "radial", presetId, stops }
-            : {
-                kind: "linear",
-                presetId,
-                angle:
-                  getGradientPreset(presetId ?? "")?.angle ??
-                  DEFAULT_GRADIENT.angle,
-                stops,
-              };
-        return { ...design, background };
-      }),
 
     setGradientAngle: (degrees) =>
       commit((design) => {

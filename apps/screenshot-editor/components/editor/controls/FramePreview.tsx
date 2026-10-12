@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 // Small HTML pictures of each frame for the frame picker. They use the same
 // colours as the canvas, which never changes with the interface theme.
 
-const BACKDROP = "linear-gradient(135deg, #c471f5 0%, #fa71cd 100%)";
+const BACKDROP = "linear-gradient(135deg, #424a52 0%, #d10373 100%)";
 const SCREEN = "#f8fafc";
 const SCREEN_LINE = "#cbd5e1";
 
@@ -124,13 +124,13 @@ export function FramePreview({ kind, theme, className }: Props) {
   } else if (kind === "glass") {
     picture = (
       <div
-        className="rounded-[5px] p-[4px] shadow-sm"
+        className="rounded-[5px] p-[2.5px] shadow-sm"
         style={{
           backgroundColor: palette.ringFill,
-          boxShadow: `inset 0 0 0 1px ${palette.ringStroke}`,
+          boxShadow: `inset 0 1px 0 ${palette.ringHighlight}, inset 0 0 0 1px ${palette.ringStroke}`,
         }}
       >
-        <Screen className="rounded-[2px] shadow-md" />
+        <Screen className="rounded-[3px] shadow-md" />
       </div>
     );
   } else {

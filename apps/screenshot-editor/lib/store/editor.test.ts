@@ -90,7 +90,7 @@ describe("editor store: style", () => {
     expect(state().past).toEqual([]);
   });
 
-  it("applies gradient presets as copies and keeps the gradient kind", () => {
+  it("applies gradient presets as linear copies", () => {
     state().applyGradientPreset("mist");
     const mist = getGradientPreset("mist");
     expect(state().design.background).toEqual({
@@ -98,18 +98,6 @@ describe("editor store: style", () => {
       presetId: "mist",
       angle: mist?.angle,
       stops: mist?.stops,
-    });
-    state().setGradientKind("radial");
-    state().applyGradientPreset("ocean");
-    expect(state().design.background).toMatchObject({
-      kind: "radial",
-      presetId: "ocean",
-    });
-    state().setGradientKind("linear");
-    expect(state().design.background).toMatchObject({
-      kind: "linear",
-      presetId: "ocean",
-      angle: 135,
     });
   });
 

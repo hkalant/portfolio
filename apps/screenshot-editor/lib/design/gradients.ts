@@ -24,6 +24,7 @@ const twoStop = (
 
 /** The first preset is the default background. */
 export const GRADIENT_PRESETS: readonly GradientPreset[] = [
+  twoStop("brookes", "Brookes", "#424a52", "#d10373"),
   twoStop("lavender", "Lavender", "#c471f5", "#fa71cd"),
   twoStop("sunset", "Sunset", "#ff7e5f", "#feb47b"),
   twoStop("ocean", "Ocean", "#2193b0", "#6dd5ed"),
