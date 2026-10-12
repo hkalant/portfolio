@@ -60,21 +60,20 @@ export async function saveSnapshot(
 /**
  * Saves the design at once, for a page that is being hidden or closed, where
  * saveSnapshot's first read would never get its answer. The design goes in
- * one transaction with the images it uses that aren't in `storedIds` (those
- * known to be saved already). Images no longer used are left for the next
+ * one transaction with every image it uses: another tab may have deleted
+ * any of them since this tab last saved. Images no longer used are left for the next
  * saveSnapshot to delete. False if this storage can't write this way.
  */
 export function saveSnapshotNow(
   storage: AutosaveStorage,
   design: Design,
   images: Record<string, LoadedImage>,
-  storedIds: ReadonlySet<string>,
 ): boolean {
   if (!storage.writeNow) return false;
   const entries: [string, unknown][] = [];
   for (const id of referencedImageIds(design)) {
     const image = images[id];
-    if (!image || storedIds.has(id)) continue;
+    if (!image) continue;
     const record: SavedImage = { blob: image.blob, name: image.name };
     entries.push([imageKey(id), record]);
   }

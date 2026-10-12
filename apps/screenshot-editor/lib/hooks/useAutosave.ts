@@ -1,7 +1,6 @@
 "use client";
 
 import { useLayoutEffect } from "react";
-import { referencedImageIds } from "@/lib/design/refs";
 import { loadImageFromBlob } from "@/lib/image/load";
 import {
   restoreSnapshot,
@@ -37,9 +36,6 @@ const storage: AutosaveStorage = {
 // blocked or full storage) or storage stops answering.
 let storageWorks = true;
 
-// Images this page knows are saved, so a save on hide skips them.
-const storedImageIds = new Set<string>();
-
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = window.setTimeout(
@@ -72,9 +68,12 @@ const restoreStorage: AutosaveStorage = {
 
 // The store outlives the editor page (client-side navigation keeps it), so
 // the saved design is read once per page load, never over a live design.
-let restoration: Promise<void> | null = null;
+// It resolves to the revision whose design matches storage: the restored
+// design, or the untouched default when nothing was saved. -1 when the user
+// changed something during the restore, so that change gets saved.
+let restoration: Promise<number> | null = null;
 
-function restoreOnce(): Promise<void> {
+function restoreOnce(): Promise<number> {
   restoration ??= (async () => {
     const store = useEditorStore;
     const startRevision = store.getState().revision;
@@ -84,12 +83,13 @@ function restoreOnce(): Promise<void> {
       loadImageFromBlob,
     ).catch(() => null);
     const state = store.getState();
+    const untouched = state.revision === startRevision;
     // Keep what the user did while the restore was running.
-    if (restored && state.revision === startRevision) {
+    if (restored && untouched)
       state.loadDesign(restored.design, restored.images);
-      for (const image of restored.images) storedImageIds.add(image.id);
-    } else for (const image of restored?.images ?? []) image.release();
+    else for (const image of restored?.images ?? []) image.release();
     store.getState().setRestoring(false);
+    return untouched ? store.getState().revision : -1;
   })();
   return restoration;
 }
@@ -125,11 +125,9 @@ export function useAutosave() {
       }
       saving = true;
       const { design, images, revision } = store.getState();
-      if (await saveSnapshot(storage, design, images)) {
+      if (await saveSnapshot(storage, design, images))
         writtenRevision = Math.max(writtenRevision, revision);
-        storedImageIds.clear();
-        for (const id of referencedImageIds(design)) storedImageIds.add(id);
-      } else storageWorks = false;
+      else storageWorks = false;
       saving = false;
       if (pendingSave) {
         pendingSave = false;
@@ -155,27 +153,26 @@ export function useAutosave() {
     const flush = () => {
       const { design, images, revision } = store.getState();
       if (!storageWorks || revision <= writtenRevision) return;
-      if (saveSnapshotNow(storage, design, images, storedImageIds)) {
-        writtenRevision = revision;
-        for (const id of referencedImageIds(design)) storedImageIds.add(id);
-      }
+      if (saveSnapshotNow(storage, design, images)) writtenRevision = revision;
       void save();
     };
     const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") flush();
     };
 
-    void restoreOnce().then(() => {
+    void restoreOnce().then((cleanRevision) => {
       if (disposed) return;
+      // A tab that only shows what storage holds never writes it back, so it
+      // can't overwrite another tab's newer work when it is hidden or closed.
+      writtenRevision = cleanRevision;
       let revision = store.getState().revision;
       unsubscribe = store.subscribe((next) => {
         if (next.revision === revision) return;
         revision = next.revision;
         schedule();
       });
-      // Save what is there now: a restored design, a change made during the
-      // restore, or the live design when the editor opens again.
-      if (revision > 0) schedule();
+      // Save a change made during the restore, or since the editor last closed.
+      if (revision > writtenRevision) schedule();
       document.addEventListener("visibilitychange", onVisibilityChange);
       window.addEventListener("pagehide", flush);
     });

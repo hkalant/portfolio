@@ -189,6 +189,30 @@ test("an edit made just before a reload is kept", async ({ page }) => {
   await expectDesignSize(page, 1368, 918);
 });
 
+test("a tab left untouched doesn't overwrite another tab's work", async ({
+  page,
+}) => {
+  const savedImageId = async () => {
+    const design = (await savedDesign(page)) as {
+      layers?: { imageId?: string | null }[];
+    } | null;
+    return design?.layers?.[0]?.imageId ?? null;
+  };
+  // A second tab opens while nothing is saved, and is never touched.
+  const other = await page.context().newPage();
+  await other.goto("./editor/");
+  await expect(other.getByTestId("empty-state")).toBeVisible();
+
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await expect.poll(savedImageId).toEqual(expect.any(String));
+
+  // Hiding or closing it must not write its empty design over that work.
+  await other.close({ runBeforeUnload: true });
+  await page.reload();
+  await expectDesignSize(page, 1328, 878);
+  expect(await savedImageId()).toEqual(expect.any(String));
+});
+
 test("exports JPEG and WebP at other scales and remembers the choice", async ({
   page,
 }) => {

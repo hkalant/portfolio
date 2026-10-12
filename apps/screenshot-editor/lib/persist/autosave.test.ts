@@ -93,14 +93,16 @@ describe("saveSnapshot", () => {
 });
 
 describe("saveSnapshotNow", () => {
-  it("writes the design with only the images not known to be stored, in one go", () => {
+  it("writes the design with every image it uses, in one go", () => {
     const { map, storage } = memoryStorage();
     const images = { a: fakeImage("a"), bg: fakeImage("bg") };
-    expect(
-      saveSnapshotNow(storage, designWith("a", "bg"), images, new Set(["a"])),
-    ).toBe(true);
+    expect(saveSnapshotNow(storage, designWith("a", "bg"), images)).toBe(true);
     expect(storage.writeNow).toHaveBeenCalledTimes(1);
-    expect([...map.keys()].sort()).toEqual([DESIGN_KEY, imageKey("bg")]);
+    expect([...map.keys()].sort()).toEqual([
+      DESIGN_KEY,
+      imageKey("a"),
+      imageKey("bg"),
+    ]);
     expect(map.get(DESIGN_KEY)).toMatchObject({
       design: designWith("a", "bg"),
     });
@@ -109,9 +111,7 @@ describe("saveSnapshotNow", () => {
   it("can't save without an immediate write", () => {
     const { storage } = memoryStorage();
     delete storage.writeNow;
-    expect(saveSnapshotNow(storage, designWith(null), {}, new Set())).toBe(
-      false,
-    );
+    expect(saveSnapshotNow(storage, designWith(null), {})).toBe(false);
   });
 });
 
