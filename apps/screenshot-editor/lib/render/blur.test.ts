@@ -81,7 +81,9 @@ describe("blurRgba", () => {
     // And it is actually smoother.
     let jumps = 0;
     for (let x = 1; x < width; x += 1)
-      jumps += Math.abs(pixel(data, width, x, 5)[0] - pixel(data, width, x - 1, 5)[0]);
+      jumps += Math.abs(
+        pixel(data, width, x, 5)[0] - pixel(data, width, x - 1, 5)[0],
+      );
     expect(jumps / (width - 1)).toBeLessThan(20);
   });
 
@@ -91,8 +93,12 @@ describe("blurRgba", () => {
       x < 20 ? [0, 0, 0, 255] : [255, 255, 255, 255],
     );
     blurRgba(data, width, 3, [2, 2, 3]);
-    const row = Array.from({ length: width }, (_, x) => pixel(data, width, x, 1)[0]);
-    for (let x = 1; x < width; x += 1) expect(row[x]).toBeGreaterThanOrEqual(row[x - 1]);
+    const row = Array.from(
+      { length: width },
+      (_, x) => pixel(data, width, x, 1)[0],
+    );
+    for (let x = 1; x < width; x += 1)
+      expect(row[x]).toBeGreaterThanOrEqual(row[x - 1]);
     expect(row[0]).toBe(0);
     expect(row[width - 1]).toBe(255);
     expect(row[19]).toBeGreaterThan(64);
@@ -165,9 +171,9 @@ describe("shrinkSteps", () => {
   });
 
   it("has one step when the size doesn't change", () => {
-    expect(shrinkSteps({ width: 64, height: 48 }, { width: 64, height: 48 })).toEqual([
-      { width: 64, height: 48 },
-    ]);
+    expect(
+      shrinkSteps({ width: 64, height: 48 }, { width: 64, height: 48 }),
+    ).toEqual([{ width: 64, height: 48 }]);
   });
 });
 

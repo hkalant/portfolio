@@ -51,7 +51,7 @@ export function Notice() {
         type="button"
         onClick={dismissNotice}
         aria-label="Dismiss"
-        className="rounded-md p-1 text-muted-foreground outline-none hover:bg-accent max-md:p-2.5 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring"
+        className="rounded-md p-1 text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring max-md:p-2.5"
       >
         <X className="size-4" aria-hidden />
       </button>

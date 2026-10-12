@@ -3,8 +3,12 @@ import { coverCrop, coverScale, sourceSize } from "./cover";
 
 describe("coverScale", () => {
   it("scales so the source covers the target on both axes", () => {
-    expect(coverScale({ width: 400, height: 300 }, { width: 200, height: 200 })).toBeCloseTo(2 / 3);
-    expect(coverScale({ width: 100, height: 100 }, { width: 300, height: 150 })).toBe(3);
+    expect(
+      coverScale({ width: 400, height: 300 }, { width: 200, height: 200 }),
+    ).toBeCloseTo(2 / 3);
+    expect(
+      coverScale({ width: 100, height: 100 }, { width: 300, height: 150 }),
+    ).toBe(3);
   });
 });
 
@@ -35,7 +39,10 @@ describe("coverCrop", () => {
       { width: 100, height: 4000 },
     ]) {
       const crop = coverCrop(source, target);
-      expect(crop.width / crop.height).toBeCloseTo(target.width / target.height, 6);
+      expect(crop.width / crop.height).toBeCloseTo(
+        target.width / target.height,
+        6,
+      );
       expect(crop.x).toBeGreaterThanOrEqual(0);
       expect(crop.y).toBeGreaterThanOrEqual(0);
       expect(crop.x + crop.width).toBeCloseTo(source.width - crop.x, 6);
@@ -48,7 +55,12 @@ describe("coverCrop", () => {
 
 describe("sourceSize", () => {
   it("reads natural size from images and width and height from canvases", () => {
-    const image = { naturalWidth: 640, naturalHeight: 480, width: 10, height: 10 };
+    const image = {
+      naturalWidth: 640,
+      naturalHeight: 480,
+      width: 10,
+      height: 10,
+    };
     const canvas = { width: 320, height: 200 };
     expect(sourceSize(image as unknown as HTMLImageElement)).toEqual({
       width: 640,

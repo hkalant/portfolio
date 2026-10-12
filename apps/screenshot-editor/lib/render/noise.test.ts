@@ -33,7 +33,9 @@ describe("noiseTileValues", () => {
     expect(tile).toHaveLength(NOISE_TILE_SIZE * NOISE_TILE_SIZE);
     expect(noiseTileValues()).toEqual(tile);
     // Pinned: a different tile would change every exported image with noise.
-    expect([...tile.slice(0, 8)]).toEqual([188, 40, 150, 34, 226, 176, 138, 140]);
+    expect([...tile.slice(0, 8)]).toEqual([
+      188, 40, 150, 34, 226, 176, 138, 140,
+    ]);
     let hash = 0;
     for (const value of tile) hash = (Math.imul(hash, 31) + value) >>> 0;
     expect(hash).toBe(3153737164);

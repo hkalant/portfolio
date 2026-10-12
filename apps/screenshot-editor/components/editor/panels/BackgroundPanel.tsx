@@ -100,6 +100,7 @@ function chooseKind(choice: BackgroundChoice) {
 export function BackgroundPanel() {
   const background = useEditorStore((state) => state.design.background);
   const fx = useEditorStore((state) => state.design.backgroundFx);
+  const applyMeshPreset = useEditorStore((state) => state.applyMeshPreset);
   const choice = backgroundChoice(background.kind);
 
   return (
@@ -116,7 +117,7 @@ export function BackgroundPanel() {
           label="Presets"
           swatches={MESH_SWATCHES}
           selectedId={background.presetId}
-          onSelect={(id) => useEditorStore.getState().applyMeshPreset(id)}
+          onSelect={applyMeshPreset}
         />
       )}
       {background.kind === "image" && <ImageControls background={background} />}
