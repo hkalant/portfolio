@@ -1,7 +1,7 @@
 export const EXPORT_FORMATS = ["png", "jpeg", "webp"] as const;
 export type ExportFormat = (typeof EXPORT_FORMATS)[number];
 
-export const EXPORT_SCALES = [1, 2, 3, 4] as const;
+export const EXPORT_SCALES = [1, 2, 3] as const;
 export type ExportScale = (typeof EXPORT_SCALES)[number];
 
 export type ExportOptions = {

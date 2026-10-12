@@ -6,7 +6,7 @@
 export function EditorSkeleton() {
   return (
     <div
-      className="flex h-dvh flex-col overflow-hidden bg-background pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] md:gap-2 md:py-2 md:pr-[max(0.5rem,env(safe-area-inset-right))] md:pl-[max(0.5rem,env(safe-area-inset-left))] md:ambient"
+      className="flex h-dvh flex-col overflow-hidden bg-background pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] font-sans text-foreground scheme-light md:gap-2 md:py-2 md:pr-[max(0.5rem,env(safe-area-inset-right))] md:pl-[max(0.5rem,env(safe-area-inset-left))] md:ambient dark:scheme-dark"
       aria-busy="true"
       aria-label="Loading editor"
     >

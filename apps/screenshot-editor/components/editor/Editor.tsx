@@ -55,7 +55,9 @@ export default function Editor() {
   return (
     <div
       className={cn(
-        "flex h-dvh flex-col overflow-hidden",
+        // Colour, font and scheme here as well as on body, which a host page
+        // (such as the artifact preview) may style over.
+        "flex h-dvh flex-col overflow-hidden font-sans text-foreground scheme-light dark:scheme-dark",
         // Desktop: glass panes floating over the brand wash, kept clear of
         // side notches.
         desktop

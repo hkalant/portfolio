@@ -303,8 +303,8 @@ test("very large exports are capped to what the browser allows", async ({
   await page.keyboard.press("Escape");
   await expectDesignSize(page, 4000, 4000);
   await page.getByRole("button", { name: "Export options" }).click();
-  await page.getByRole("radio", { name: "4×" }).click();
-  // 16,000 px a side is over the 16,777,216 px area limit: 4096 x 4096 instead.
+  await page.getByRole("radio", { name: "3×" }).click();
+  // 12,000 px a side is over the 16,777,216 px area limit: 4096 x 4096 instead.
   await expect(page.getByTestId("export-size")).toContainText("4096 × 4096 px");
   await expect(page.getByTestId("size-readout")).toContainText("largest size");
 });

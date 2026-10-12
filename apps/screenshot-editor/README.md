@@ -10,7 +10,7 @@ This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 - **Backgrounds:** gradients (linear or radial), solid colours, mesh gradients, built-in wallpapers, your own image (with blur), a gradient made from the screenshot's colours, or transparent.
 - **Frames:** macOS window, browser, Windows window, minimal bar and glass, each light or dark, with a window title or address.
 - **Style:** padding, scale, position (drag, arrow keys or a 9-point grid), rotation, corner radius, shadow presets or a custom shadow, border, and an inset around the screenshot.
-- **Export:** PNG, JPEG or WebP at 1× to 4×, or copy a PNG to the clipboard. Exports larger than the browser allows are reduced to the largest size it can make, and the editor says so.
+- **Export:** PNG, JPEG or WebP at 1×, 2× or 3×, or copy a PNG to the clipboard. Exports larger than the browser allows are reduced to the largest size it can make, and the editor says so.
 - **Undo and redo**, and **autosave**: the last design and its images are kept in this browser (IndexedDB) and restored on the next visit.
 - **Phones and tablets:** a mobile layout with the settings in a panel under the canvas.
 - **Light and dark** interface, following the system setting unless you pick one.
@@ -161,7 +161,7 @@ e2e/                    Playwright tests
 
 - **Rendering.** The canvas uses Konva. Without a frame or inset, the screenshot is one Konva `Image` with `cornerRadius` and shadow properties; Konva draws the rounded image into a buffer first, so the shadow follows the corners (and the outline of a transparent PNG). This relies on Konva internals, which is why `konva` is pinned exactly and an e2e test checks the pixels.
 - **Export.** The export renders the layer at its true size times the chosen scale, whatever the on-screen zoom, so a 1328 × 878 design exports at 2× as 2656 × 1756. Browsers limit canvases (Safari to 16,777,216 pixels in area, all to 16,384 px a side); larger exports are scaled down to fit.
-- **Large images.** Images over 50 megapixels or 50 MB are refused. Images longer than 3200 px on a side are downscaled when loaded. Screenshots are shown at most 1600 px long in the design, so 3× and 4× exports scale them up.
+- **Large images.** Images over 50 megapixels or 50 MB are refused. Images longer than 3200 px on a side are downscaled when loaded. Screenshots are shown at most 1600 px long in the design, so 3× exports scale them up.
 - **Storage.** Autosave uses an IndexedDB database named `screenshot-editor`, and preferences use localStorage keys starting with `screenshot-editor:`, because every app on the same `bitbucket.io` site shares one browser origin. Private windows or blocked storage just turn autosave off.
 - **WebP.** Browsers that can't encode WebP (some Safari versions) show the option disabled.
 - **Playwright** is pinned to 1.56.1 to match the Chromium build preinstalled in the cloud sandbox the app was built in. CI installs its own browsers, so upgrading only needs that sandbox to follow.

@@ -21,7 +21,7 @@ const FEATURES = [
 
 export default function HomePage() {
   return (
-    <div className="min-h-dvh ambient">
+    <div className="min-h-dvh font-sans text-foreground scheme-light ambient dark:scheme-dark">
       <main className="mx-auto flex min-h-dvh max-w-3xl flex-col justify-center gap-10 px-6 py-16">
         <div className="flex items-center gap-3 font-semibold">
           <Logo className="size-8" />
