@@ -184,7 +184,7 @@ function CustomSizeFields({
         onKeyDown={(event) => {
           if (event.key === "Enter") commit(name);
         }}
-        className="h-9 w-full min-w-0 rounded-md border border-input bg-background px-2 text-sm tabular-nums outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="h-9 w-full min-w-0 rounded-full border border-input bg-background/70 px-2 text-sm tabular-nums outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
       />
     </label>
   );
@@ -200,7 +200,7 @@ function CustomSizeFields({
           title="Lock aspect ratio"
           onClick={() => onLockedChange(!locked, size)}
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-md border text-muted-foreground outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",
+            "flex size-9 shrink-0 items-center justify-center rounded-full border text-muted-foreground outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",
             locked && "bg-accent text-foreground",
           )}
         >
@@ -231,7 +231,7 @@ export function SizeMenu() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label={`Canvas size: ${label}${size ? `, ${dimensions(size)}` : ""}`}
-        className="flex h-8 items-center gap-2 rounded-md px-2.5 text-sm outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring data-[state=open]:bg-accent"
+        className="flex h-8 items-center gap-2 rounded-full px-3 text-sm outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring data-[state=open]:bg-accent"
       >
         <Maximize2 className="size-4 text-muted-foreground" aria-hidden />
         <span className="max-w-36 truncate">{label}</span>

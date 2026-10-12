@@ -15,24 +15,24 @@ export function ToolRail() {
       value={activePanel}
       onValueChange={(value) => setActivePanel(value as PanelId)}
       orientation="vertical"
-      className="flex min-h-0 shrink-0"
+      className="flex min-h-0 shrink-0 gap-2"
     >
       <Tabs.List
         aria-label="Tools"
-        className="flex w-20 flex-col items-center gap-1 border-r bg-background py-3"
+        className="flex w-20 flex-col items-center gap-1 rounded-xl glass py-2"
       >
         {PANELS.map(({ id, label, icon: Icon }) => (
           <Tabs.Trigger
             key={id}
             value={id}
-            className="flex w-16 flex-col items-center gap-1 rounded-md py-2 text-[11px] text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring data-[state=active]:bg-selected data-[state=active]:font-semibold data-[state=active]:text-selected-foreground"
+            className="flex w-16 flex-col items-center gap-1 rounded-lg py-2 text-[11px] text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring data-[state=active]:bg-selected data-[state=active]:font-semibold data-[state=active]:text-selected-foreground data-[state=active]:sheen"
           >
             <Icon className="size-5" aria-hidden />
             {label}
           </Tabs.Trigger>
         ))}
       </Tabs.List>
-      <div className="w-72 overflow-y-auto border-r bg-background lg:w-80">
+      <div className="w-72 overflow-y-auto rounded-xl glass lg:w-80">
         {PANELS.map(({ id, label, Component }) => (
           <Tabs.Content
             key={id}

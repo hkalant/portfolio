@@ -19,11 +19,11 @@ export function TopBar({ onReplace }: Props) {
   const loading = useEditorStore((state) => state.loading);
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-3 lg:gap-3 lg:px-4">
+    <header className="flex h-14 shrink-0 items-center gap-2 rounded-xl glass px-3 lg:gap-3 lg:px-4">
       <Link
         href="/"
         aria-label="Screenshot Editor home"
-        className="flex items-center gap-2 rounded-md font-semibold outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="flex items-center gap-2 rounded-sm font-semibold outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Logo className="size-6" />
         <span className="hidden flex-col leading-tight xl:flex">

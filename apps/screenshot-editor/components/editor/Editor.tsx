@@ -53,16 +53,30 @@ export default function Editor() {
   // twice. The canvas keeps its place in the tree in both, so crossing the
   // breakpoint doesn't remount the stage.
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
+    <div
+      className={cn(
+        "flex h-dvh flex-col overflow-hidden",
+        // Desktop: glass panes floating over the brand wash, kept clear of
+        // side notches.
+        desktop
+          ? "gap-2 py-2 pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] ambient"
+          : "bg-background pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]",
+      )}
+    >
       {desktop ? (
         <TopBar onReplace={openFilePicker} />
       ) : (
         <MobileBar onReplace={openFilePicker} />
       )}
-      <div className={cn("flex min-h-0 flex-1", !desktop && "flex-col")}>
+      <div
+        className={cn("flex min-h-0 flex-1", desktop ? "gap-2" : "flex-col")}
+      >
         {desktop && <ToolRail />}
         <main
-          className="relative min-h-0 min-w-0 flex-1 bg-workspace"
+          className={cn(
+            "relative min-h-0 min-w-0 flex-1",
+            !desktop && "bg-workspace",
+          )}
           aria-label="Canvas"
         >
           <CanvasViewport onUpload={openFilePicker} onSample={loadSample} />

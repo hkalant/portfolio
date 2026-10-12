@@ -21,40 +21,42 @@ const FEATURES = [
 
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col justify-center gap-10 px-6 py-16">
-      <div className="flex items-center gap-3 font-semibold">
-        <Logo className="size-8" />
-        <span className="flex flex-col leading-tight">
-          Screenshot Editor
-          <span className="font-brand text-sm font-normal text-muted-foreground">
-            Oxford Brookes University
+    <div className="min-h-dvh ambient">
+      <main className="mx-auto flex min-h-dvh max-w-3xl flex-col justify-center gap-10 px-6 py-16">
+        <div className="flex items-center gap-3 font-semibold">
+          <Logo className="size-8" />
+          <span className="flex flex-col leading-tight">
+            Screenshot Editor
+            <span className="font-brand text-sm font-normal text-muted-foreground">
+              Oxford Brookes University
+            </span>
           </span>
-        </span>
-      </div>
-      <div className="space-y-4">
-        <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-          Make your screenshots look good.
-        </h1>
-        <p className="max-w-xl text-lg text-pretty text-muted-foreground">
-          Drop in a screenshot, add a gradient background, padding, rounded
-          corners and a shadow, then export a PNG ready for social posts, docs
-          and slides.
-        </p>
-      </div>
-      <div>
-        <Link href="/editor/" className={buttonVariants({ size: "lg" })}>
-          Open editor
-          <ArrowRight aria-hidden />
-        </Link>
-      </div>
-      <ul className="grid gap-x-8 gap-y-5 border-t-2 border-primary pt-8 sm:grid-cols-2">
-        {FEATURES.map((feature) => (
-          <li key={feature.title}>
-            <p className="font-semibold">{feature.title}</p>
-            <p className="text-sm text-muted-foreground">{feature.text}</p>
-          </li>
-        ))}
-      </ul>
-    </main>
+        </div>
+        <div className="space-y-4">
+          <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+            Make your screenshots look good.
+          </h1>
+          <p className="max-w-xl text-lg text-pretty text-muted-foreground">
+            Drop in a screenshot, add a gradient background, padding, rounded
+            corners and a shadow, then export a PNG ready for social posts, docs
+            and slides.
+          </p>
+        </div>
+        <div>
+          <Link href="/editor/" className={buttonVariants({ size: "lg" })}>
+            Open editor
+            <ArrowRight aria-hidden />
+          </Link>
+        </div>
+        <ul className="grid gap-x-8 gap-y-5 rounded-xl border-t-4 border-primary glass p-6 sm:grid-cols-2 sm:p-8">
+          {FEATURES.map((feature) => (
+            <li key={feature.title}>
+              <p className="font-semibold">{feature.title}</p>
+              <p className="text-sm text-muted-foreground">{feature.text}</p>
+            </li>
+          ))}
+        </ul>
+      </main>
+    </div>
   );
 }

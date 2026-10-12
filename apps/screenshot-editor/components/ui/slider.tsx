@@ -67,7 +67,7 @@ function Slider({
       <SliderPrimitive.Thumb
         data-slot="slider-thumb"
         aria-label={thumbLabel}
-        className="relative block size-4 shrink-0 touch-none rounded-full border-2 border-foreground bg-background transition-[box-shadow] outline-none after:absolute after:-inset-3 after:rounded-full after:content-[''] hover:ring-4 hover:ring-ring/40 focus-visible:ring-4 focus-visible:ring-ring"
+        className="relative block h-5 w-7 shrink-0 touch-none rounded-full border-2 border-foreground bg-background shadow-[0_2px_6px_rgb(0_0_0/0.2)] transition-[box-shadow] outline-none after:absolute after:-inset-3 after:rounded-full after:content-[''] hover:ring-4 hover:ring-ring/40 focus-visible:ring-4 focus-visible:ring-ring"
       />
     </SliderPrimitive.Root>
   );
