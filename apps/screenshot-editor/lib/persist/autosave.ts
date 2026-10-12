@@ -9,7 +9,35 @@ const IMAGE_PREFIX = "image:";
 export const imageKey = (id: string) => `${IMAGE_PREFIX}${id}`;
 
 export type SavedDesign = { design: unknown; savedAt: number };
-export type SavedImage = { blob: Blob; name: string };
+/**
+ * An image as stored: its bytes, because WebKit in private browsing can't
+ * store a Blob in IndexedDB (the write fails, and with it the design).
+ * Records saved earlier hold the Blob itself, and still restore.
+ */
+export type SavedImage =
+  | { bytes: ArrayBuffer; type: string; name: string }
+  | { blob: Blob; name: string };
+
+// Bytes already read from an image's Blob, so the unload save (which can't
+// wait to read them) can still store bytes.
+const imageBytes = new WeakMap<Blob, ArrayBuffer>();
+
+async function imageRecord(image: LoadedImage): Promise<SavedImage> {
+  let bytes = imageBytes.get(image.blob);
+  if (!bytes) {
+    bytes = await image.blob.arrayBuffer();
+    imageBytes.set(image.blob, bytes);
+  }
+  return { bytes, type: image.blob.type, name: image.name };
+}
+
+/** The record without waiting: bytes if they were read before, else the Blob. */
+function imageRecordNow(image: LoadedImage): SavedImage {
+  const bytes = imageBytes.get(image.blob);
+  return bytes
+    ? { bytes, type: image.blob.type, name: image.name }
+    : { blob: image.blob, name: image.name };
+}
 
 /** The storage calls autosave needs; lib/persist/storage.ts in the app, a Map in tests. */
 export type AutosaveStorage = {
@@ -44,8 +72,8 @@ export async function saveSnapshot(
   for (const id of ids) {
     const image = images[id];
     if (stored.has(imageKey(id)) || !image) continue;
-    const record: SavedImage = { blob: image.blob, name: image.name };
-    if (!(await storage.write(imageKey(id), record))) return false;
+    if (!(await storage.write(imageKey(id), await imageRecord(image))))
+      return false;
   }
   const saved: SavedDesign = { design, savedAt: Date.now() };
   if (!(await storage.write(DESIGN_KEY, saved))) return false;
@@ -74,22 +102,29 @@ export function saveSnapshotNow(
   for (const id of referencedImageIds(design)) {
     const image = images[id];
     if (!image) continue;
-    const record: SavedImage = { blob: image.blob, name: image.name };
-    entries.push([imageKey(id), record]);
+    entries.push([imageKey(id), imageRecordNow(image)]);
   }
   const saved: SavedDesign = { design, savedAt: Date.now() };
   entries.push([DESIGN_KEY, saved]);
   return storage.writeNow(entries);
 }
 
-function isSavedImage(value: unknown): value is SavedImage {
-  const record = value as Partial<SavedImage> | null | undefined;
-  return (
-    !!record &&
-    record.blob instanceof Blob &&
-    record.blob.size > 0 &&
-    typeof record.name === "string"
-  );
+/** The saved image as a Blob, or null if the record isn't a usable image. */
+function savedImageBlob(value: unknown): { blob: Blob; name: string } | null {
+  const record = value as
+    | { bytes?: unknown; type?: unknown; blob?: unknown; name?: unknown }
+    | null
+    | undefined;
+  if (!record || typeof record.name !== "string") return null;
+  if (record.bytes instanceof ArrayBuffer && record.bytes.byteLength > 0) {
+    const type = typeof record.type === "string" ? record.type : "";
+    const blob = new Blob([record.bytes], { type });
+    imageBytes.set(blob, record.bytes);
+    return { blob, name: record.name };
+  }
+  if (record.blob instanceof Blob && record.blob.size > 0)
+    return { blob: record.blob, name: record.name };
+  return null;
 }
 
 /**
@@ -109,8 +144,8 @@ export async function restoreSnapshot(
   const missing = new Set<string>();
   try {
     for (const id of referencedImageIds(design)) {
-      const record = await storage.read(imageKey(id));
-      if (!isSavedImage(record)) {
+      const record = savedImageBlob(await storage.read(imageKey(id)));
+      if (!record) {
         missing.add(id);
         continue;
       }

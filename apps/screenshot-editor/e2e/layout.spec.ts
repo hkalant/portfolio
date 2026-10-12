@@ -98,7 +98,10 @@ test.describe("on a phone", () => {
 
   test("a swipe on a slider's track doesn't change it, but its thumb drags", async ({
     page,
+    browserName,
   }) => {
+    // Touch and safe-area emulation go through the Chrome DevTools Protocol.
+    test.skip(browserName !== "chromium", "needs Chromium's DevTools Protocol");
     await page.goto("./editor/");
     await upload(page, makeSolidPng(1200, 750, RED));
     await page.getByRole("button", { name: "Style", exact: true }).click();
@@ -134,7 +137,10 @@ test.describe("on a phone", () => {
 
   test("the editor stays clear of side notches in landscape", async ({
     page,
+    browserName,
   }) => {
+    // Touch and safe-area emulation go through the Chrome DevTools Protocol.
+    test.skip(browserName !== "chromium", "needs Chromium's DevTools Protocol");
     await page.setViewportSize({ width: 844, height: 390 });
     const cdp = await page.context().newCDPSession(page);
     await cdp.send("Emulation.setSafeAreaInsetsOverride", {

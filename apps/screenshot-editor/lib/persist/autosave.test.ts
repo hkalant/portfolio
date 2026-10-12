@@ -84,6 +84,15 @@ describe("saveSnapshot", () => {
     expect([...map.keys()].sort()).toEqual([DESIGN_KEY, imageKey("a")]);
   });
 
+  it("stores image bytes rather than a Blob, which WebKit private browsing refuses", async () => {
+    const { map, storage } = memoryStorage();
+    await saveSnapshot(storage, designWith("a"), { a: fakeImage("a") });
+    const record = map.get(imageKey("a")) as Record<string, unknown>;
+    expect(record).toMatchObject({ type: "image/png", name: "a.png" });
+    expect(record.bytes).toBeInstanceOf(ArrayBuffer);
+    expect(record).not.toHaveProperty("blob");
+  });
+
   it("reports failing storage", async () => {
     const { storage } = memoryStorage(true);
     expect(
@@ -106,6 +115,16 @@ describe("saveSnapshotNow", () => {
     expect(map.get(DESIGN_KEY)).toMatchObject({
       design: designWith("a", "bg"),
     });
+  });
+
+  it("stores bytes for images an earlier save already read", async () => {
+    const { map, storage } = memoryStorage();
+    const images = { a: fakeImage("a"), b: fakeImage("b") };
+    await saveSnapshot(storage, designWith("a"), images);
+    saveSnapshotNow(storage, designWith("a", "b"), images);
+    expect(map.get(imageKey("a"))).toHaveProperty("bytes");
+    // Not read yet, and an unload can't wait: the Blob itself.
+    expect(map.get(imageKey("b"))).toHaveProperty("blob");
   });
 
   it("can't save without an immediate write", () => {
@@ -149,6 +168,23 @@ describe("restoreSnapshot", () => {
     const restored = await restoreSnapshot(storage, loadImage);
     expect(restored?.design).toEqual(design);
     expect(restored?.images.map((image) => image.id)).toEqual(["a", "bg"]);
+  });
+
+  it("restores images saved as a Blob by earlier versions", async () => {
+    const { map, storage } = memoryStorage();
+    map.set(DESIGN_KEY, { design: designWith("a"), savedAt: 1 });
+    map.set(imageKey("a"), { blob: new Blob(["a"]), name: "a.png" });
+    const restored = await restoreSnapshot(storage, loadImage);
+    expect(restored?.images.map((image) => image.id)).toEqual(["a"]);
+  });
+
+  it("restores the bytes as a Blob of the saved type", async () => {
+    const { storage } = memoryStorage();
+    await saveSnapshot(storage, designWith("a"), { a: fakeImage("a") });
+    const restored = await restoreSnapshot(storage, loadImage);
+    const [image] = restored?.images ?? [];
+    expect(image.blob.type).toBe("image/png");
+    expect(await image.blob.text()).toBe("a");
   });
 
   it("drops images that are missing or can't be decoded", async () => {
