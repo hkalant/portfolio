@@ -25,7 +25,7 @@ This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 | ⌘S / Ctrl+S                                             | Export                                                        |
 | ⌘C / Ctrl+C (with no text selected), ⇧⌘C / Ctrl+Shift+C | Copy the image                                                |
 | ⌘O / Ctrl+O                                             | Open a screenshot                                             |
-| Delete or Backspace                                     | Remove the screenshot (undoable)                              |
+| Delete or Backspace (with the canvas focused: click it) | Remove the screenshot (undoable) |
 | Arrow keys (Shift for 10 px)                            | Move the screenshot, with the canvas focused, on a fixed size |
 
 ## Scripts

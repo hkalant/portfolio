@@ -26,38 +26,32 @@ type LoadImage = (
 ) => Promise<LoadedImage>;
 
 /**
- * Saves the design and the images it uses. Images are written once per id
- * (`written` remembers them between saves), before the design, so a saved
- * design never refers to an image that isn't stored. Images the design no
- * longer uses are deleted afterwards. False if storage failed.
+ * Saves the design and the images it uses. An image is written only when its
+ * key isn't stored yet, and before the design, so a saved design never refers
+ * to an image that isn't stored. Reading the keys each time (rather than
+ * remembering what this tab wrote) keeps this right when another tab saved in
+ * between. Images the design no longer uses are deleted. False if storage failed.
  */
 export async function saveSnapshot(
   storage: AutosaveStorage,
   design: Design,
   images: Record<string, LoadedImage>,
-  written: Set<string>,
 ): Promise<boolean> {
   const ids = referencedImageIds(design);
+  const stored = new Set((await storage.keys()) ?? []);
   for (const id of ids) {
-    if (written.has(id)) continue;
     const image = images[id];
-    if (!image) continue;
+    if (stored.has(imageKey(id)) || !image) continue;
     const record: SavedImage = { blob: image.blob, name: image.name };
     if (!(await storage.write(imageKey(id), record))) return false;
-    written.add(id);
   }
   const saved: SavedDesign = { design, savedAt: Date.now() };
   if (!(await storage.write(DESIGN_KEY, saved))) return false;
 
-  const keep = new Set(ids);
-  const stored = await storage.keys();
-  for (const key of stored ?? []) {
-    if (!key.startsWith(IMAGE_PREFIX)) continue;
-    const id = key.slice(IMAGE_PREFIX.length);
-    if (keep.has(id)) continue;
-    await storage.remove(key);
-    written.delete(id);
-  }
+  const keep = new Set(ids.map(imageKey));
+  for (const key of stored)
+    if (key.startsWith(IMAGE_PREFIX) && !keep.has(key))
+      await storage.remove(key);
   return true;
 }
 

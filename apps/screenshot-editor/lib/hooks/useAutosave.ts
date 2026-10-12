@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { loadImageFromBlob } from "@/lib/image/load";
 import {
   restoreSnapshot,
@@ -24,87 +24,98 @@ const storage: AutosaveStorage = {
   keys: listKeys,
 };
 
+// Off for the rest of the page's life once a save fails (private windows,
+// blocked or full storage).
+let storageWorks = true;
+
+// The store outlives the editor page (client-side navigation keeps it), so
+// the saved design is read once per page load, never over a live design.
+let restoration: Promise<void> | null = null;
+
+function restoreOnce(): Promise<void> {
+  restoration ??= (async () => {
+    const store = useEditorStore;
+    const startRevision = store.getState().revision;
+    store.getState().setRestoring(true);
+    const restored = await restoreSnapshot(storage, loadImageFromBlob).catch(
+      () => null,
+    );
+    const state = store.getState();
+    // Keep what the user did while the restore was running.
+    if (restored && state.revision === startRevision)
+      state.loadDesign(restored.design, restored.images);
+    else for (const image of restored?.images ?? []) image.release();
+    store.getState().setRestoring(false);
+  })();
+  return restoration;
+}
+
 /**
  * Restores the last design on startup, then saves the design and its images
  * to IndexedDB shortly after every change. Without working storage the editor
  * simply runs without autosave.
  */
 export function useAutosave() {
-  useEffect(() => {
+  // A layout effect, so "Restoring…" shows from the first paint.
+  useLayoutEffect(() => {
+    const store = useEditorStore;
     let disposed = false;
     let timer: number | undefined;
     let saving = false;
     let pendingSave = false;
-    let enabled = true;
-    const written = new Set<string>();
     let unsubscribe: (() => void) | undefined;
 
     const save = async () => {
       timer = undefined;
-      if (!enabled || disposed) return;
+      if (!storageWorks) return;
       if (saving) {
         pendingSave = true;
         return;
       }
       saving = true;
-      const { design, images } = useEditorStore.getState();
-      const ok = await saveSnapshot(storage, design, images, written);
+      const { design, images } = store.getState();
+      if (!(await saveSnapshot(storage, design, images))) storageWorks = false;
       saving = false;
-      if (!ok) enabled = false;
-      else if (pendingSave) {
+      if (pendingSave) {
         pendingSave = false;
         void save();
       }
     };
 
     const schedule = () => {
-      if (!enabled) return;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => void save(), SAVE_DELAY_MS);
     };
 
-    // Leaving the page: write now rather than after the delay.
+    // Write a waiting change now: when the page is hidden or the editor closes.
     const flush = () => {
-      if (timer === undefined || document.visibilityState !== "hidden") return;
+      if (timer === undefined) return;
       window.clearTimeout(timer);
       void save();
     };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
 
-    const store = useEditorStore;
-    const startRevision = store.getState().revision;
-    store.getState().setRestoring(true);
-
-    void (async () => {
-      const restored = await restoreSnapshot(storage, loadImageFromBlob).catch(
-        () => null,
-      );
-      const state = store.getState();
-      // Keep what the user did while the restore was running.
-      if (disposed || !restored || state.revision !== startRevision) {
-        for (const image of restored?.images ?? []) image.release();
-      } else {
-        state.loadDesign(restored.design, restored.images);
-        for (const image of restored.images) written.add(image.id);
-      }
+    void restoreOnce().then(() => {
       if (disposed) return;
-      store.getState().setRestoring(false);
-
       let revision = store.getState().revision;
       unsubscribe = store.subscribe((next) => {
         if (next.revision === revision) return;
         revision = next.revision;
         schedule();
       });
-      // A change made during the restore still needs saving.
-      if (revision !== startRevision) schedule();
-      document.addEventListener("visibilitychange", flush);
-    })();
+      // Save what is there now: a restored design, a change made during the
+      // restore, or the live design when the editor opens again.
+      if (revision > 0) schedule();
+      document.addEventListener("visibilitychange", onVisibilityChange);
+    });
 
     return () => {
       disposed = true;
-      window.clearTimeout(timer);
       unsubscribe?.();
-      document.removeEventListener("visibilitychange", flush);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      flush();
     };
   }, []);
 }

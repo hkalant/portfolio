@@ -28,7 +28,8 @@ export function matchShortcut(
   apple: boolean,
 ): ShortcutCommand | null {
   if (event.altKey) return null;
-  const key = event.key.toLowerCase();
+  // Some synthetic key events (Chrome's autofill) have no key at all.
+  const key = event.key?.toLowerCase() ?? "";
   const modifier = apple ? event.metaKey : event.ctrlKey;
   // The other modifier (Ctrl on a Mac, the Windows key elsewhere) means
   // something else; leave those presses to the system.
@@ -72,7 +73,10 @@ export function shortcutApplies(
     case "copy":
       return !context.hasSelection;
     case "delete":
-      return context.focus !== "other";
+      // Only on the canvas: focus can fall back to the page from a control
+      // (a field that re-renders, a button that turns disabled), and a
+      // Backspace meant for that control must not remove the screenshot.
+      return context.focus === "canvas";
     case "nudge":
       return context.focus === "canvas";
     default:

@@ -97,14 +97,26 @@ describe("shortcutApplies", () => {
     ).toBe(false);
   });
 
-  it("deletes only from the page or the canvas, and nudges only on the canvas", () => {
-    expect(shortcutApplies({ type: "delete" }, context())).toBe(true);
+  it("deletes and nudges only on the canvas", () => {
+    expect(
+      shortcutApplies({ type: "delete" }, context({ focus: "canvas" })),
+    ).toBe(true);
+    expect(shortcutApplies({ type: "delete" }, context())).toBe(false);
     expect(
       shortcutApplies({ type: "delete" }, context({ focus: "other" })),
     ).toBe(false);
     const nudge = { type: "nudge", dx: 1, dy: 0 } as const;
     expect(shortcutApplies(nudge, context())).toBe(false);
     expect(shortcutApplies(nudge, context({ focus: "canvas" }))).toBe(true);
+  });
+
+  it("ignores key events without a key", () => {
+    expect(
+      matchShortcut(
+        { ...key("a"), key: undefined as unknown as string },
+        false,
+      ),
+    ).toBeNull();
   });
 
   it("undoes from any control", () => {

@@ -1,4 +1,5 @@
 import type Konva from "konva";
+import { SceneCanvas } from "konva/lib/Canvas";
 import type { Size } from "@/lib/design/layout";
 import { exportFilename } from "./filename";
 import { exportPixelSize, safePixelRatio } from "./limits";
@@ -25,14 +26,21 @@ export function renderLayerToCanvas(
   stage.scale({ x: 1, y: 1 });
   for (const node of hidden) node.visible(false);
   try {
-    // layer.toCanvas needs one full-size canvas; stage.toCanvas would need two.
-    return layer.toCanvas({
-      x: 0,
-      y: 0,
+    // What layer.toCanvas does (one full-size canvas; stage.toCanvas would need
+    // two), but with "high" smoothing: images drawn smaller than their source
+    // look as smooth as in the preview. Konva's buffers copy the setting.
+    const canvas = new SceneCanvas({
       width: size.width,
       height: size.height,
       pixelRatio,
     });
+    const context = canvas.getContext();
+    context._context.imageSmoothingQuality = "high";
+    context.save();
+    layer.drawScene(canvas);
+    context.restore();
+    canvas._releaseIsolationCanvas();
+    return canvas._canvas;
   } finally {
     for (const node of hidden) node.visible(true);
     stage.scale(previous);
@@ -164,9 +172,13 @@ export async function exportDesign(
   const written =
     Object.values(FORMAT_INFO).find((info) => info.mime === blob.type) ??
     FORMAT_INFO[options.format];
+  // A capped export says the scale it really has, such as "1.02x".
+  const scale = plan.capped
+    ? Math.floor(plan.ratio * 100) / 100
+    : options.scale;
   const filename = exportFilename(
     sourceName,
-    options.scale,
+    scale,
     new Date(),
     written.extension,
   );

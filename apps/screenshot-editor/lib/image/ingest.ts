@@ -10,6 +10,15 @@ export type IngestTarget = "shot" | "background";
 // added after it.
 const latestAttempt: Record<IngestTarget, number> = { shot: 0, background: 0 };
 
+// The store has one loading flag (export waits for it), so it stays on while
+// either target is still loading.
+const busy: Record<IngestTarget, boolean> = { shot: false, background: false };
+
+function setBusy(target: IngestTarget, value: boolean) {
+  busy[target] = value;
+  useEditorStore.getState().setLoading(busy.shot || busy.background);
+}
+
 function messageFor(error: unknown): string {
   if (error instanceof ImageLoadError && error.reason === "tooManyPixels")
     return IMAGE_MESSAGES.tooManyPixels;
@@ -29,8 +38,8 @@ async function ingest(
 ): Promise<void> {
   const attempt = ++latestAttempt[target];
   const isLatest = () => attempt === latestAttempt[target];
-  const { setLoading, showError } = useEditorStore.getState();
-  setLoading(true);
+  const { showError } = useEditorStore.getState();
+  setBusy(target, true);
   try {
     const image = await load();
     if (!isLatest()) {
@@ -41,7 +50,7 @@ async function ingest(
   } catch (error) {
     if (isLatest()) showError(failureMessage ?? messageFor(error));
   } finally {
-    if (isLatest()) setLoading(false);
+    if (isLatest()) setBusy(target, false);
   }
 }
 
@@ -56,9 +65,8 @@ export function ingestFile(
   const check = validateImageFile(file);
   if (!check.ok) {
     latestAttempt[target] += 1; // a newer action: drop any load still in flight
-    const { setLoading, showError } = useEditorStore.getState();
-    setLoading(false);
-    showError(check.message);
+    setBusy(target, false);
+    useEditorStore.getState().showError(check.message);
     return Promise.resolve();
   }
   return ingest(target, () => loadImageFromBlob(file, file.name));

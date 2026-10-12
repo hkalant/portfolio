@@ -26,6 +26,7 @@ export function LabeledSlider({
   onChange,
 }: Props) {
   const sealHistory = useEditorStore((state) => state.sealHistory);
+  const beginGesture = useEditorStore((state) => state.beginGesture);
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between text-sm">
@@ -42,7 +43,9 @@ export function LabeledSlider({
         step={step}
         disabled={disabled}
         onValueChange={([next]) => onChange(next)}
-        // One drag is one undo step, even when the next one follows quickly.
+        // One drag is one undo step, however slow, and the next drag is another.
+        onPointerDown={beginGesture}
+        onPointerUp={sealHistory}
         onValueCommit={sealHistory}
       />
     </div>

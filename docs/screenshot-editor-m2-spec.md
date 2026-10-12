@@ -322,7 +322,7 @@ Export renders the layer exactly as in M1. Guides are hidden during export.
 | ⌘/Ctrl+S | export |
 | ⌘/Ctrl+C (no text selected), ⌘/Ctrl+Shift+C | copy |
 | ⌘/Ctrl+O | open the file picker |
-| Delete, Backspace | remove the screenshot (undoable); only when the page or the canvas has focus |
+| Delete, Backspace | remove the screenshot (undoable); only when the canvas has focus (click it first) |
 | arrows, Shift+arrows | nudge, when the canvas has focus |
 
 All shortcuts are ignored while typing (the same editable check as paste). ⌘V paste stays.

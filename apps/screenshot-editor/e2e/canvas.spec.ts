@@ -118,7 +118,12 @@ test("Delete removes the screenshot and undo brings it back", async ({
 }) => {
   await upload(page, makeSolidPng(400, 300, RED));
   await expect(stage(page)).toBeVisible();
+  // From the page itself nothing happens: only the focused canvas deletes.
   await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+  await page.keyboard.press("Backspace");
+  await expect(stage(page)).toBeVisible();
+  await stage(page).click();
+  await expect(page.locator("[data-design-canvas]")).toBeFocused();
   await page.keyboard.press("Delete");
   await expect(page.getByTestId("empty-state")).toBeVisible();
   await page.keyboard.press("ControlOrMeta+z");
@@ -274,4 +279,22 @@ test("copies the design to the clipboard as a PNG", async ({
     .click();
   await page.keyboard.press("ControlOrMeta+c");
   await expect(page.getByTestId("notice")).toContainText("Copied to clipboard");
+});
+
+test("leaving the editor and coming back keeps the design and its history", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await openTab(page, "Style");
+  await setSlider(page, "Padding", "Home");
+  await expectDesignSize(page, 1200, 750);
+  // Straight away, before the autosave delay has passed.
+  await page.getByRole("link", { name: "Screenshot Editor home" }).click();
+  await page.getByRole("link", { name: "Open editor" }).click();
+  await expectDesignSize(page, 1200, 750);
+  await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled();
+
+  // And the change was saved: a full reload restores it.
+  await page.reload();
+  await expectDesignSize(page, 1200, 750);
 });

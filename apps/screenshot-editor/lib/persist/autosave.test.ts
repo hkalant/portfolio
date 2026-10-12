@@ -46,40 +46,43 @@ const loadImage = async (blob: Blob, name: string, { id }: { id: string }) => ({
 describe("saveSnapshot", () => {
   it("writes the images once, then the design, and deletes unused images", async () => {
     const { map, storage } = memoryStorage();
-    const written = new Set<string>();
     const images: Record<string, LoadedImage> = {
       a: fakeImage("a"),
       bg: fakeImage("bg"),
       b: fakeImage("b"),
     };
 
-    expect(
-      await saveSnapshot(storage, designWith("a", "bg"), images, written),
-    ).toBe(true);
+    expect(await saveSnapshot(storage, designWith("a", "bg"), images)).toBe(
+      true,
+    );
     expect([...map.keys()].sort()).toEqual([
       DESIGN_KEY,
       imageKey("a"),
       imageKey("bg"),
     ]);
 
-    await saveSnapshot(storage, designWith("a", "bg"), images, written);
+    await saveSnapshot(storage, designWith("a", "bg"), images);
     // Two images and two designs: images are not rewritten.
     expect(storage.write).toHaveBeenCalledTimes(4);
 
-    await saveSnapshot(storage, designWith("b"), images, written);
+    await saveSnapshot(storage, designWith("b"), images);
     expect([...map.keys()].sort()).toEqual([DESIGN_KEY, imageKey("b")]);
-    expect([...written]).toEqual(["b"]);
+  });
+
+  it("rewrites an image another tab deleted", async () => {
+    const { map, storage } = memoryStorage();
+    const images = { a: fakeImage("a"), b: fakeImage("b") };
+    // Tab 1 saves A, tab 2 saves B (deleting A), then tab 1 saves again.
+    await saveSnapshot(storage, designWith("a"), images);
+    await saveSnapshot(storage, designWith("b"), images);
+    await saveSnapshot(storage, designWith("a"), images);
+    expect([...map.keys()].sort()).toEqual([DESIGN_KEY, imageKey("a")]);
   });
 
   it("reports failing storage", async () => {
     const { storage } = memoryStorage(true);
     expect(
-      await saveSnapshot(
-        storage,
-        designWith("a"),
-        { a: fakeImage("a") },
-        new Set(),
-      ),
+      await saveSnapshot(storage, designWith("a"), { a: fakeImage("a") }),
     ).toBe(false);
   });
 });
@@ -88,12 +91,10 @@ describe("restoreSnapshot", () => {
   it("restores the design and decodes its images with their ids", async () => {
     const { storage } = memoryStorage();
     const design = designWith("a", "bg");
-    await saveSnapshot(
-      storage,
-      design,
-      { a: fakeImage("a"), bg: fakeImage("bg") },
-      new Set(),
-    );
+    await saveSnapshot(storage, design, {
+      a: fakeImage("a"),
+      bg: fakeImage("bg"),
+    });
     const restored = await restoreSnapshot(storage, loadImage);
     expect(restored?.design).toEqual(design);
     expect(restored?.images.map((image) => image.id)).toEqual(["a", "bg"]);
@@ -101,12 +102,10 @@ describe("restoreSnapshot", () => {
 
   it("drops images that are missing or can't be decoded", async () => {
     const { map, storage } = memoryStorage();
-    await saveSnapshot(
-      storage,
-      designWith("a", "bg"),
-      { a: fakeImage("a"), bg: fakeImage("bg") },
-      new Set(),
-    );
+    await saveSnapshot(storage, designWith("a", "bg"), {
+      a: fakeImage("a"),
+      bg: fakeImage("bg"),
+    });
     map.delete(imageKey("bg"));
     const failing = async () => {
       throw new Error("decode failed");

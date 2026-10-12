@@ -55,6 +55,7 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
   const { draggable } = layout;
   const setPosition = useEditorStore((state) => state.setPosition);
   const sealHistory = useEditorStore((state) => state.sealHistory);
+  const beginGesture = useEditorStore((state) => state.beginGesture);
   const groupRef = useRef<Konva.Group>(null);
   const dragging = useRef(false);
 
@@ -96,7 +97,8 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
         draggable: true,
         onDragStart: (event: KonvaEventObject<DragEvent>) => {
           dragging.current = true;
-          sealHistory();
+          // The whole drag is one undo step, however slow.
+          beginGesture();
           setCursor(event, "grabbing");
         },
         onDragMove,

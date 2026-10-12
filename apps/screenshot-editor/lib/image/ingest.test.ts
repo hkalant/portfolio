@@ -99,6 +99,19 @@ describe("ingestFile", () => {
     });
   });
 
+  it("stays loading until both a screenshot and a background have loaded", async () => {
+    const shot = deferred<LoadedImage>();
+    load
+      .mockReturnValueOnce(shot.promise)
+      .mockResolvedValueOnce(fakeImage("bg"));
+    const shotDone = ingestFile(png("a.png"));
+    await ingestFile(png("bg.png"), "background");
+    expect(state().loading).toBe(true);
+    shot.resolve(fakeImage("a"));
+    await shotDone;
+    expect(state().loading).toBe(false);
+  });
+
   it("explains why an image could not be loaded", async () => {
     load.mockRejectedValueOnce(new ImageLoadError("tooManyPixels"));
     await ingestFile(png("huge.png"));

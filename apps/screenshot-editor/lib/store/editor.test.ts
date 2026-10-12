@@ -258,6 +258,45 @@ describe("editor store: history", () => {
     expect(state().past).toHaveLength(4);
   });
 
+  it("keeps frame and theme choices as separate steps, but merges typing", () => {
+    state().setFrame({ kind: "macos" });
+    state().setFrame({ kind: "browser" });
+    state().setFrame({ theme: "dark" });
+    expect(state().past).toHaveLength(3);
+    state().setFrame({ url: "a" });
+    state().setFrame({ url: "ab" });
+    expect(state().past).toHaveLength(4);
+    state().setInset({ color: "#123456" });
+    state().setInset({ color: "auto" });
+    expect(state().past).toHaveLength(6);
+  });
+
+  it("drops a merged run that ends where it began, and keeps that state", () => {
+    state().setPadding(80);
+    state().setPadding(64);
+    expect(state().past).toEqual([]);
+    state().setPadding(70);
+    expect(state().past).toHaveLength(1);
+    state().undo();
+    expect(shot().padding).toBe(64);
+  });
+
+  it("merges a whole gesture however slow it is", () => {
+    state().beginGesture();
+    state().setPadding(70);
+    later();
+    state().setPadding(90);
+    later();
+    state().setPadding(100);
+    state().sealHistory();
+    expect(state().past).toHaveLength(1);
+    // After the gesture, the time limit applies again.
+    state().setPadding(110);
+    later();
+    state().setPadding(120);
+    expect(state().past).toHaveLength(3);
+  });
+
   it("ignores changes that change nothing", () => {
     state().setPadding(64);
     state().setShadowPreset("medium");

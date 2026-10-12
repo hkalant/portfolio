@@ -96,8 +96,6 @@ export function SizeOptions({ onPick }: { onPick?: () => void }) {
       </ToggleGroupPrimitive.Root>
       {canvas.preset === "custom" && (
         <CustomSizeFields
-          // A new size from outside (undo, another preset) resets the drafts.
-          key={`${canvas.width}x${canvas.height}`}
           size={canvas}
           locked={locked}
           onLockedChange={setLocked}
@@ -120,17 +118,19 @@ function CustomSizeFields({
   onChange: (width: number, height: number) => void;
 }) {
   const id = useId();
-  const [draft, setDraft] = useState({
-    width: String(size.width),
-    height: String(size.height),
-  });
+  // Only what is being typed. Otherwise the fields show the current size, so
+  // a change from outside (undo, a clamp) shows up without remounting them,
+  // which would drop the focus.
+  const [draft, setDraft] = useState<
+    Partial<Record<"width" | "height", string>>
+  >({});
 
   const commit = (changed: "width" | "height") => {
-    const value = Number.parseInt(draft[changed], 10);
-    if (!Number.isFinite(value) || value <= 0) {
-      setDraft({ width: String(size.width), height: String(size.height) });
-      return;
-    }
+    const typed = draft[changed];
+    setDraft({});
+    if (typed === undefined) return;
+    const value = Number.parseInt(typed, 10);
+    if (!Number.isFinite(value) || value <= 0) return;
     const ratio = size.width / size.height;
     let width = changed === "width" ? value : size.width;
     let height = changed === "height" ? value : size.height;
@@ -150,7 +150,7 @@ function CustomSizeFields({
         inputMode="numeric"
         min={CUSTOM_SIZE.min}
         max={CUSTOM_SIZE.max}
-        value={draft[name]}
+        value={draft[name] ?? String(size[name])}
         onChange={(event) =>
           setDraft((current) => ({ ...current, [name]: event.target.value }))
         }

@@ -72,6 +72,8 @@ export type EditorState = {
   /** Key and time of the last commit, for merging rapid changes into one step. */
   mergeKey: string | null;
   mergeAt: number;
+  /** A drag or slider gesture is under way: its changes merge however slow it is. */
+  gesture: boolean;
 
   /** Decoded images by id. The design refers to them by id. */
   images: Record<string, LoadedImage>;
@@ -88,6 +90,8 @@ export type EditorState = {
   redo: () => void;
   /** Ends the current merge, so the next change starts a new undo step. */
   sealHistory: () => void;
+  /** Starts a drag or slider gesture: one undo step until sealHistory. */
+  beginGesture: () => void;
 
   setImage: (image: LoadedImage) => void;
   clearImage: () => void;
@@ -176,7 +180,8 @@ function trimPastForImages(past: Design[], present: Design): Design[] {
 
 /**
  * Applies a design change as one history step, or merges it into the previous
- * step when `mergeKey` matches a commit less than MERGE_WINDOW_MS ago.
+ * step when `mergeKey` matches a commit less than MERGE_WINDOW_MS ago (or any
+ * time during a gesture). A merged run that ends where it began is no step.
  * Returns `state` itself (no update at all) when nothing changed.
  */
 function commitDesign(
@@ -190,17 +195,22 @@ function commitDesign(
   const merge =
     mergeKey !== undefined &&
     mergeKey === state.mergeKey &&
-    now - state.mergeAt < MERGE_WINDOW_MS;
-  const past = merge
+    (state.gesture || now - state.mergeAt < MERGE_WINDOW_MS);
+  let past = merge
     ? state.past
     : [...state.past, state.design].slice(-HISTORY_LIMIT);
+  // Back where the run started: drop its step, and start afresh from here so
+  // the next change keeps this state as its own step.
+  const before = past.at(-1);
+  const undone = merge && before !== undefined && sameDesign(next, before);
+  if (undone) past = past.slice(0, -1);
   return {
     ...extra,
     design: next,
     past: trimPastForImages(past, next),
     future: [],
     revision: state.revision + 1,
-    mergeKey: mergeKey ?? null,
+    mergeKey: undone ? null : (mergeKey ?? null),
     mergeAt: now,
   };
 }
@@ -232,6 +242,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     revision: 0,
     mergeKey: null,
     mergeAt: 0,
+    gesture: false,
     images: {},
     activePanel: "background",
     mobilePanel: null,
@@ -268,7 +279,13 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       }),
 
     sealHistory: () =>
-      set((state) => (state.mergeKey === null ? state : { mergeKey: null })),
+      set((state) =>
+        state.mergeKey === null && !state.gesture
+          ? state
+          : { mergeKey: null, gesture: false },
+      ),
+
+    beginGesture: () => set(() => ({ mergeKey: null, gesture: true })),
 
     setImage: (image) =>
       set((state) =>
@@ -631,7 +648,10 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           }
           return { inset: next };
         },
-        `inset-${Object.keys(patch).sort().join()}`,
+        // Auto/Custom is a choice; sizes and picked colours are continuous.
+        patch.color === "auto"
+          ? undefined
+          : `inset-${Object.keys(patch).sort().join()}`,
       ),
 
     setFrame: (patch) =>
@@ -652,23 +672,33 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             next.url = patch.url.slice(0, MAX_FRAME_TEXT);
           return { frame: next };
         },
-        `frame-${Object.keys(patch).sort().join()}`,
+        // Typing a title or address merges; picking a frame or theme doesn't.
+        patch.kind === undefined && patch.theme === undefined
+          ? `frame-${Object.keys(patch).sort().join()}`
+          : undefined,
       ),
 
     resetStyle: () => commitShot(() => defaultShotStyle()),
 
     loadDesign: (design, images) =>
-      set((state) => ({
-        design,
-        past: [],
-        future: [],
-        revision: state.revision + 1,
-        mergeKey: null,
-        images: {
-          ...state.images,
-          ...Object.fromEntries(images.map((image) => [image.id, image])),
-        },
-      })),
+      set((state) => {
+        // A new copy of an image already held replaces it: free the old one.
+        for (const image of images) {
+          const held = state.images[image.id];
+          if (held && held !== image) held.release();
+        }
+        return {
+          design,
+          past: [],
+          future: [],
+          revision: state.revision + 1,
+          mergeKey: null,
+          images: {
+            ...state.images,
+            ...Object.fromEntries(images.map((image) => [image.id, image])),
+          },
+        };
+      }),
 
     setActivePanel: (panel) => set(() => ({ activePanel: panel })),
     setMobilePanel: (panel) => set(() => ({ mobilePanel: panel })),
