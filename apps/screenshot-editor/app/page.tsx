@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { Logo } from "@/components/editor/Logo";
+import { BrookesLogo } from "@/components/editor/BrookesLogo";
 import { buttonVariants } from "@/components/ui/button";
 
 const FEATURES = [
@@ -23,14 +23,10 @@ export default function HomePage() {
   return (
     <div className="min-h-dvh font-sans text-foreground scheme-light ambient dark:scheme-dark">
       <main className="mx-auto flex min-h-dvh max-w-3xl flex-col justify-center gap-10 px-6 py-16">
-        <div className="flex items-center gap-3 font-semibold">
-          <Logo className="size-8" />
-          <span className="flex flex-col leading-tight">
-            Screenshot Editor
-            <span className="font-brand text-sm font-normal text-muted-foreground">
-              Oxford Brookes University
-            </span>
-          </span>
+        <div className="flex items-center gap-4 font-semibold">
+          <BrookesLogo className="hidden h-10 w-auto text-(--obu-charcoal) sm:block dark:text-foreground" />
+          <span className="hidden h-8 w-px bg-border sm:block" aria-hidden />
+          Screenshot Editor
         </div>
         <div className="space-y-4">
           <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">

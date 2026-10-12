@@ -4,7 +4,7 @@ import { ImageUp } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
-import { Logo } from "./Logo";
+import { BrookesLogo } from "./BrookesLogo";
 import { CopyButton } from "./topbar/CopyButton";
 import { ExportMenu } from "./topbar/ExportMenu";
 import { HistoryButtons } from "./topbar/HistoryButtons";
@@ -23,15 +23,12 @@ export function TopBar({ onReplace }: Props) {
       <Link
         href="/"
         aria-label="Screenshot Editor home"
-        className="flex items-center gap-2 rounded-sm font-semibold outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="flex shrink-0 items-center gap-3 rounded-sm font-semibold whitespace-nowrap outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
-        <Logo className="size-6" />
-        <span className="hidden flex-col leading-tight xl:flex">
-          Screenshot Editor
-          <span className="font-brand text-[11px] font-normal text-muted-foreground">
-            Oxford Brookes University
-          </span>
-        </span>
+        {/* The logo only where the bar has room for it. */}
+        <BrookesLogo className="hidden h-8 w-auto text-(--obu-charcoal) lg:block dark:text-foreground" />
+        <span className="hidden h-6 w-px bg-border lg:block" aria-hidden />
+        Screenshot Editor
       </Link>
       <div className="mx-1 h-6 w-px bg-border" aria-hidden />
       <SizeMenu />

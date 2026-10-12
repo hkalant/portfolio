@@ -4,7 +4,6 @@ import { ImageUp } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
-import { Logo } from "./Logo";
 import { CopyButton } from "./topbar/CopyButton";
 import { ExportMenu } from "./topbar/ExportMenu";
 import { HistoryButtons } from "./topbar/HistoryButtons";
@@ -22,10 +21,9 @@ export function MobileBar({ onReplace }: Props) {
       <Link
         href="/"
         aria-label="Screenshot Editor home"
-        title="Screenshot Editor home"
-        className="flex size-10 shrink-0 items-center justify-center rounded-md outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="flex h-10 shrink-0 items-center rounded-md px-2 text-sm font-semibold whitespace-nowrap outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
-        <Logo className="size-7" />
+        Screenshot Editor
       </Link>
       <HistoryButtons />
       <div className="min-w-0 flex-1" />
