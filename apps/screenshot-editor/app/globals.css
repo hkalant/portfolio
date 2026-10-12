@@ -5,6 +5,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  color-scheme: light;
   /* Space the tab bar keeps clear of a phone's home indicator. A host page
      that already pads its frame by the inset sets this to 0. */
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
@@ -67,6 +68,7 @@
    Dark is the Brookes dark section ground (charcoal) with white text; the
    two darker charcoals are derived from it, as the palette has none. */
 .dark {
+  color-scheme: dark;
   --background: var(--obu-charcoal);
   --foreground: #ffffff;
   --muted: #384047;

@@ -25,14 +25,14 @@ export function ToolRail() {
         </label>
         <div className="relative">
           <Icon
-            className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-selected-foreground"
+            className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-foreground"
             aria-hidden
           />
           <select
             id={id}
             value={panel.id}
             onChange={(event) => setActivePanel(event.target.value as PanelId)}
-            className="h-10 w-full appearance-none rounded-full bg-selected pr-10 pl-10 text-sm font-semibold text-selected-foreground sheen outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="h-10 w-full appearance-none rounded-full border border-input bg-background/50 pr-10 pl-10 text-sm font-semibold text-foreground outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             {PANELS.map((entry) => (
               <option key={entry.id} value={entry.id}>
@@ -41,7 +41,7 @@ export function ToolRail() {
             ))}
           </select>
           <ChevronDown
-            className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-selected-foreground"
+            className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-foreground"
             aria-hidden
           />
         </div>
