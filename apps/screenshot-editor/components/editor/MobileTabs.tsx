@@ -53,7 +53,7 @@ export function MobileTabs() {
               aria-pressed={open}
               aria-controls={open ? MOBILE_PANEL_ID : undefined}
               onClick={() => toggle(id)}
-              className="group flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg text-[11px] font-medium text-muted-foreground transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-inset aria-pressed:text-foreground"
+              className="group flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg text-[11px] font-medium text-muted-foreground transition-colors outline-none focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-ring aria-pressed:text-foreground"
             >
               <span className="flex h-7 w-12 items-center justify-center rounded-full transition-colors group-aria-pressed:bg-accent">
                 <Icon className="size-5" aria-hidden />

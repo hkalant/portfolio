@@ -23,7 +23,7 @@ export function MobileBar({ onReplace }: Props) {
         href="/"
         aria-label="Screenshot Editor home"
         title="Screenshot Editor home"
-        className="flex size-10 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+        className="flex size-10 shrink-0 items-center justify-center rounded-md outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Logo className="size-7" />
       </Link>

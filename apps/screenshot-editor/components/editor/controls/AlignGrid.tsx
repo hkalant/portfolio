@@ -50,7 +50,7 @@ export function AlignGrid({ label, onAlign, isActive }: Props) {
                 aria-label={name}
                 title={name}
                 onClick={() => onAlign(column.h, row.v)}
-                className="group flex size-7 items-center justify-center rounded-md transition-colors outline-none hover:bg-background focus-visible:ring-[3px] focus-visible:ring-ring"
+                className="group flex size-7 items-center justify-center rounded-md transition-colors outline-none hover:bg-background focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <span
                   aria-hidden

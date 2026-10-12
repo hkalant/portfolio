@@ -23,10 +23,15 @@ export function TopBar({ onReplace }: Props) {
       <Link
         href="/"
         aria-label="Screenshot Editor home"
-        className="flex items-center gap-2 rounded-md font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+        className="flex items-center gap-2 rounded-md font-semibold outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Logo className="size-6" />
-        <span className="hidden xl:inline">Screenshot Editor</span>
+        <span className="hidden flex-col leading-tight xl:flex">
+          Screenshot Editor
+          <span className="font-brand text-[11px] font-normal text-muted-foreground">
+            Oxford Brookes University
+          </span>
+        </span>
       </Link>
       <div className="mx-1 h-6 w-px bg-border" aria-hidden />
       <SizeMenu />

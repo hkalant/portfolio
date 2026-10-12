@@ -81,7 +81,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
                 : "Design canvas"
             }
             className={cn(
-              "rounded-[2px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-workspace",
+              "rounded-[2px] outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",
               transparent && "checkerboard",
             )}
           >
@@ -101,7 +101,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
         {plan.capped && " (largest size this browser allows)"}
       </p>
       {loading && (
-        <div className="absolute top-3 right-3 flex items-center gap-2 rounded-md bg-background/90 px-3 py-1.5 text-xs shadow-sm">
+        <div className="absolute top-3 right-3 flex items-center gap-2 rounded-md border bg-background/90 px-3 py-1.5 text-xs">
           <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
           Loading image…
         </div>

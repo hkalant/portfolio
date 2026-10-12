@@ -70,11 +70,11 @@ export function SwatchGrid({
               aria-pressed={selected}
               onClick={() => onSelect(swatch.id)}
               className={cn(
-                "bg-cover bg-center ring-offset-2 ring-offset-background transition-[box-shadow,transform] outline-none hover:scale-[1.04] focus-visible:ring-[3px] focus-visible:ring-ring",
+                "bg-cover bg-center ring-offset-2 ring-offset-background transition-[box-shadow,transform] outline-none hover:scale-[1.04] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",
                 shape === "dot"
                   ? "aspect-square rounded-full border border-black/10 dark:border-white/15"
                   : cn(aspect, "rounded-lg"),
-                selected && "ring-2 ring-primary",
+                selected && "ring-2 ring-foreground",
               )}
               style={swatch.style}
             />

@@ -24,7 +24,12 @@ export default function HomePage() {
     <main className="mx-auto flex min-h-dvh max-w-3xl flex-col justify-center gap-10 px-6 py-16">
       <div className="flex items-center gap-3 font-semibold">
         <Logo className="size-8" />
-        Screenshot Editor
+        <span className="flex flex-col leading-tight">
+          Screenshot Editor
+          <span className="font-brand text-sm font-normal text-muted-foreground">
+            Oxford Brookes University
+          </span>
+        </span>
       </div>
       <div className="space-y-4">
         <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
@@ -42,10 +47,10 @@ export default function HomePage() {
           <ArrowRight aria-hidden />
         </Link>
       </div>
-      <ul className="grid gap-x-8 gap-y-5 border-t pt-8 sm:grid-cols-2">
+      <ul className="grid gap-x-8 gap-y-5 border-t-2 border-primary pt-8 sm:grid-cols-2">
         {FEATURES.map((feature) => (
           <li key={feature.title}>
-            <p className="font-medium">{feature.title}</p>
+            <p className="font-semibold">{feature.title}</p>
             <p className="text-sm text-muted-foreground">{feature.text}</p>
           </li>
         ))}

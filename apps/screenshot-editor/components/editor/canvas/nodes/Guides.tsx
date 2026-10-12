@@ -7,7 +7,8 @@ import { NO_GUIDES, type CentreGuides } from "@/lib/render/snap";
 /** The centre lines shown while a dragged shot is snapped to them. Not part of the design. */
 export const useGuides = create<CentreGuides>()(() => ({ ...NO_GUIDES }));
 
-const GUIDE_COLOR = "#ff00c8";
+// Brookes pink: a primary colour that stands out on most designs.
+const GUIDE_COLOR = "#d10373";
 
 type Props = {
   canvas: Size;

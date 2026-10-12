@@ -33,7 +33,7 @@ export function EmptyState({ loading, restoring, onUpload, onSample }: Props) {
           type="button"
           onClick={onUpload}
           disabled={busy}
-          className="flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-muted-foreground/25 bg-background/60 px-8 py-14 text-center transition-colors outline-none hover:border-muted-foreground/45 hover:bg-background focus-visible:ring-[3px] focus-visible:ring-ring disabled:cursor-progress"
+          className="flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-muted-foreground/25 bg-background/60 px-8 py-14 text-center transition-colors outline-none hover:border-muted-foreground/45 hover:bg-background focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-progress"
         >
           <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
             {busy ? (

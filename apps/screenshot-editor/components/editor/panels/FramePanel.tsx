@@ -51,7 +51,7 @@ function TextField({
         onChange={(event) => onChange(event.target.value)}
         // Typing merges into one undo step; leaving the field ends it.
         onBlur={sealHistory}
-        className="h-9 w-full min-w-0 rounded-md border bg-background px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring"
+        className="h-9 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
       />
     </div>
   );
@@ -78,12 +78,12 @@ export function FramePanel() {
           <ToggleGroup.Item
             key={kind}
             value={kind}
-            className="group flex min-w-0 flex-col items-center gap-1.5 rounded-lg p-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring data-[state=on]:text-foreground"
+            className="group flex min-w-0 flex-col items-center gap-1.5 rounded-lg p-1 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring data-[state=on]:text-foreground"
           >
             <FramePreview
               kind={kind}
               theme={frame.theme}
-              className="ring-offset-2 ring-offset-background transition-shadow group-data-[state=on]:ring-2 group-data-[state=on]:ring-primary"
+              className="ring-offset-2 ring-offset-background transition-shadow group-data-[state=on]:ring-2 group-data-[state=on]:ring-foreground"
             />
             {FRAME_LABELS[kind]}
           </ToggleGroup.Item>

@@ -57,17 +57,17 @@ function Slider({
     >
       <SliderPrimitive.Track
         data-slot="slider-track"
-        className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-muted-foreground/20"
+        className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-border"
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
-          className="absolute h-full bg-primary"
+          className="absolute h-full bg-foreground"
         />
       </SliderPrimitive.Track>
       <SliderPrimitive.Thumb
         data-slot="slider-thumb"
         aria-label={thumbLabel}
-        className="relative block size-4 shrink-0 touch-none rounded-full border border-primary bg-background shadow-sm transition-[box-shadow] outline-none after:absolute after:-inset-3 after:rounded-full after:content-[''] hover:ring-4 hover:ring-ring/40 focus-visible:ring-4 focus-visible:ring-ring"
+        className="relative block size-4 shrink-0 touch-none rounded-full border-2 border-foreground bg-background transition-[box-shadow] outline-none after:absolute after:-inset-3 after:rounded-full after:content-[''] hover:ring-4 hover:ring-ring/40 focus-visible:ring-4 focus-visible:ring-ring"
       />
     </SliderPrimitive.Root>
   );

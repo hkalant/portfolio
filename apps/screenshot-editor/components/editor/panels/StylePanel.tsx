@@ -43,9 +43,7 @@ const percent = (value: number) => Math.round(value * 100);
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="space-y-5">
-      <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        {title}
-      </h3>
+      <h3 className="text-sm font-semibold text-muted-foreground">{title}</h3>
       {children}
     </div>
   );
@@ -180,7 +178,7 @@ export function StylePanel() {
           onOpenChange={setShadowOpen}
           className="space-y-5"
         >
-          <Collapsible.Trigger className="group -mx-1 flex items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring">
+          <Collapsible.Trigger className="group -mx-1 flex items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring">
             Customise shadow
             <ChevronDown
               className="size-4 transition-transform group-data-[state=open]:rotate-180"

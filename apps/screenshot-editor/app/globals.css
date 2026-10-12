@@ -8,43 +8,70 @@
   /* Space the tab bar keeps clear of a phone's home indicator. A host page
      that already pads its frame by the inset sets this to 0. */
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.48 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.556 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --accent: oklch(0.95 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --workspace: oklch(0.94 0.003 264);
-  --radius: 0.625rem;
+
+  /* Oxford Brookes palette (brookes.ac.uk "Our colours"). */
+  --obu-charcoal: #424a52;
+  --obu-charcoal-60: #8e9297;
+  --obu-charcoal-20: #d9dbdc;
+  --obu-charcoal-10: #eceded;
+  --obu-pink: #d10373;
+  --obu-yellow: #f9c909;
+  --obu-red: #c70540;
+  --obu-red-20: #f2ced9;
+  --obu-green: #006338;
+  --obu-green-20: #cedfd8;
+
+  /* The interface, light: white grounds, black and charcoal text, yellow for
+     the one primary action, as on brookes.ac.uk. */
+  --background: #ffffff;
+  --foreground: #000000;
+  --muted: var(--obu-charcoal-10);
+  --muted-foreground: var(--obu-charcoal);
+  /* Decorative lines (panel edges, dividers). */
+  --border: var(--obu-charcoal-20);
+  /* Control outlines, which need 3:1 against the ground. */
+  --input: var(--obu-charcoal-60);
+  /* Focus: a 3px black outline, 2px clear of the control. */
+  --ring: #000000;
+  --primary: var(--obu-yellow);
+  --primary-foreground: #000000;
+  --secondary: var(--obu-charcoal);
+  --secondary-foreground: #ffffff;
+  --accent: var(--obu-charcoal-10);
+  --accent-foreground: #000000;
+  --destructive: var(--obu-red);
+  --destructive-foreground: #ffffff;
+  --success: var(--obu-green);
+  /* The chosen option in a segmented control. */
+  --selected: var(--obu-charcoal);
+  --selected-foreground: #ffffff;
+  --workspace: var(--obu-charcoal-10);
+  --radius: 4px;
 }
 
-/* Only the interface changes: the design canvas never follows the theme. */
+/* Only the interface changes: the design canvas never follows the theme.
+   Dark is the Brookes dark section ground (charcoal) with white text; the
+   two darker charcoals are derived from it, as the palette has none. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --workspace: oklch(0.2 0 0);
+  --background: var(--obu-charcoal);
+  --foreground: #ffffff;
+  --muted: #384047;
+  --muted-foreground: var(--obu-charcoal-20);
+  --border: rgb(255 255 255 / 15%);
+  --input: var(--obu-charcoal-20);
+  --ring: #ffffff;
+  --primary: var(--obu-yellow);
+  --primary-foreground: #000000;
+  --secondary: #ffffff;
+  --secondary-foreground: var(--obu-charcoal);
+  --accent: #384047;
+  --accent-foreground: #ffffff;
+  --destructive: var(--obu-red-20);
+  --destructive-foreground: #000000;
+  --success: var(--obu-green-20);
+  --selected: #ffffff;
+  --selected-foreground: var(--obu-charcoal);
+  --workspace: #30363c;
 }
 
 @theme inline {
@@ -63,12 +90,22 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-selected: var(--selected);
+  --color-selected-foreground: var(--selected-foreground);
   --color-workspace: var(--workspace);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  /* Brookes radii: 2px small, 4px default, 6px large. */
+  --radius-sm: 2px;
+  --radius-md: var(--radius);
+  --radius-lg: 6px;
+  --radius-xl: 6px;
+  /* brookes.ac.uk sets text in the operating system's sans-serif. */
+  --font-sans:
+    BlinkMacSystemFont, -apple-system, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  /* The Brookes brand face, for the name. */
+  --font-brand: Helvetica, Arial, sans-serif;
 }
 
 /* Shown behind a transparent design. */
@@ -96,7 +133,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background font-sans text-foreground antialiased;

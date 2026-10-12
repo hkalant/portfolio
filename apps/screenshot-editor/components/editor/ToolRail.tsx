@@ -25,7 +25,7 @@ export function ToolRail() {
           <Tabs.Trigger
             key={id}
             value={id}
-            className="flex w-16 flex-col items-center gap-1 rounded-lg py-2 text-[11px] text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring data-[state=active]:bg-accent data-[state=active]:text-foreground"
+            className="flex w-16 flex-col items-center gap-1 rounded-md py-2 text-[11px] text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring data-[state=active]:bg-selected data-[state=active]:font-semibold data-[state=active]:text-selected-foreground"
           >
             <Icon className="size-5" aria-hidden />
             {label}

@@ -372,7 +372,7 @@ function EffectsControls({ fx }: { fx: BackgroundFx }) {
     <section aria-labelledby={headingId} className="space-y-5 border-t pt-5">
       <h3
         id={headingId}
-        className="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+        className="text-sm font-semibold text-muted-foreground"
       >
         Effects
       </h3>
