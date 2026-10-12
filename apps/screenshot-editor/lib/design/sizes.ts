@@ -49,9 +49,16 @@ export function isSizePresetId(id: string): id is SizePresetId {
   return SIZE_PRESETS.some((preset) => preset.id === id);
 }
 
-/** "16:9" style ratio for a size, reduced by the greatest common divisor. */
+/**
+ * "16:9" style ratio for a size, reduced by the greatest common divisor.
+ * Ratios that don't reduce to small numbers read better as "1.91:1".
+ */
 export function aspectLabel(width: number, height: number): string {
   const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
-  const divisor = gcd(Math.round(width), Math.round(height)) || 1;
-  return `${Math.round(width) / divisor}:${Math.round(height) / divisor}`;
+  const w = Math.round(width);
+  const h = Math.round(height);
+  const divisor = gcd(w, h) || 1;
+  if (Math.max(w, h) / divisor <= 21) return `${w / divisor}:${h / divisor}`;
+  const ratio = (value: number) => String(Math.round(value * 100) / 100);
+  return w >= h ? `${ratio(w / h)}:1` : `1:${ratio(h / w)}`;
 }

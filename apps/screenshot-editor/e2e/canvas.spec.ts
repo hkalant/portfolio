@@ -245,3 +245,33 @@ test("the screenshot can be nudged and dragged on a fixed canvas", async ({
   await page.mouse.up();
   expect(await probeIsRed()).toBe(true);
 });
+
+test("copies the design to the clipboard as a PNG", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(
+    browserName !== "chromium",
+    "Only Chromium lets tests grant clipboard access",
+  );
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await upload(page, makeSolidPng(400, 300, RED));
+  await page.getByRole("button", { name: "Copy image" }).click();
+  await expect(page.getByTestId("notice")).toContainText("Copied to clipboard");
+  const copied = await page.evaluate(async () => {
+    const [item] = await navigator.clipboard.read();
+    const bitmap = await createImageBitmap(await item.getType("image/png"));
+    return { width: bitmap.width, height: bitmap.height };
+  });
+  // (400 + 2 x 64) x (300 + 2 x 64) at the default 2x.
+  expect(copied).toEqual({ width: 1056, height: 856 });
+
+  // The keyboard shortcut does the same when no text is selected.
+  await page
+    .getByTestId("notice")
+    .getByRole("button", { name: "Dismiss" })
+    .click();
+  await page.keyboard.press("ControlOrMeta+c");
+  await expect(page.getByTestId("notice")).toContainText("Copied to clipboard");
+});
