@@ -51,7 +51,7 @@ export function ColorField({
           className="flex h-8 items-center gap-2 rounded-md border bg-background px-1.5 pr-2.5 text-xs text-muted-foreground tabular-nums outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring"
         >
           <span
-            className="size-5 rounded-sm border border-black/10"
+            className="size-5 rounded-sm border border-black/10 dark:border-white/15"
             style={{ backgroundColor: value }}
             aria-hidden
           />

@@ -106,18 +106,20 @@ test("window frames add a title bar above the screenshot", async ({ page }) => {
   await expectDesignSize(page, 1128, 762);
   const bar: [number, number] = [(64 + 500) * 2, (64 + 17) * 2];
   const inside: [number, number] = [(64 + 500) * 2, (64 + 34 + 300) * 2];
-  let [barPixel, imagePixel] = await samplePixels(
+  const [lightBar, imagePixel] = await samplePixels(
     page,
     (await exportImage(page)).data,
     [bar, inside],
   );
-  expect(isRed(barPixel)).toBe(false);
-  expect(brightness(barPixel)).toBeGreaterThan(200);
+  expect(isRed(lightBar)).toBe(false);
+  expect(brightness(lightBar)).toBeGreaterThan(200);
   expect(isRed(imagePixel)).toBe(true);
 
   await page.getByRole("radio", { name: "Dark" }).click();
-  [barPixel] = await samplePixels(page, (await exportImage(page)).data, [bar]);
-  expect(brightness(barPixel)).toBeLessThan(80);
+  const [darkBar] = await samplePixels(page, (await exportImage(page)).data, [
+    bar,
+  ]);
+  expect(brightness(darkBar)).toBeLessThan(80);
 
   await page.getByLabel("Window title").fill("My app");
   await frame("Browser").click();
