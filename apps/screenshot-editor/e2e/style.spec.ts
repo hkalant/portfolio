@@ -1,0 +1,172 @@
+import type { Page } from "@playwright/test";
+import {
+  chooseFile,
+  expectColor,
+  expectDesignSize,
+  exportImage,
+  openTab,
+  RED,
+  setSlider,
+  upload,
+} from "./helpers/editor";
+import { expect, test } from "./helpers/fixtures";
+import { brightness, isRed, makeSolidPng, samplePixels } from "./helpers/png";
+
+test.beforeEach(async ({ page }) => {
+  await page.goto("./editor/");
+  await expect(page.getByTestId("empty-state")).toBeVisible();
+});
+
+const backgroundType = (page: Page, name: string) =>
+  page
+    .getByRole("group", { name: "Background type" })
+    .getByRole("radio", { name, exact: true });
+
+async function cornerPixel(page: Page) {
+  const [pixel] = await samplePixels(page, (await exportImage(page)).data, [
+    [4, 4],
+  ]);
+  return pixel;
+}
+
+test("solid, transparent and uploaded backgrounds are what gets exported", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(400, 300, RED));
+
+  await backgroundType(page, "Solid").click();
+  await expect(backgroundType(page, "Solid")).toHaveAttribute(
+    "data-state",
+    "on",
+  );
+  await page.getByRole("button", { name: /^Colour:/ }).click();
+  const hex = page.getByLabel("Hex");
+  await hex.fill("#123456");
+  await hex.press("Enter");
+  await page.keyboard.press("Escape");
+  expectColor(await cornerPixel(page), "#123456", 2);
+
+  await backgroundType(page, "None").click();
+  expect((await cornerPixel(page))[3]).toBe(0);
+
+  await backgroundType(page, "Image").click();
+  await chooseFile(
+    page,
+    "Upload background",
+    makeSolidPng(300, 200, [0, 0, 255, 255]),
+    "sky.png",
+  );
+  expectColor(await cornerPixel(page), "#0000ff", 4);
+  await setSlider(page, "Blur", "End");
+  expectColor(await cornerPixel(page), "#0000ff", 8);
+
+  await backgroundType(page, "From image").click();
+  // A red screenshot makes a red gradient.
+  const fromImage = await cornerPixel(page);
+  expect(fromImage[0]).toBeGreaterThan(fromImage[1] + 40);
+
+  await backgroundType(page, "Mesh").click();
+  expect((await cornerPixel(page))[3]).toBe(255);
+
+  await backgroundType(page, "Gradient").click();
+  await expect(page.getByRole("button", { name: "Lavender" })).toBeVisible();
+});
+
+test("built-in wallpapers draw without errors", async ({ page }) => {
+  await upload(page, makeSolidPng(400, 300, RED));
+  await backgroundType(page, "Image").click();
+  const first = page.getByRole("button", { name: "Waves" });
+  await first.click();
+  await expect(first).toHaveAttribute("aria-pressed", "true");
+  const corner = await cornerPixel(page);
+  expect(corner[3]).toBe(255);
+  await setSlider(page, "Noise", "End");
+  expect((await cornerPixel(page))[3]).toBe(255);
+});
+
+test("JPEG exports fill transparency with white", async ({ page }) => {
+  await upload(page, makeSolidPng(400, 300, RED));
+  await backgroundType(page, "None").click();
+  await page.getByRole("button", { name: "Export options" }).click();
+  await page.getByRole("radio", { name: "JPEG" }).click();
+  await page.keyboard.press("Escape");
+  expectColor(await cornerPixel(page), "#ffffff", 3);
+});
+
+test("window frames add a title bar above the screenshot", async ({ page }) => {
+  // 1000 px wide: frame chrome at its base size.
+  await upload(page, makeSolidPng(1000, 600, RED));
+  await openTab(page, "Frame");
+  const frame = (name: string) =>
+    page
+      .getByRole("group", { name: "Frame" })
+      .getByRole("radio", { name, exact: true });
+
+  await frame("macOS").click();
+  await expectDesignSize(page, 1128, 762);
+  const bar: [number, number] = [(64 + 500) * 2, (64 + 17) * 2];
+  const inside: [number, number] = [(64 + 500) * 2, (64 + 34 + 300) * 2];
+  let [barPixel, imagePixel] = await samplePixels(
+    page,
+    (await exportImage(page)).data,
+    [bar, inside],
+  );
+  expect(isRed(barPixel)).toBe(false);
+  expect(brightness(barPixel)).toBeGreaterThan(200);
+  expect(isRed(imagePixel)).toBe(true);
+
+  await page.getByRole("radio", { name: "Dark" }).click();
+  [barPixel] = await samplePixels(page, (await exportImage(page)).data, [bar]);
+  expect(brightness(barPixel)).toBeLessThan(80);
+
+  await page.getByLabel("Window title").fill("My app");
+  await frame("Browser").click();
+  await expectDesignSize(page, 1128, 776);
+  await page.getByLabel("Address").fill("example.com");
+  await frame("Glass").click();
+  await expectDesignSize(page, 1160, 760);
+  await frame("None").click();
+  await expectDesignSize(page, 1128, 728);
+});
+
+test("inset, border, rotation and reset", async ({ page }) => {
+  await upload(page, makeSolidPng(400, 300, RED));
+  await openTab(page, "Style");
+
+  // An "auto" inset takes the screenshot's edge colour: red here.
+  await setSlider(page, "Inset", "End");
+  await expectDesignSize(page, 656, 556);
+  const [insetPixel] = await samplePixels(
+    page,
+    (await exportImage(page)).data,
+    [[(64 + 10) * 2, (64 + 214) * 2]],
+  );
+  expect(isRed(insetPixel)).toBe(true);
+
+  await page.getByRole("button", { name: "Reset style" }).click();
+  await expectDesignSize(page, 528, 428);
+
+  // A white border at 60 % over red is pink.
+  await setSlider(page, "Border width", "End");
+  const [borderPixel] = await samplePixels(
+    page,
+    (await exportImage(page)).data,
+    [[(64 + 5) * 2, (64 + 150) * 2]],
+  );
+  expect(borderPixel[1]).toBeGreaterThan(100);
+
+  await setSlider(page, "Rotation", "End");
+  await expect(page.getByRole("slider", { name: "Rotation" })).toHaveAttribute(
+    "aria-valuenow",
+    "45",
+  );
+  await exportImage(page);
+
+  await page.getByRole("button", { name: "Customise shadow" }).click();
+  await setSlider(page, "Shadow blur", "End");
+  // A hand-tuned shadow is none of the presets.
+  for (const name of ["None", "Soft", "Medium", "Floating", "Hard"])
+    await expect(
+      page.getByRole("radio", { name, exact: true }),
+    ).toHaveAttribute("data-state", "off");
+});

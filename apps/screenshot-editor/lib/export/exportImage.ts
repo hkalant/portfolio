@@ -145,7 +145,7 @@ export async function renderDesignBlob(
     const blob = await canvasToBlob(
       canvas,
       info.mime,
-      info.alpha && options.format === "png" ? undefined : options.quality,
+      options.format === "png" ? undefined : options.quality,
     );
     return { blob, plan };
   } finally {
@@ -160,14 +160,38 @@ export async function exportDesign(
   sourceName: string | null,
 ): Promise<{ filename: string; plan: ExportPlan }> {
   const { blob, plan } = await renderDesignBlob(target, options);
+  // A browser that can't encode the format writes PNG instead; name it so.
+  const written =
+    Object.values(FORMAT_INFO).find((info) => info.mime === blob.type) ??
+    FORMAT_INFO[options.format];
   const filename = exportFilename(
     sourceName,
     options.scale,
     new Date(),
-    FORMAT_INFO[options.format].extension,
+    written.extension,
   );
   downloadBlob(blob, filename);
   return { filename, plan };
+}
+
+const encodable = new Map<string, boolean>();
+
+/** Whether canvases here can encode `mime`. Some browsers write PNG instead of WebP. */
+export function canEncode(mime: string): boolean {
+  if (mime === "image/png") return true;
+  const known = encodable.get(mime);
+  if (known !== undefined) return known;
+  let supported = false;
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    supported = canvas.toDataURL(mime).startsWith(`data:${mime}`);
+  } catch {
+    supported = false;
+  }
+  encodable.set(mime, supported);
+  return supported;
 }
 
 /** True when this browser can put an image on the clipboard. */

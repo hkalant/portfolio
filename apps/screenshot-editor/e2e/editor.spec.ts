@@ -1,73 +1,21 @@
-import { readFile } from "node:fs/promises";
-import type { Page } from "@playwright/test";
 import { expect, test } from "./helpers/fixtures";
+import {
+  chooseFile,
+  expectColor,
+  expectDesignSize,
+  exportPng,
+  RED,
+  setSlider,
+  stage,
+  upload,
+} from "./helpers/editor";
 import {
   brightness,
   isRed,
   makeSolidPng,
   readPngSize,
   samplePixels,
-  type Rgba,
 } from "./helpers/png";
-
-const RED = [255, 0, 0, 255] as const;
-
-/** Each channel within `tolerance` of the #rrggbb colour. */
-function expectColor(actual: Rgba, hex: string, tolerance = 12) {
-  const expected = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-  expected.forEach((channel, i) =>
-    expect(
-      Math.abs(actual[i] - channel),
-      `channel ${i} of ${actual} vs ${hex}`,
-    ).toBeLessThanOrEqual(tolerance),
-  );
-}
-
-/** Opens the system file picker through a button, the way a user does. */
-async function chooseFile(
-  page: Page,
-  button: string | RegExp,
-  buffer: Buffer,
-  name = "fixture.png",
-) {
-  const chooser = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: button }).click();
-  await (await chooser).setFiles({ name, mimeType: "image/png", buffer });
-}
-
-async function upload(
-  page: Page,
-  buffer: Buffer,
-  name = "fixture.png",
-  mimeType = "image/png",
-) {
-  await page
-    .getByTestId("file-input")
-    .setInputFiles({ name, mimeType, buffer });
-}
-
-async function exportPng(page: Page) {
-  const [download] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByRole("button", { name: "Export PNG 2×" }).click(),
-  ]);
-  const file = await download.path();
-  return { name: download.suggestedFilename(), png: await readFile(file) };
-}
-
-const stage = (page: Page) => page.getByTestId("design-stage");
-
-async function expectDesignSize(page: Page, width: number, height: number) {
-  await expect(stage(page)).toHaveAttribute("data-width", String(width));
-  await expect(stage(page)).toHaveAttribute("data-height", String(height));
-}
-
-async function setSlider(page: Page, name: string, key: "Home" | "End") {
-  const slider = page.getByRole("slider", { name });
-  await slider.focus();
-  await slider.press(key);
-  return slider;
-}
 
 test.beforeEach(async ({ page }) => {
   await page.goto("./editor/");
@@ -80,7 +28,7 @@ test("uploads a screenshot and exports it at 2x with rounded corners", async ({
   await chooseFile(
     page,
     /click to add a screenshot/,
-    makeSolidPng(1200, 750, [...RED]),
+    makeSolidPng(1200, 750, RED),
   );
   // 1200 x 750 plus 64px default padding on each side.
   await expectDesignSize(page, 1328, 878);
@@ -113,7 +61,7 @@ test("uploads a screenshot and exports it at 2x with rounded corners", async ({
 });
 
 test("padding changes the canvas size", async ({ page }) => {
-  await upload(page, makeSolidPng(1200, 750, [...RED]));
+  await upload(page, makeSolidPng(1200, 750, RED));
   await page.getByRole("tab", { name: "Style" }).click();
   const padding = await setSlider(page, "Padding", "End");
   await expect(padding).toHaveAttribute("aria-valuenow", "200");
@@ -123,7 +71,7 @@ test("padding changes the canvas size", async ({ page }) => {
 });
 
 test("the chosen gradient and angle are what gets drawn", async ({ page }) => {
-  await upload(page, makeSolidPng(400, 300, [...RED]));
+  await upload(page, makeSolidPng(400, 300, RED));
   const lavender = page.getByRole("button", { name: "Lavender" });
   await expect(lavender).toHaveAttribute("aria-pressed", "true");
 
@@ -161,7 +109,7 @@ test("the chosen gradient and angle are what gets drawn", async ({ page }) => {
 test("the shadow is drawn below a screenshot with rounded corners", async ({
   page,
 }) => {
-  await upload(page, makeSolidPng(1200, 750, [...RED]));
+  await upload(page, makeSolidPng(1200, 750, RED));
   await page.getByRole("button", { name: "Mist" }).click(); // light background, so the shadow shows
   await page.getByRole("tab", { name: "Style" }).click();
 
@@ -196,7 +144,7 @@ test("the shadow is drawn below a screenshot with rounded corners", async ({
 test("clicking the active shadow option again keeps it selected", async ({
   page,
 }) => {
-  await upload(page, makeSolidPng(400, 300, [...RED]));
+  await upload(page, makeSolidPng(400, 300, RED));
   await page.getByRole("tab", { name: "Style" }).click();
   const floating = page.getByRole("radio", { name: "Floating" });
   await floating.click();
@@ -215,7 +163,7 @@ test("the sample image loads", async ({ page }) => {
 });
 
 test("replacing the image keeps the style", async ({ page }) => {
-  await upload(page, makeSolidPng(400, 300, [...RED]));
+  await upload(page, makeSolidPng(400, 300, RED));
   await page.getByRole("tab", { name: "Style" }).click();
   await setSlider(page, "Padding", "Home");
   await expectDesignSize(page, 400, 300);

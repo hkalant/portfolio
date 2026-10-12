@@ -1,8 +1,32 @@
 # Screenshot Editor
 
-Make screenshots look good: add a gradient background, padding, rounded corners and a shadow, then export a PNG at 2×. Everything runs in the browser; images never leave your machine.
+Make screenshots look good: put them on a background, in a window frame, with padding, rounded corners and a shadow, then export or copy the image. Everything runs in the browser; images never leave your machine.
 
-This is milestone 1 of the plan in [`docs/screenshot-editor-plan.md`](../../docs/screenshot-editor-plan.md). It is built with Next.js 16 as a **static export**, so it can be hosted on any static file host, including a subfolder of a Bitbucket Cloud website (`https://<workspace>.bitbucket.io/screenshot-editor/`).
+This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs/screenshot-editor-plan.md); [`docs/screenshot-editor-m2-spec.md`](../../docs/screenshot-editor-m2-spec.md) describes how it is built. It is built with Next.js 16 as a **static export**, so it can be hosted on any static file host, including a subfolder of a Bitbucket Cloud website (`https://<workspace>.bitbucket.io/screenshot-editor/`).
+
+## Features
+
+- **Canvas sizes:** Auto (the screenshot plus padding), presets for X, LinkedIn, Open Graph, Instagram, stories, Product Hunt, Dribbble and YouTube, or a custom size up to 4000 × 4000.
+- **Backgrounds:** gradients (linear or radial), solid colours, mesh gradients, built-in wallpapers, your own image (with blur), a gradient made from the screenshot's colours, or transparent; optional noise.
+- **Frames:** macOS window, browser, Windows window, minimal bar and glass, each light or dark, with a window title or address.
+- **Style:** padding, scale, position (drag, arrow keys or a 9-point grid), rotation, corner radius, shadow presets or a custom shadow, border, and an inset around the screenshot.
+- **Export:** PNG, JPEG or WebP at 1× to 4×, or copy a PNG to the clipboard. Exports larger than the browser allows are reduced to the largest size it can make, and the editor says so.
+- **Undo and redo**, and **autosave**: the last design and its images are kept in this browser (IndexedDB) and restored on the next visit.
+- **Phones and tablets:** a mobile layout with the settings in a panel under the canvas.
+- **Light and dark** interface, following the system setting unless you pick one.
+
+### Keyboard shortcuts
+
+| Keys                                                    | Action                                                        |
+| ------------------------------------------------------- | ------------------------------------------------------------- |
+| ⌘V / Ctrl+V                                             | Paste a screenshot                                            |
+| ⌘Z / Ctrl+Z                                             | Undo                                                          |
+| ⇧⌘Z / Ctrl+Shift+Z or Ctrl+Y                            | Redo                                                          |
+| ⌘S / Ctrl+S                                             | Export                                                        |
+| ⌘C / Ctrl+C (with no text selected), ⇧⌘C / Ctrl+Shift+C | Copy the image                                                |
+| ⌘O / Ctrl+O                                             | Open a screenshot                                             |
+| Delete or Backspace                                     | Remove the screenshot (undoable)                              |
+| Arrow keys (Shift for 10 px)                            | Move the screenshot, with the canvas focused, on a fixed size |
 
 ## Scripts
 
@@ -119,11 +143,13 @@ The Atlassian documentation could not be checked while this was written, so thes
 app/                    Routes: / (home) and /editor/
 components/editor/      Editor shell, panels, controls, canvas (react-konva)
 components/ui/          Small shadcn-style components on Radix primitives
-lib/design/             Design model (zod schema), presets, layout maths
-lib/store/editor.ts     Zustand store
-lib/image/              File checks, loading, downscaling, paste/drop/picker intake
-lib/export/             PNG export and file names
-lib/hooks/              Browser hooks (resize, paste, drop, pixel ratio)
+lib/design/             Design model (zod schema, migration), presets, frames, layout maths
+lib/store/              Zustand store with its own undo history
+lib/image/              File checks, loading, downscaling, intake, colour sampling
+lib/render/             Canvas drawing helpers (mesh, wallpapers, blur, noise, frames)
+lib/export/             Export, copy, size limits and file names
+lib/persist/            Autosave (IndexedDB) and preferences (localStorage)
+lib/hooks/              Browser hooks (resize, paste, drop, pixel ratio, shortcuts, autosave, theme)
 assets/samples/         Sample screenshot (made by scripts/make-sample-image.mjs)
 scripts/                Static server, sample generator, Bitbucket deploy scripts and tests
 e2e/                    Playwright tests
@@ -133,8 +159,9 @@ e2e/                    Playwright tests
 
 ## Notes
 
-- **Rendering.** The canvas uses Konva. The screenshot is one Konva `Image` with `cornerRadius` and shadow properties; Konva draws the rounded image into a buffer first, so the shadow follows the corners. This relies on Konva internals, which is why `konva` is pinned exactly and an e2e test checks the pixels.
-- **Export.** The export renders the layer at its true size times 2, whatever the on-screen zoom, so a 1328 × 878 design always exports as 2656 × 1756.
-- **Large images.** Images over 50 megapixels or 50 MB are refused. Images longer than 3200 px on a side are downscaled when loaded, which is all a 2× export can use. Screenshots smaller than 3200 px are scaled up slightly in the 2× export; a 1:1 export option comes in a later milestone.
-- **Small screens.** The editor needs about 960 px of width. On phones it scrolls sideways and shows a notice; the mobile layout comes in a later milestone.
+- **Rendering.** The canvas uses Konva. Without a frame or inset, the screenshot is one Konva `Image` with `cornerRadius` and shadow properties; Konva draws the rounded image into a buffer first, so the shadow follows the corners (and the outline of a transparent PNG). This relies on Konva internals, which is why `konva` is pinned exactly and an e2e test checks the pixels.
+- **Export.** The export renders the layer at its true size times the chosen scale, whatever the on-screen zoom, so a 1328 × 878 design exports at 2× as 2656 × 1756. Browsers limit canvases (Safari to 16,777,216 pixels in area, all to 16,384 px a side); larger exports are scaled down to fit.
+- **Large images.** Images over 50 megapixels or 50 MB are refused. Images longer than 3200 px on a side are downscaled when loaded. Screenshots are shown at most 1600 px long in the design, so 3× and 4× exports scale them up.
+- **Storage.** Autosave uses an IndexedDB database named `screenshot-editor`, and preferences use localStorage keys starting with `screenshot-editor:`, because every app on the same `bitbucket.io` site shares one browser origin. Private windows or blocked storage just turn autosave off.
+- **WebP.** Browsers that can't encode WebP (some Safari versions) show the option disabled.
 - **Playwright** is pinned to 1.56.1 to match the Chromium build preinstalled in the cloud sandbox the app was built in. CI installs its own browsers, so upgrading only needs that sandbox to follow.

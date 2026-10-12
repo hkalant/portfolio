@@ -39,7 +39,34 @@ export function readPngSize(png: Buffer): { width: number; height: number } {
   return { width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
 }
 
-/** Decodes the PNG in the page and returns the RGBA values at the given pixels. */
+/** Width and height from a JPEG's start-of-frame marker. */
+export function readJpegSize(jpeg: Buffer): { width: number; height: number } {
+  if (jpeg[0] !== 0xff || jpeg[1] !== 0xd8) throw new Error("Not a JPEG file");
+  let offset = 2;
+  while (offset < jpeg.length) {
+    if (jpeg[offset] !== 0xff) throw new Error("Bad JPEG marker");
+    const marker = jpeg[offset + 1];
+    const length = jpeg.readUInt16BE(offset + 2);
+    // SOF0..SOF15, except DHT (C4), JPG (C8) and DAC (CC).
+    if (
+      marker >= 0xc0 &&
+      marker <= 0xcf &&
+      ![0xc4, 0xc8, 0xcc].includes(marker)
+    )
+      return {
+        height: jpeg.readUInt16BE(offset + 5),
+        width: jpeg.readUInt16BE(offset + 7),
+      };
+    offset += 2 + length;
+  }
+  throw new Error("No JPEG frame header");
+}
+
+export const isWebp = (file: Buffer) =>
+  file.subarray(0, 4).toString("ascii") === "RIFF" &&
+  file.subarray(8, 12).toString("ascii") === "WEBP";
+
+/** Decodes the image (PNG, JPEG or WebP) in the page and returns the RGBA values at the given pixels. */
 export async function samplePixels(
   page: Page,
   png: Buffer,
@@ -48,9 +75,7 @@ export async function samplePixels(
   return page.evaluate(
     async ({ base64, points }) => {
       const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
-      const bitmap = await createImageBitmap(
-        new Blob([bytes], { type: "image/png" }),
-      );
+      const bitmap = await createImageBitmap(new Blob([bytes]));
       const canvas = document.createElement("canvas");
       canvas.width = bitmap.width;
       canvas.height = bitmap.height;

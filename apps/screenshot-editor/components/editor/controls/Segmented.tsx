@@ -3,7 +3,12 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 type Props<T extends string> = {
   label: string;
   value: T;
-  options: readonly { value: T; label: string }[];
+  options: readonly {
+    value: T;
+    label: string;
+    disabled?: boolean;
+    title?: string;
+  }[];
   onChange: (value: T) => void;
 };
 
@@ -26,7 +31,12 @@ export function Segmented<T extends string>({
         }}
       >
         {options.map((option) => (
-          <ToggleGroupItem key={option.value} value={option.value}>
+          <ToggleGroupItem
+            key={option.value}
+            value={option.value}
+            disabled={option.disabled}
+            title={option.title}
+          >
             {option.label}
           </ToggleGroupItem>
         ))}

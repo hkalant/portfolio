@@ -136,7 +136,7 @@ Draw your own simplified **SVG device frames**, or use a set whose license allow
 ## 4. Milestones
 1. **M0 Setup** (built): Next.js, Tailwind, shadcn-style components, zustand, react-konva, ESLint/Prettier, Vitest, Playwright; static export deployed to a Bitbucket website subfolder (`<workspace>.bitbucket.io/screenshot-editor/`) by GitHub Actions.
 2. **M1 Core loop (MVP)** (built): upload or paste → gradient background, padding, corner radius, shadow → PNG export at 2×. Already useful on its own. Browser tests run in Chromium locally and in Chromium, Firefox and WebKit in CI.
-3. **M2 Full styling**: size presets, all background types, window and browser frames, border, inset, alignment and drag, copy to clipboard, JPEG/WebP, undo/redo, autosave, shortcuts, mobile layout.
+3. **M2 Full styling** (built; see [the M2 spec](screenshot-editor-m2-spec.md)): size presets, all background types, window and browser frames, border, inset, alignment and drag, copy to clipboard, JPEG/WebP at 1×–4×, undo/redo, autosave, shortcuts, mobile layout, light and dark interface.
 4. **M3 Content**: text, annotations and redaction, watermark and brand kit, templates gallery, saved presets, landing page.
 5. **M4 Phase 2a**: 2D device mockups and layouts with several images.
 6. **M5 Phase 2b**: 3D tilt (the WebGL perspective step) and mockup scenes.
