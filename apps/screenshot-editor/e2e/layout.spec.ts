@@ -108,7 +108,7 @@ test.describe("on a phone", () => {
     await page.goto("./editor/");
     await upload(page, makeSolidPng(1200, 750, RED));
     await page.getByRole("button", { name: "Style", exact: true }).click();
-    const slider = page.getByRole("slider", { name: "Corner radius" });
+    const slider = page.getByRole("slider", { name: "Border width" });
     await slider.scrollIntoViewIfNeeded();
     const value = await slider.getAttribute("aria-valuenow");
     const measure = async () => {

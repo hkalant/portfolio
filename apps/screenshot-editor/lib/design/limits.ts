@@ -4,7 +4,7 @@
 export const MAX_DESIGN_SIDE = 1600;
 
 export const PADDING = { min: 0, max: 200, step: 4, default: 72 } as const;
-export const RADIUS = { min: 0, max: 64, step: 1, default: 12 } as const;
+export const RADIUS = { min: 0, max: 64, step: 1, default: 15 } as const;
 export const ANGLE = { min: 0, max: 359, step: 1 } as const;
 
 /** Size of the shot on a fixed canvas, relative to "fits inside the padding". */

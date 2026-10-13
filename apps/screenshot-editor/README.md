@@ -9,7 +9,7 @@ This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 - **Canvas sizes:** Auto (the screenshot plus padding), presets for X, LinkedIn, Open Graph, Instagram, stories and YouTube, or a custom size up to 4000 × 4000.
 - **Backgrounds:** linear gradients, solid colours, built-in wallpapers, your own image (with blur), a gradient made from the screenshot's colours, or transparent.
 - **Frames:** macOS window, browser, Windows window, minimal bar and glass, each light or dark, with a window title or address.
-- **Style:** corner radius, shadow presets or a custom shadow, and border. The padding is fixed at 72px and the screenshot is not rotated.
+- **Style:** shadow presets (None, Soft, Medium, Floating; Floating by default) and a border. The padding is fixed at 72px, the corner radius at 15px and the screenshot is not rotated.
 - **Export:** PNG, JPEG or WebP at 1×, 2× or 3×, or copy a PNG to the clipboard. Exports larger than the browser allows are reduced to the largest size it can make, and the editor says so.
 - **Undo and redo**, and **autosave**: the last design and its images are kept in this browser (IndexedDB) and restored on the next visit.
 - **Phones and tablets:** a mobile layout with the settings in a panel under the canvas.

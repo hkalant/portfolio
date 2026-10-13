@@ -140,11 +140,11 @@ test("border and shadow", async ({ page }) => {
   );
   expect(borderPixel[1]).toBeGreaterThan(100);
 
-  await page.getByRole("button", { name: "Customise shadow" }).click();
-  await setSlider(page, "Shadow blur", "End");
-  // A hand-tuned shadow is none of the presets.
-  for (const name of ["None", "Soft", "Medium", "Floating", "Hard"])
-    await expect(
-      page.getByRole("radio", { name, exact: true }),
-    ).toHaveAttribute("data-state", "off");
+  // The shadow comes from the presets only.
+  for (const name of ["None", "Soft", "Medium", "Floating"])
+    await expect(page.getByRole("radio", { name, exact: true })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Hard" })).toHaveCount(0);
+  await expect(
+    page.getByRole("radio", { name: "Floating", exact: true }),
+  ).toHaveAttribute("data-state", "on");
 });

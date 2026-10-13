@@ -117,7 +117,7 @@ describe("migrateDesign", () => {
           imageId: "img-1",
           padding: 100,
           radius: 20,
-          shadow: { ...current.layers[0].shadow, preset: "hard" },
+          shadow: { ...current.layers[0].shadow, preset: "soft" },
         },
       ],
     };

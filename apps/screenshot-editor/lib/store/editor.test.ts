@@ -36,7 +36,7 @@ describe("editor store: style", () => {
   it("sets an image and keeps the style settings", () => {
     state().setPadding(100);
     state().setRadius(20);
-    state().setShadowPreset("hard");
+    state().setShadowPreset("soft");
     state().showError("old error");
     const image = fakeImage("a");
     state().setImage(image);
@@ -44,7 +44,7 @@ describe("editor store: style", () => {
       imageId: "a",
       padding: 100,
       radius: 20,
-      shadow: { preset: "hard" },
+      shadow: { preset: "soft" },
     });
     expect(state().notice).toBeNull();
     expect(selectActiveImage(state())).toBe(image);
@@ -155,14 +155,14 @@ describe("editor store: style", () => {
   });
 
   it("copies shadow presets, ignores the empty toggle value, and marks edits custom", () => {
-    state().setShadowPreset("hard");
-    expect(shot().shadow).toEqual(SHADOW_PRESETS.hard);
-    expect(shot().shadow).not.toBe(SHADOW_PRESETS.hard);
+    state().setShadowPreset("soft");
+    expect(shot().shadow).toEqual(SHADOW_PRESETS.soft);
+    expect(shot().shadow).not.toBe(SHADOW_PRESETS.soft);
     state().setShadowPreset("");
-    expect(shot().shadow.preset).toBe("hard");
+    expect(shot().shadow.preset).toBe("soft");
     state().setShadow({ blur: 30.4, color: "#FF00FF" });
     expect(shot().shadow).toEqual({
-      ...SHADOW_PRESETS.hard,
+      ...SHADOW_PRESETS.soft,
       preset: "custom",
       blur: 30,
       color: "#ff00ff",
@@ -219,7 +219,7 @@ describe("editor store: history", () => {
     state().setRadius(30);
     expect(selectCanUndo(state())).toBe(true);
     state().undo();
-    expect(shot()).toMatchObject({ padding: 100, radius: 12 });
+    expect(shot()).toMatchObject({ padding: 100, radius: 15 });
     state().undo();
     expect(shot().padding).toBe(72);
     expect(selectCanUndo(state())).toBe(false);
@@ -293,7 +293,7 @@ describe("editor store: history", () => {
 
   it("ignores changes that change nothing", () => {
     state().setPadding(72);
-    state().setShadowPreset("medium");
+    state().setShadowPreset("floating");
     expect(state().past).toEqual([]);
     expect(state().revision).toBe(0);
   });

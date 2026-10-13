@@ -38,7 +38,7 @@ test("uploads a screenshot and exports it at 2x with rounded corners", async ({
   const first = await exportPng(page);
   expect(first.name).toBe("fixture-2x.png");
   expect(readPngSize(first.png)).toEqual({ width: 2688, height: 1788 });
-  // The image starts at (144, 144) in export pixels; with a 12px (24 export px)
+  // The image starts at (144, 144) in export pixels; with a 15px (30 export px)
   // radius, the pixel just inside its corner is cut away.
   const [center, background, roundedCorner] = await samplePixels(
     page,
@@ -53,13 +53,6 @@ test("uploads a screenshot and exports it at 2x with rounded corners", async ({
   expect(background[3]).toBe(255);
   expect(isRed(background)).toBe(false);
   expect(isRed(roundedCorner)).toBe(false);
-
-  await openTab(page, "Style");
-  const radius = await setSlider(page, "Corner radius", "Home");
-  await expect(radius).toHaveAttribute("aria-valuenow", "0");
-  const square = await exportPng(page);
-  const [squareCorner] = await samplePixels(page, square.png, [[145, 145]]);
-  expect(isRed(squareCorner)).toBe(true);
 });
 
 test("the chosen gradient and angle are what gets drawn", async ({ page }) => {
@@ -157,7 +150,7 @@ test("the sample image loads", async ({ page }) => {
 test("replacing the image keeps the style", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
   await openTab(page, "Style");
-  await setSlider(page, "Corner radius", "End");
+  await setSlider(page, "Border width", "End");
   await expectDesignSize(page, 544, 444);
   await chooseFile(
     page,
@@ -167,8 +160,8 @@ test("replacing the image keeps the style", async ({ page }) => {
   );
   await expectDesignSize(page, 944, 744);
   await expect(
-    page.getByRole("slider", { name: "Corner radius" }),
-  ).toHaveAttribute("aria-valuenow", "64");
+    page.getByRole("slider", { name: "Border width" }),
+  ).toHaveAttribute("aria-valuenow", "24");
 });
 
 test("a large screenshot is downscaled and still exports sharp", async ({

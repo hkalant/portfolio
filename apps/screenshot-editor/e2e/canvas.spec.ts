@@ -213,22 +213,22 @@ test("an edit made just before a reload is kept", async ({ page }) => {
     .toEqual(expect.any(String));
 
   await openTab(page, "Style");
-  const radius = page.getByRole("slider", { name: "Corner radius" });
-  await radius.focus();
-  for (let i = 0; i < 5; i += 1) await radius.press("ArrowRight");
-  await expect(radius).toHaveAttribute("aria-valuenow", "17");
+  const border = page.getByRole("slider", { name: "Border width" });
+  await border.focus();
+  for (let i = 0; i < 5; i += 1) await border.press("ArrowRight");
+  await expect(border).toHaveAttribute("aria-valuenow", "5");
   // Quick arrow-key steps on a slider are one undo step.
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(radius).toHaveAttribute("aria-valuenow", "12");
+  await expect(border).toHaveAttribute("aria-valuenow", "0");
   await page.getByRole("button", { name: "Redo" }).click();
-  await expect(radius).toHaveAttribute("aria-valuenow", "17");
+  await expect(border).toHaveAttribute("aria-valuenow", "5");
 
   // Straight away, well inside the save delay.
   await page.reload();
   await openTab(page, "Style");
   await expect(
-    page.getByRole("slider", { name: "Corner radius" }),
-  ).toHaveAttribute("aria-valuenow", "17");
+    page.getByRole("slider", { name: "Border width" }),
+  ).toHaveAttribute("aria-valuenow", "5");
 });
 
 test("an edit is kept when the browser drops the writes made on close", async ({
@@ -245,10 +245,10 @@ test("an edit is kept when the browser drops the writes made on close", async ({
     .toEqual(expect.any(String));
 
   await openTab(page, "Style");
-  const radius = page.getByRole("slider", { name: "Corner radius" });
-  await radius.focus();
-  for (let i = 0; i < 5; i += 1) await radius.press("ArrowRight");
-  await expect(radius).toHaveAttribute("aria-valuenow", "17");
+  const border = page.getByRole("slider", { name: "Border width" });
+  await border.focus();
+  for (let i = 0; i < 5; i += 1) await border.press("ArrowRight");
+  await expect(border).toHaveAttribute("aria-valuenow", "5");
   // As WebKit sometimes does on a quick reload: no IndexedDB write made from
   // here on lands, neither the delayed save nor the one made on close.
   await page.evaluate(() => {
@@ -259,8 +259,8 @@ test("an edit is kept when the browser drops the writes made on close", async ({
   await page.reload();
   await openTab(page, "Style");
   await expect(
-    page.getByRole("slider", { name: "Corner radius" }),
-  ).toHaveAttribute("aria-valuenow", "17");
+    page.getByRole("slider", { name: "Border width" }),
+  ).toHaveAttribute("aria-valuenow", "5");
 });
 
 test("a tab left untouched doesn't overwrite another tab's work", async ({

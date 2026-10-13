@@ -38,14 +38,6 @@ export const SHADOW_PRESETS: Record<ShadowPresetId, ShadowSpec> = {
     color: "#000000",
     opacity: 0.35,
   },
-  hard: {
-    preset: "hard",
-    offsetX: 12,
-    offsetY: 12,
-    blur: 0,
-    color: "#000000",
-    opacity: 0.9,
-  },
 };
 
 export const SHADOW_PRESET_ORDER = SHADOW_PRESET_IDS;
@@ -55,10 +47,9 @@ export const SHADOW_LABELS: Record<ShadowPresetId, string> = {
   soft: "Soft",
   medium: "Medium",
   floating: "Floating",
-  hard: "Hard",
 };
 
-export const DEFAULT_SHADOW: ShadowPresetId = "medium";
+export const DEFAULT_SHADOW: ShadowPresetId = "floating";
 
 export function isShadowPresetId(value: string): value is ShadowPresetId {
   return (SHADOW_PRESET_IDS as readonly string[]).includes(value);

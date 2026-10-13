@@ -82,13 +82,17 @@ export const SHADOW_PRESET_IDS = [
   "soft",
   "medium",
   "floating",
-  "hard",
 ] as const;
 export const shadowPresetIdSchema = z.enum(SHADOW_PRESET_IDS);
 
 export const shadowSpecSchema = z.object({
   /** "custom" once any value was changed by hand. */
-  preset: z.union([shadowPresetIdSchema, z.literal("custom")]),
+  // "hard" was a preset once; designs saved with it keep its values as custom.
+  preset: z.union([
+    shadowPresetIdSchema,
+    z.literal("custom"),
+    z.literal("hard").transform(() => "custom" as const),
+  ]),
   offsetX: z.number(),
   offsetY: z.number(),
   blur: z.number().min(0),

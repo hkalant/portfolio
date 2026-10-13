@@ -70,8 +70,8 @@ describe("computeLayout on an auto canvas", () => {
     expect(canvas).toEqual({ width: 1344, height: 894 });
     expect(shot).toMatchObject({ x: 72, y: 72, width: 1200, height: 750 });
     expect(shot.image).toEqual({ x: 0, y: 0, width: 1200, height: 750 });
-    expect(shot.radius).toBe(12);
-    expect(shot.imageRadii).toEqual([12, 12, 12, 12]);
+    expect(shot.radius).toBe(15);
+    expect(shot.imageRadii).toEqual([15, 15, 15, 15]);
     expect(shot.chrome).toBeNull();
     expect(draggable).toBe(false);
   });
@@ -110,7 +110,7 @@ describe("computeLayout on an auto canvas", () => {
     expect(shot.chrome).toEqual({ x: 0, y: 0, width: 1000, height: 34 });
     expect(shot.image).toEqual({ x: 0, y: 34, width: 1000, height: 600 });
     expect(shot.height).toBe(634);
-    expect(shot.imageRadii).toEqual([0, 0, 12, 12]);
+    expect(shot.imageRadii).toEqual([0, 0, 15, 15]);
   });
 
   it("puts the glass ring around everything", () => {
