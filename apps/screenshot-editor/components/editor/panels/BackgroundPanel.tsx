@@ -3,6 +3,7 @@ import { useId, useMemo, useRef, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { defaultBackground } from "@/lib/design/defaults";
 import {
+  BROOKES_COLORS,
   GRADIENT_PRESETS,
   toCssLinearGradient,
   type GradientGroup,
@@ -176,6 +177,23 @@ function GradientControls({
   );
 }
 
+const BROOKES_SOLID_COLORS: readonly { name: string; color: string }[] = [
+  { name: "Charcoal", color: BROOKES_COLORS.charcoal },
+  { name: "Charcoal 60%", color: BROOKES_COLORS.charcoal60 },
+  { name: "Charcoal 20%", color: BROOKES_COLORS.charcoal20 },
+  { name: "Charcoal 10%", color: BROOKES_COLORS.charcoal10 },
+  { name: "Pink", color: BROOKES_COLORS.pink },
+  { name: "Yellow", color: BROOKES_COLORS.yellow },
+  { name: "Red", color: BROOKES_COLORS.red },
+  { name: "Red 20%", color: BROOKES_COLORS.red20 },
+  { name: "Green", color: BROOKES_COLORS.green },
+  { name: "Green 20%", color: BROOKES_COLORS.green20 },
+];
+
+const BROOKES_SOLID_SWATCHES: readonly Swatch[] = BROOKES_SOLID_COLORS.map(
+  ({ name, color }) => ({ id: color, name, style: { backgroundColor: color } }),
+);
+
 const SOLID_SWATCHES: readonly Swatch[] = SOLID_COLORS.map(
   ({ name, color }) => ({
     id: color,
@@ -191,8 +209,15 @@ function SolidControls({ color }: { color: string }) {
     <div className="space-y-4">
       <ColorField label="Colour" value={color} onChange={setSolidColor} />
       <SwatchGrid
-        label="Quick colours"
-        hideLabel
+        label="Oxford Brookes"
+        swatches={BROOKES_SOLID_SWATCHES}
+        selectedId={color}
+        columns={10}
+        shape="dot"
+        onSelect={(next) => setBackground({ kind: "solid", color: next })}
+      />
+      <SwatchGrid
+        label="Generic colours"
         swatches={SOLID_SWATCHES}
         selectedId={color}
         columns={10}
