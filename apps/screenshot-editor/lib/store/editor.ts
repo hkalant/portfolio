@@ -12,7 +12,6 @@ import type { Alignment } from "@/lib/design/layout";
 import {
   BLUR,
   BORDER_WIDTH,
-  INSET,
   MAX_FRAME_TEXT,
   PADDING,
   RADIUS,
@@ -56,7 +55,6 @@ export const HISTORY_IMAGE_LIMIT = 5;
 
 type ShadowPatch = Partial<Omit<ShadowSpec, "preset">>;
 type BorderPatch = Partial<ShotLayer["border"]>;
-type InsetPatch = Partial<ShotLayer["inset"]>;
 type FramePatch = Partial<FrameSpec>;
 
 export type EditorState = {
@@ -122,7 +120,6 @@ export type EditorState = {
   setShadowPreset: (id: string) => void;
   setShadow: (patch: ShadowPatch) => void;
   setBorder: (patch: BorderPatch) => void;
-  setInset: (patch: InsetPatch) => void;
   setFrame: (patch: FramePatch) => void;
   resetStyle: () => void;
 
@@ -582,25 +579,6 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           return { border: next };
         },
         `border-${Object.keys(patch).sort().join()}`,
-      ),
-
-    setInset: (patch) =>
-      commitShot(
-        (shot) => {
-          const next = { ...shot.inset };
-          if (finite(patch.size))
-            next.size = Math.round(clamp(patch.size, INSET.min, INSET.max));
-          if (patch.color !== undefined) {
-            if (patch.color !== "auto" && !isHexColor(patch.color)) return null;
-            next.color =
-              patch.color === "auto" ? "auto" : patch.color.toLowerCase();
-          }
-          return { inset: next };
-        },
-        // Auto/Custom is a choice; sizes and picked colours are continuous.
-        patch.color === "auto"
-          ? undefined
-          : `inset-${Object.keys(patch).sort().join()}`,
       ),
 
     setFrame: (patch) =>

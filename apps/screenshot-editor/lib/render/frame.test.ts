@@ -1,29 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { createDefaultDesign } from "@/lib/design/defaults";
-import { computeLayout } from "@/lib/design/layout";
-import type { Design, FrameKind, ShotLayer } from "@/lib/design/schema";
+import type { FrameKind } from "@/lib/design/schema";
 import { SHADOW_PRESETS } from "@/lib/design/shadows";
 import {
   addressContents,
   addressPill,
   chromeLayout,
-  contentRadii,
   cornerClearance,
   framePalette,
   hasShadow,
   insideStroke,
   isPlainShot,
-  resolveInsetColor,
   roundedRectPath,
   TRAFFIC_LIGHT_COLORS,
   trafficLights,
   trafficLightsEnd,
 } from "./frame";
-
-function designWith(patch: Partial<ShotLayer>): Design {
-  const design = createDefaultDesign();
-  return { ...design, layers: [{ ...design.layers[0], ...patch }] };
-}
 
 const frame = (kind: FrameKind) => ({
   kind,
@@ -47,25 +38,10 @@ describe("framePalette", () => {
   });
 });
 
-describe("resolveInsetColor", () => {
-  it("uses the edge colour for auto, white without one, or the custom colour", () => {
-    expect(resolveInsetColor("auto", "#123456")).toBe("#123456");
-    expect(resolveInsetColor("auto", null)).toBe("#ffffff");
-    expect(resolveInsetColor("#abcdef", "#123456")).toBe("#abcdef");
-  });
-});
-
 describe("isPlainShot and hasShadow", () => {
-  it("draws one image only without a frame or inset", () => {
-    expect(
-      isPlainShot({ frame: frame("none"), inset: { size: 0, color: "auto" } }),
-    ).toBe(true);
-    expect(
-      isPlainShot({ frame: frame("none"), inset: { size: 4, color: "auto" } }),
-    ).toBe(false);
-    expect(
-      isPlainShot({ frame: frame("glass"), inset: { size: 0, color: "auto" } }),
-    ).toBe(false);
+  it("draws one image only without a frame", () => {
+    expect(isPlainShot({ frame: frame("none") })).toBe(true);
+    expect(isPlainShot({ frame: frame("glass") })).toBe(false);
   });
 
   it("has no shadow for None or opacity 0", () => {
@@ -74,43 +50,6 @@ describe("isPlainShot and hasShadow", () => {
     expect(
       hasShadow({ ...SHADOW_PRESETS.medium, preset: "custom", opacity: 0 }),
     ).toBe(false);
-  });
-});
-
-describe("contentRadii", () => {
-  const source = { width: 1000, height: 600 };
-
-  it("rounds the inset like the outer shape, square under a title bar", () => {
-    const plain = computeLayout(
-      source,
-      designWith({ radius: 20, inset: { size: 10, color: "auto" } }),
-    ).shot;
-    expect(contentRadii(plain)).toEqual([20, 20, 20, 20]);
-
-    const mac = computeLayout(
-      source,
-      designWith({
-        radius: 20,
-        inset: { size: 10, color: "auto" },
-        frame: frame("macos"),
-      }),
-    ).shot;
-    expect(contentRadii(mac)).toEqual([0, 0, 20, 20]);
-  });
-
-  it("takes the glass ring off the radius", () => {
-    const glass = computeLayout(
-      source,
-      designWith({
-        radius: 40,
-        inset: { size: 10, color: "auto" },
-        frame: frame("glass"),
-      }),
-    ).shot;
-    // Ring 10 at unit 1.
-    expect(contentRadii(glass)).toEqual([30, 30, 30, 30]);
-    const small = { ...glass, radius: 8 };
-    expect(contentRadii(small)).toEqual([0, 0, 0, 0]);
   });
 });
 

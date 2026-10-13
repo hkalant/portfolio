@@ -9,7 +9,7 @@ This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 - **Canvas sizes:** Auto (the screenshot plus padding), presets for X, LinkedIn, Open Graph, Instagram, stories and YouTube, or a custom size up to 4000 × 4000.
 - **Backgrounds:** linear gradients, solid colours, built-in wallpapers, your own image (with blur), a gradient made from the screenshot's colours, or transparent.
 - **Frames:** macOS window, browser, Windows window, minimal bar and glass, each light or dark, with a window title or address.
-- **Style:** padding, scale, position (drag, arrow keys or a 9-point grid), rotation, corner radius, shadow presets or a custom shadow, border, and an inset around the screenshot.
+- **Style:** padding, scale, position (drag, arrow keys or a 9-point grid), rotation, corner radius, shadow presets or a custom shadow, and border.
 - **Export:** PNG, JPEG or WebP at 1×, 2× or 3×, or copy a PNG to the clipboard. Exports larger than the browser allows are reduced to the largest size it can make, and the editor says so.
 - **Undo and redo**, and **autosave**: the last design and its images are kept in this browser (IndexedDB) and restored on the next visit.
 - **Phones and tablets:** a mobile layout with the settings in a panel under the canvas.
@@ -159,7 +159,7 @@ e2e/                    Playwright tests
 
 ## Notes
 
-- **Rendering.** The canvas uses Konva. Without a frame or inset, the screenshot is one Konva `Image` with `cornerRadius` and shadow properties; Konva draws the rounded image into a buffer first, so the shadow follows the corners (and the outline of a transparent PNG). This relies on Konva internals, which is why `konva` is pinned exactly and an e2e test checks the pixels.
+- **Rendering.** The canvas uses Konva. Without a frame, the screenshot is one Konva `Image` with `cornerRadius` and shadow properties; Konva draws the rounded image into a buffer first, so the shadow follows the corners (and the outline of a transparent PNG). This relies on Konva internals, which is why `konva` is pinned exactly and an e2e test checks the pixels.
 - **Export.** The export renders the layer at its true size times the chosen scale, whatever the on-screen zoom, so a 1328 × 878 design exports at 2× as 2656 × 1756. Browsers limit canvases (Safari to 16,777,216 pixels in area, all to 16,384 px a side); larger exports are scaled down to fit.
 - **Large images.** Images over 50 megapixels or 50 MB are refused. Images longer than 3200 px on a side are downscaled when loaded. Screenshots are shown at most 1600 px long in the design, so 3× exports scale them up.
 - **Storage.** Autosave uses an IndexedDB database named `screenshot-editor`, and preferences use localStorage keys starting with `screenshot-editor:`, because every app on the same `bitbucket.io` site shares one browser origin. Private windows or blocked storage just turn autosave off.

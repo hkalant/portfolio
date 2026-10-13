@@ -17,7 +17,6 @@ export const SHOT_SCALE = {
 export const ROTATION = { min: -45, max: 45, step: 1, default: 0 } as const;
 
 export const BORDER_WIDTH = { min: 0, max: 24, step: 1 } as const;
-export const INSET = { min: 0, max: 64, step: 1 } as const;
 export const OPACITY = { min: 0, max: 1, step: 0.01 } as const;
 
 /** Ranges for hand-tuned shadows. */

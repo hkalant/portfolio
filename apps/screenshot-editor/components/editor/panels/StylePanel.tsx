@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { alignedPosition, type Alignment } from "@/lib/design/layout";
 import {
   BORDER_WIDTH,
-  INSET,
   PADDING,
   RADIUS,
   ROTATION,
@@ -15,13 +14,7 @@ import {
 } from "@/lib/design/limits";
 import type { ShadowPresetId } from "@/lib/design/schema";
 import { SHADOW_LABELS, SHADOW_PRESET_ORDER } from "@/lib/design/shadows";
-import { edgeColor, sampleImagePixels } from "@/lib/image/colors";
-import { resolveInsetColor } from "@/lib/render/frame";
-import {
-  selectActiveImage,
-  selectShot,
-  useEditorStore,
-} from "@/lib/store/editor";
+import { selectShot, useEditorStore } from "@/lib/store/editor";
 import { useDesignLayout } from "@/lib/store/hooks";
 import { AlignGrid } from "../controls/AlignGrid";
 import { ColorField } from "../controls/ColorField";
@@ -32,11 +25,6 @@ const SHADOW_OPTIONS = SHADOW_PRESET_ORDER.map((id) => ({
   value: id,
   label: SHADOW_LABELS[id],
 }));
-
-const INSET_COLOR_OPTIONS = [
-  { value: "auto", label: "Auto" },
-  { value: "custom", label: "Custom" },
-] as const;
 
 const percent = (value: number) => Math.round(value * 100);
 
@@ -51,7 +39,6 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export function StylePanel() {
   const shot = useEditorStore(selectShot);
-  const image = useEditorStore(selectActiveImage);
   const fixedCanvas = useEditorStore(
     (state) => state.design.canvas.preset !== "auto",
   );
@@ -64,12 +51,11 @@ export function StylePanel() {
   const setShadowPreset = useEditorStore((state) => state.setShadowPreset);
   const setShadow = useEditorStore((state) => state.setShadow);
   const setBorder = useEditorStore((state) => state.setBorder);
-  const setInset = useEditorStore((state) => state.setInset);
   const resetStyle = useEditorStore((state) => state.resetStyle);
   const [shadowOpen, setShadowOpen] = useState(
     () => shot.shadow.preset === "custom",
   );
-  const { shadow, border, inset } = shot;
+  const { shadow, border } = shot;
 
   // Positions are stored to 4 places, so compare with a little slack.
   const isAligned = (horizontal: Alignment, vertical: Alignment) => {
@@ -79,18 +65,6 @@ export function StylePanel() {
       Math.abs(target.x - shot.position.x) < 1e-3 &&
       Math.abs(target.y - shot.position.y) < 1e-3
     );
-  };
-
-  // "Custom" starts from the colour "Auto" was showing.
-  const chooseInsetMode = (mode: "auto" | "custom") => {
-    if (mode === "auto") {
-      setInset({ color: "auto" });
-    } else if (inset.color === "auto") {
-      const pixels = image ? sampleImagePixels(image.source) : null;
-      setInset({
-        color: resolveInsetColor("auto", pixels && edgeColor(pixels)),
-      });
-    }
   };
 
   return (
@@ -244,31 +218,6 @@ export function StylePanel() {
           value={border.color}
           onChange={(color) => setBorder({ color })}
         />
-      </Section>
-
-      <Section title="Inset">
-        <LabeledSlider
-          label="Inset"
-          value={inset.size}
-          min={INSET.min}
-          max={INSET.max}
-          step={INSET.step}
-          unit="px"
-          onChange={(size) => setInset({ size })}
-        />
-        <Segmented
-          label="Inset colour"
-          value={inset.color === "auto" ? "auto" : "custom"}
-          options={INSET_COLOR_OPTIONS}
-          onChange={chooseInsetMode}
-        />
-        {inset.color !== "auto" && (
-          <ColorField
-            label="Custom inset colour"
-            value={inset.color}
-            onChange={(color) => setInset({ color })}
-          />
-        )}
       </Section>
 
       <Button variant="outline" className="w-full" onClick={resetStyle}>

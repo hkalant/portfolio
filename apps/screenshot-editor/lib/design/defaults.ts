@@ -24,7 +24,6 @@ export function defaultShotStyle(): ShotStyle {
     radius: RADIUS.default,
     shadow: { ...SHADOW_PRESETS[DEFAULT_SHADOW] },
     border: { width: 0, color: "#ffffff", opacity: 0.6 },
-    inset: { size: 0, color: "auto" },
     frame: { kind: "none", theme: "light", title: "", url: "" },
   };
 }

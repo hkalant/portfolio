@@ -1,4 +1,4 @@
-import type { CornerRadii, ShotLayout, Size } from "@/lib/design/layout";
+import type { Size } from "@/lib/design/layout";
 import type {
   FrameKind,
   FrameSpec,
@@ -73,38 +73,14 @@ export function framePalette(theme: FrameTheme): FramePalette {
 
 export const TRAFFIC_LIGHT_COLORS = ["#ff5f57", "#febc2e", "#28c840"] as const;
 
-/** The inset colour to paint: "auto" uses the screenshot's edge colour, or white. */
-export function resolveInsetColor(
-  color: ShotLayer["inset"]["color"],
-  edge: string | null,
-): string {
-  return color === "auto" ? (edge ?? "#ffffff") : color;
-}
-
 /** The shot is drawn as one image when there is nothing around it. */
-export function isPlainShot(shot: Pick<ShotLayer, "frame" | "inset">) {
-  return shot.frame.kind === "none" && shot.inset.size === 0;
+export function isPlainShot(shot: Pick<ShotLayer, "frame">) {
+  return shot.frame.kind === "none";
 }
 
 /** "None" or opacity 0 means no shadow. */
 export function hasShadow(shadow: ShadowSpec): boolean {
   return shadow.preset !== "none" && shadow.opacity > 0;
-}
-
-/**
- * Corners of the inset area: the outer radius less the ring, and square at the
- * top under a title bar.
- */
-export function contentRadii(
-  shot: Pick<ShotLayout, "radius" | "content" | "chrome">,
-): CornerRadii {
-  const { content } = shot;
-  const radius = Math.max(
-    0,
-    Math.min(shot.radius - content.x, content.width / 2, content.height / 2),
-  );
-  const top = shot.chrome ? 0 : radius;
-  return [top, top, radius, radius];
 }
 
 export type Box = { x: number; y: number; width: number; height: number };

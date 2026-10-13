@@ -65,8 +65,6 @@ describe("editor store: style", () => {
     expect(shot().position).toEqual({ x: 0, y: 1 });
     state().setBorder({ width: 30, opacity: 2 });
     expect(shot().border).toMatchObject({ width: 24, opacity: 1 });
-    state().setInset({ size: -3 });
-    expect(shot().inset.size).toBe(0);
     state().setBlur(-1);
     expect(state().design.backgroundFx).toEqual({ blur: 0 });
     state().setCustomSize(50, 9000);
@@ -264,9 +262,7 @@ describe("editor store: history", () => {
     state().setFrame({ url: "a" });
     state().setFrame({ url: "ab" });
     expect(state().past).toHaveLength(4);
-    state().setInset({ color: "#123456" });
-    state().setInset({ color: "auto" });
-    expect(state().past).toHaveLength(6);
+    expect(state().past).toHaveLength(4);
   });
 
   it("drops a merged run that ends where it began, and keeps that state", () => {

@@ -1,19 +1,16 @@
 import type Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Group, Image as KonvaImage, Rect } from "react-konva";
 import { hexToRgba } from "@/lib/design/colors";
 import type { DesignLayout } from "@/lib/design/layout";
 import type { ShadowSpec, ShotLayer } from "@/lib/design/schema";
-import { edgeColor, sampleImagePixels } from "@/lib/image/colors";
 import type { LoadedImage } from "@/lib/image/load";
 import {
-  contentRadii,
   framePalette,
   hasShadow,
   insideStroke,
   isPlainShot,
-  resolveInsetColor,
   roundedRectPath,
 } from "@/lib/render/frame";
 import { NO_GUIDES, snapDrag } from "@/lib/render/snap";
@@ -58,16 +55,6 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
   const beginGesture = useEditorStore((state) => state.beginGesture);
   const groupRef = useRef<Konva.Group>(null);
   const dragging = useRef(false);
-
-  const insetSize = shot.inset.size;
-  const insetSetting = shot.inset.color;
-  const insetColor = useMemo(() => {
-    // Only an inset shows this colour, so don't sample the image without one.
-    if (insetSetting !== "auto" || insetSize === 0)
-      return resolveInsetColor(insetSetting, null);
-    const pixels = sampleImagePixels(image.source);
-    return resolveInsetColor("auto", pixels && edgeColor(pixels));
-  }, [insetSetting, insetSize, image.source]);
 
   // Leave no guide or grab cursor behind when the shot stops being draggable.
   useEffect(() => {
@@ -158,7 +145,6 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
   } else if (frame.kind === "glass") {
     const ring = framePalette(frame.theme);
     const hairline = insideStroke(size, box.radius, 1.5 * box.unit);
-    const { content } = box;
     body = (
       <>
         {/* Translucent glass with no shadow; the content casts it. */}
@@ -184,28 +170,12 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
             listening={false}
           />
         )}
-        {insetSize > 0 ? (
-          <>
-            <Rect
-              x={content.x}
-              y={content.y}
-              width={content.width}
-              height={content.height}
-              cornerRadius={contentRadii(box)}
-              fill={insetColor}
-              {...shadow}
-              listening={false}
-            />
-            {imageNode(false)}
-          </>
-        ) : (
-          // Without an inset the image itself casts the shadow, as with no frame.
-          imageNode(true)
-        )}
+        {/* The image itself casts the shadow, as with no frame. */}
+        {imageNode(true)}
       </>
     );
   } else {
-    const { chrome, content } = box;
+    const { chrome } = box;
     body = (
       <>
         {/* Opaque, so it can carry the shadow. */}
@@ -213,9 +183,7 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
           width={box.width}
           height={box.height}
           cornerRadius={box.radius}
-          fill={
-            frame.kind === "none" ? insetColor : framePalette(frame.theme).body
-          }
+          fill={framePalette(frame.theme).body}
           {...shadow}
           listening={draggable}
         />
@@ -229,17 +197,6 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
               rect={chrome}
               unit={box.unit}
               cornerRadius={box.radius}
-            />
-          )}
-          {insetSize > 0 && frame.kind !== "none" && (
-            <Rect
-              x={content.x}
-              y={content.y}
-              width={content.width}
-              height={content.height}
-              cornerRadius={contentRadii(box)}
-              fill={insetColor}
-              listening={false}
             />
           )}
           {imageNode(false)}

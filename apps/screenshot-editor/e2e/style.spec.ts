@@ -127,22 +127,9 @@ test("window frames add a title bar above the screenshot", async ({ page }) => {
   await expectDesignSize(page, 1128, 728);
 });
 
-test("inset, border, rotation and reset", async ({ page }) => {
+test("border, rotation and reset", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
   await openTab(page, "Style");
-
-  // An "auto" inset takes the screenshot's edge colour: red here.
-  await setSlider(page, "Inset", "End");
-  await expectDesignSize(page, 656, 556);
-  const [insetPixel] = await samplePixels(
-    page,
-    (await exportImage(page)).data,
-    [[(64 + 10) * 2, (64 + 214) * 2]],
-  );
-  expect(isRed(insetPixel)).toBe(true);
-
-  await page.getByRole("button", { name: "Reset style" }).click();
-  await expectDesignSize(page, 528, 428);
 
   // A white border at 60 % over red is pink.
   await setSlider(page, "Border width", "End");

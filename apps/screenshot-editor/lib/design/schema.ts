@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   BLUR,
   BORDER_WIDTH,
-  INSET,
   MAX_FRAME_TEXT,
   PADDING,
   RADIUS,
@@ -130,10 +129,6 @@ export const shotLayerSchema = z.object({
     width: z.number().min(BORDER_WIDTH.min).max(BORDER_WIDTH.max),
     color: hexColorSchema,
     opacity: z.number().min(0).max(1),
-  }),
-  inset: z.object({
-    size: z.number().min(INSET.min).max(INSET.max),
-    color: z.union([hexColorSchema, z.literal("auto")]),
   }),
   frame: frameSpecSchema,
 });

@@ -102,18 +102,6 @@ describe("computeLayout on an auto canvas", () => {
     });
   });
 
-  it("puts an inset around the image", () => {
-    const { canvas, shot } = computeLayout(
-      { width: 400, height: 300 },
-      design({ inset: { size: 20, color: "auto" }, radius: 30 }),
-    );
-    expect(canvas).toEqual({ width: 568, height: 468 });
-    expect(shot.content).toEqual({ x: 0, y: 0, width: 440, height: 340 });
-    expect(shot.image).toEqual({ x: 20, y: 20, width: 400, height: 300 });
-    // The inner corners follow the outer ones, inset by 20.
-    expect(shot.imageRadii).toEqual([10, 10, 10, 10]);
-  });
-
   it("adds a title bar above the content, with square top corners below it", () => {
     const { shot } = computeLayout(
       { width: 1000, height: 600 },
@@ -179,11 +167,11 @@ describe("computeLayout on a fixed canvas", () => {
     expect(shot.y).toBeCloseTo(450 - 175);
   });
 
-  it("scales chrome and inset with the shot, but not the radius", () => {
+  it("scales the frame with the shot, but not the radius", () => {
     const { shot } = computeLayout(
       { width: 1000, height: 500 },
       design(
-        { padding: 0, radius: 12, inset: { size: 10, color: "auto" } },
+        { padding: 0, radius: 12, frame: frame("glass") },
         { preset: "custom", width: 510, height: 260 },
       ),
     );

@@ -10,38 +10,6 @@ export type PixelData = {
 /** Longest side of the copy that colours are read from. */
 export const SAMPLE_SIDE = 64;
 
-const averageHex = (sum: Rgb, count: number) =>
-  count === 0
-    ? null
-    : rgbToHex({ r: sum.r / count, g: sum.g / count, b: sum.b / count });
-
-/**
- * The average colour of the outermost ring of pixels: what an inset around the
- * screenshot should be so it looks like part of it. Mostly transparent pixels
- * are skipped; null if there are no opaque ones.
- */
-export function edgeColor({ width, height, data }: PixelData): string | null {
-  const sum = { r: 0, g: 0, b: 0 };
-  let count = 0;
-  const add = (x: number, y: number) => {
-    const i = (y * width + x) * 4;
-    if (data[i + 3] < 128) return;
-    sum.r += data[i];
-    sum.g += data[i + 1];
-    sum.b += data[i + 2];
-    count += 1;
-  };
-  for (let x = 0; x < width; x += 1) {
-    add(x, 0);
-    if (height > 1) add(x, height - 1);
-  }
-  for (let y = 1; y < height - 1; y += 1) {
-    add(0, y);
-    if (width > 1) add(width - 1, y);
-  }
-  return averageHex(sum, count);
-}
-
 /**
  * Up to `count` colours that stand out in the image, most common first, for a
  * background made from the screenshot. Pixels are grouped into coarse colour
