@@ -98,21 +98,21 @@ test("the chosen gradient and angle are what gets drawn", async ({ page }) => {
   expectColor(bottom, "#424a52");
 
   // A preset brings its own colours and angle.
-  const mist = page.getByRole("button", { name: "Mist" });
-  await mist.click();
-  await expect(mist).toHaveAttribute("aria-pressed", "true");
+  const stone = page.getByRole("button", { name: "Stone" });
+  await stone.click();
+  await expect(stone).toHaveAttribute("aria-pressed", "true");
   await expect(brookes).toHaveAttribute("aria-pressed", "false");
-  const [mistCorner] = await samplePixels(page, (await exportPng(page)).png, [
+  const [stoneCorner] = await samplePixels(page, (await exportPng(page)).png, [
     [4, 4],
   ]);
-  expectColor(mistCorner, "#e0eafc");
+  expectColor(stoneCorner, "#eceded");
 });
 
 test("the shadow is drawn below a screenshot with rounded corners", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
-  await page.getByRole("button", { name: "Mist" }).click(); // light background, so the shadow shows
+  await page.getByRole("button", { name: "Stone" }).click(); // light background, so the shadow shows
   await openTab(page, "Style");
 
   // 20 export px below the bottom edge of the image, horizontally centred.

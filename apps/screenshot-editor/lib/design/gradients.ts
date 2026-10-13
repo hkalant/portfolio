@@ -1,12 +1,8 @@
 import type { GradientStop } from "./schema";
 
-/** Which section of the presets a gradient is shown in. */
-export type GradientGroup = "brookes" | "generic";
-
 export type GradientPreset = {
   id: string;
   name: string;
-  group: GradientGroup;
   angle: number;
   stops: readonly GradientStop[];
 };
@@ -25,16 +21,16 @@ export const BROOKES_COLORS = {
   green20: "#cedfd8",
 } as const;
 
-const twoStop = (
+const c = BROOKES_COLORS;
+
+const brookes = (
   id: string,
   name: string,
   from: string,
   to: string,
-  group: GradientGroup = "generic",
 ): GradientPreset => ({
   id,
   name,
-  group,
   angle: 135,
   stops: [
     { offset: 0, color: from },
@@ -42,13 +38,9 @@ const twoStop = (
   ],
 });
 
-const brookes = (id: string, name: string, from: string, to: string) =>
-  twoStop(id, name, from, to, "brookes");
-const c = BROOKES_COLORS;
-
 /**
- * Oxford Brookes gradients first, made only from the design system's colours,
- * then generic ones. The first preset is the default background.
+ * Gradients made only from the Oxford Brookes design system's colours. The
+ * first preset is the default background.
  */
 export const GRADIENT_PRESETS: readonly GradientPreset[] = [
   brookes("brookes", "Brookes", c.charcoal, c.pink),
@@ -59,28 +51,6 @@ export const GRADIENT_PRESETS: readonly GradientPreset[] = [
   brookes("evergreen", "Evergreen", c.green, c.charcoal),
   brookes("sage", "Sage", c.green20, c.green),
   brookes("stone", "Stone", c.charcoal10, c.charcoal60),
-  twoStop("lavender", "Lavender", "#c471f5", "#fa71cd"),
-  twoStop("sunset", "Sunset", "#ff7e5f", "#feb47b"),
-  twoStop("ocean", "Ocean", "#2193b0", "#6dd5ed"),
-  twoStop("aurora", "Aurora", "#43cea2", "#185a9d"),
-  twoStop("flamingo", "Flamingo", "#f857a6", "#ff5858"),
-  twoStop("grape", "Grape", "#8e2de2", "#4a00e0"),
-  {
-    id: "midnight",
-    name: "Midnight",
-    group: "generic",
-    angle: 135,
-    stops: [
-      { offset: 0, color: "#0f2027" },
-      { offset: 0.5, color: "#203a43" },
-      { offset: 1, color: "#2c5364" },
-    ],
-  },
-  twoStop("slate", "Slate", "#475569", "#0f172a"),
-  twoStop("peach", "Peach", "#ffecd2", "#fcb69f"),
-  twoStop("mist", "Mist", "#e0eafc", "#cfdef3"),
-  twoStop("sky", "Sky", "#a1c4fd", "#c2e9fb"),
-  twoStop("lime", "Lime", "#d4fc79", "#96e6a1"),
 ];
 
 export const DEFAULT_GRADIENT = GRADIENT_PRESETS[0];

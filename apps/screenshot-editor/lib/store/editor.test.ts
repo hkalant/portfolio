@@ -90,11 +90,11 @@ describe("editor store: style", () => {
   });
 
   it("applies gradient presets as linear copies", () => {
-    state().applyGradientPreset("mist");
-    const mist = getGradientPreset("mist");
+    state().applyGradientPreset("stone");
+    const mist = getGradientPreset("stone");
     expect(state().design.background).toEqual({
       kind: "linear",
-      presetId: "mist",
+      presetId: "stone",
       angle: mist?.angle,
       stops: mist?.stops,
     });

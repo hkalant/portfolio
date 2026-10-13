@@ -6,7 +6,6 @@ import {
   BROOKES_COLORS,
   GRADIENT_PRESETS,
   toCssLinearGradient,
-  type GradientGroup,
 } from "@/lib/design/gradients";
 import { ANGLE, BLUR } from "@/lib/design/limits";
 import type {
@@ -36,33 +35,11 @@ import { ColorField } from "../controls/ColorField";
 import { LabeledSlider } from "../controls/LabeledSlider";
 import { SwatchGrid, type Swatch } from "../controls/SwatchGrid";
 
-const SOLID_COLORS: readonly { name: string; color: string }[] = [
-  { name: "White", color: "#ffffff" },
-  { name: "Light grey", color: "#e5e7eb" },
-  { name: "Black", color: "#0a0a0a" },
-  { name: "Navy", color: "#1e2a5a" },
-  { name: "Blue", color: "#3b82f6" },
-  { name: "Teal", color: "#14b8a6" },
-  { name: "Green", color: "#22c55e" },
-  { name: "Yellow", color: "#facc15" },
-  { name: "Orange", color: "#f97316" },
-  { name: "Pink", color: "#ec4899" },
-];
-
-function gradientSwatches(group: GradientGroup): readonly Swatch[] {
-  return GRADIENT_PRESETS.filter((preset) => preset.group === group).map(
-    (preset) => ({
-      id: preset.id,
-      name: preset.name,
-      style: {
-        backgroundImage: toCssLinearGradient(preset.angle, preset.stops),
-      },
-    }),
-  );
-}
-
-const BROOKES_SWATCHES = gradientSwatches("brookes");
-const GENERIC_SWATCHES = gradientSwatches("generic");
+const GRADIENT_SWATCHES: readonly Swatch[] = GRADIENT_PRESETS.map((preset) => ({
+  id: preset.id,
+  name: preset.name,
+  style: { backgroundImage: toCssLinearGradient(preset.angle, preset.stops) },
+}));
 
 /** The newest gradient in the undo history, so switching back restores it. */
 function lastGradient(past: readonly Design[]): Background | null {
@@ -140,13 +117,7 @@ function GradientControls({
     <>
       <SwatchGrid
         label="Oxford Brookes"
-        swatches={BROOKES_SWATCHES}
-        selectedId={background.presetId}
-        onSelect={applyGradientPreset}
-      />
-      <SwatchGrid
-        label="Generic"
-        swatches={GENERIC_SWATCHES}
+        swatches={GRADIENT_SWATCHES}
         selectedId={background.presetId}
         onSelect={applyGradientPreset}
       />
@@ -194,14 +165,6 @@ const BROOKES_SOLID_SWATCHES: readonly Swatch[] = BROOKES_SOLID_COLORS.map(
   ({ name, color }) => ({ id: color, name, style: { backgroundColor: color } }),
 );
 
-const SOLID_SWATCHES: readonly Swatch[] = SOLID_COLORS.map(
-  ({ name, color }) => ({
-    id: color,
-    name,
-    style: { backgroundColor: color },
-  }),
-);
-
 function SolidControls({ color }: { color: string }) {
   const setSolidColor = useEditorStore((state) => state.setSolidColor);
   const setBackground = useEditorStore((state) => state.setBackground);
@@ -211,14 +174,6 @@ function SolidControls({ color }: { color: string }) {
       <SwatchGrid
         label="Oxford Brookes"
         swatches={BROOKES_SOLID_SWATCHES}
-        selectedId={color}
-        columns={10}
-        shape="dot"
-        onSelect={(next) => setBackground({ kind: "solid", color: next })}
-      />
-      <SwatchGrid
-        label="Generic colours"
-        swatches={SOLID_SWATCHES}
         selectedId={color}
         columns={10}
         shape="dot"

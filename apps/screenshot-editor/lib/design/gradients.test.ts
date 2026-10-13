@@ -102,23 +102,18 @@ describe("presets", () => {
       });
       expect(parsed.success).toBe(true);
     }
-    expect(GRADIENT_PRESETS.length).toBeGreaterThanOrEqual(10);
+    expect(GRADIENT_PRESETS.length).toBeGreaterThanOrEqual(6);
   });
 
-  it("makes the Oxford Brookes gradients only from design system colours", () => {
+  it("are made only from design system colours", () => {
     const brand = new Set<string>(Object.values(BROOKES_COLORS));
-    const brookes = GRADIENT_PRESETS.filter((p) => p.group === "brookes");
-    expect(brookes.length).toBeGreaterThanOrEqual(6);
-    for (const preset of brookes)
+    for (const preset of GRADIENT_PRESETS)
       for (const stop of preset.stops)
         expect(brand.has(stop.color), `${preset.id} ${stop.color}`).toBe(true);
-    // Listed first, so the default is one of them.
-    expect(GRADIENT_PRESETS.slice(0, brookes.length)).toEqual(brookes);
-    expect(DEFAULT_GRADIENT.group).toBe("brookes");
   });
 
   it("can be looked up by id, and the default is the first", () => {
-    expect(getGradientPreset("mist")?.name).toBe("Mist");
+    expect(getGradientPreset("stone")?.name).toBe("Stone");
     expect(getGradientPreset("nope")).toBeUndefined();
     expect(DEFAULT_GRADIENT).toBe(GRADIENT_PRESETS[0]);
   });
