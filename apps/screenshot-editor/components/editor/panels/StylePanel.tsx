@@ -42,6 +42,7 @@ export function StylePanel() {
         {/* No option is on while the shadow is hand-tuned ("custom"). */}
         <Segmented<ShadowPresetId | "custom">
           label="Shadow"
+          hideLabel
           value={shadow.preset}
           options={SHADOW_OPTIONS}
           onChange={setShadowPreset}

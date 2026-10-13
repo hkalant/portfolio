@@ -108,6 +108,22 @@ describe("editor store: style", () => {
     expect(state().design.background).toMatchObject({ presetId: null });
   });
 
+  it("swaps the gradient colours and can undo it", () => {
+    state().setGradientStop(0, "#111111");
+    state().setGradientStop(1, "#222222");
+    state().swapGradientStops();
+    expect(state().design.background).toMatchObject({
+      stops: [
+        { offset: 0, color: "#222222" },
+        { offset: 1, color: "#111111" },
+      ],
+    });
+    state().undo();
+    expect(state().design.background).toMatchObject({
+      stops: [{ color: "#111111" }, { color: "#222222" }],
+    });
+  });
+
   it("normalises angles", () => {
     state().setGradientAngle(400);
     expect(state().design.background).toMatchObject({ angle: 40 });

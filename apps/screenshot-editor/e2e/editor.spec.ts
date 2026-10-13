@@ -92,6 +92,21 @@ test("the chosen gradient and angle are what gets drawn", async ({ page }) => {
   expectColor(stoneCorner, "#eceded");
 });
 
+test("swapping the gradient colours flips the drawn background", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(400, 300, RED));
+  const [before] = await samplePixels(page, (await exportPng(page)).png, [
+    [4, 4],
+  ]);
+  expectColor(before, "#424a52");
+  await page.getByRole("button", { name: "Swap colours" }).click();
+  const [after] = await samplePixels(page, (await exportPng(page)).png, [
+    [4, 4],
+  ]);
+  expectColor(after, "#d10373");
+});
+
 test("the shadow is drawn below a screenshot with rounded corners", async ({
   page,
 }) => {

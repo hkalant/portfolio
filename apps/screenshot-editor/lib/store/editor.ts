@@ -99,6 +99,8 @@ export type EditorState = {
   applyGradientPreset: (id: string) => void;
   setGradientAngle: (degrees: number) => void;
   setGradientStop: (index: number, color: string) => void;
+  /** Reverses the gradient's colours, keeping the stop positions. */
+  swapGradientStops: () => void;
   setSolidColor: (color: string) => void;
   setWallpaper: (id: string) => void;
   setFromImage: () => void;
@@ -350,6 +352,22 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           background: { ...background, angle: normalizeAngle(degrees) },
         };
       }, "gradient-angle"),
+
+    swapGradientStops: () =>
+      commit((design) => {
+        const background = design.background;
+        if (background.kind !== "linear" && background.kind !== "radial")
+          return null;
+        const colors = background.stops.map((stop) => stop.color).reverse();
+        const stops = background.stops.map((stop, i) => ({
+          ...stop,
+          color: colors[i],
+        }));
+        return {
+          ...design,
+          background: { ...background, presetId: null, stops },
+        };
+      }),
 
     setGradientStop: (index, color) =>
       commit((design) => {

@@ -110,6 +110,7 @@ function GradientControls({
   );
   const setGradientAngle = useEditorStore((state) => state.setGradientAngle);
   const setGradientStop = useEditorStore((state) => state.setGradientStop);
+  const swapGradientStops = useEditorStore((state) => state.swapGradientStops);
   const { stops } = background;
   const last = stops.length - 1;
 
@@ -138,6 +139,17 @@ function GradientControls({
           value={stops[0].color}
           onChange={(color) => setGradientStop(0, color)}
         />
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Swap colours"
+            title="Swap colours"
+            onClick={swapGradientStops}
+          >
+            <ArrowsUpDownIcon />
+          </Button>
+        </div>
         <ColorField
           label="End colour"
           value={stops[last].color}
@@ -145,6 +157,19 @@ function GradientControls({
         />
       </div>
     </>
+  );
+}
+
+/** Font Awesome Free "arrows-up-down" (solid), CC BY 4.0. */
+function ArrowsUpDownIcon() {
+  return (
+    <svg
+      viewBox="0 0 320 512"
+      aria-hidden="true"
+      className="size-4 fill-current"
+    >
+      <path d="M182.6 9.4c-12.5-12.5-32.8-12.5-45.3 0l-96 96c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L128 109.3V402.7L86.6 361.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l96 96c12.5 12.5 32.8 12.5 45.3 0l96-96c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 402.7V109.3l41.4 41.4c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-96-96z" />
+    </svg>
   );
 }
 
