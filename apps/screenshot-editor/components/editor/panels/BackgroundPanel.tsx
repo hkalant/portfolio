@@ -2,7 +2,11 @@ import { ImageUp } from "lucide-react";
 import { useId, useMemo, useRef, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { defaultBackground } from "@/lib/design/defaults";
-import { GRADIENT_PRESETS, toCssLinearGradient } from "@/lib/design/gradients";
+import {
+  GRADIENT_PRESETS,
+  toCssLinearGradient,
+  type GradientGroup,
+} from "@/lib/design/gradients";
 import { ANGLE, BLUR } from "@/lib/design/limits";
 import type {
   Background,
@@ -44,11 +48,20 @@ const SOLID_COLORS: readonly { name: string; color: string }[] = [
   { name: "Pink", color: "#ec4899" },
 ];
 
-const GRADIENT_SWATCHES: readonly Swatch[] = GRADIENT_PRESETS.map((preset) => ({
-  id: preset.id,
-  name: preset.name,
-  style: { backgroundImage: toCssLinearGradient(preset.angle, preset.stops) },
-}));
+function gradientSwatches(group: GradientGroup): readonly Swatch[] {
+  return GRADIENT_PRESETS.filter((preset) => preset.group === group).map(
+    (preset) => ({
+      id: preset.id,
+      name: preset.name,
+      style: {
+        backgroundImage: toCssLinearGradient(preset.angle, preset.stops),
+      },
+    }),
+  );
+}
+
+const BROOKES_SWATCHES = gradientSwatches("brookes");
+const GENERIC_SWATCHES = gradientSwatches("generic");
 
 /** The newest gradient in the undo history, so switching back restores it. */
 function lastGradient(past: readonly Design[]): Background | null {
@@ -125,8 +138,14 @@ function GradientControls({
   return (
     <>
       <SwatchGrid
-        label="Presets"
-        swatches={GRADIENT_SWATCHES}
+        label="Oxford Brookes"
+        swatches={BROOKES_SWATCHES}
+        selectedId={background.presetId}
+        onSelect={applyGradientPreset}
+      />
+      <SwatchGrid
+        label="Generic"
+        swatches={GENERIC_SWATCHES}
         selectedId={background.presetId}
         onSelect={applyGradientPreset}
       />

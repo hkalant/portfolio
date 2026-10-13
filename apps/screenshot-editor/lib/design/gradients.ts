@@ -1,20 +1,40 @@
 import type { GradientStop } from "./schema";
 
+/** Which section of the presets a gradient is shown in. */
+export type GradientGroup = "brookes" | "generic";
+
 export type GradientPreset = {
   id: string;
   name: string;
+  group: GradientGroup;
   angle: number;
   stops: readonly GradientStop[];
 };
+
+/** The Oxford Brookes design system's colours (app/globals.css, --obu-*). */
+export const BROOKES_COLORS = {
+  charcoal: "#424a52",
+  charcoal60: "#8e9297",
+  charcoal20: "#d9dbdc",
+  charcoal10: "#eceded",
+  pink: "#d10373",
+  yellow: "#f9c909",
+  red: "#c70540",
+  red20: "#f2ced9",
+  green: "#006338",
+  green20: "#cedfd8",
+} as const;
 
 const twoStop = (
   id: string,
   name: string,
   from: string,
   to: string,
+  group: GradientGroup = "generic",
 ): GradientPreset => ({
   id,
   name,
+  group,
   angle: 135,
   stops: [
     { offset: 0, color: from },
@@ -22,9 +42,23 @@ const twoStop = (
   ],
 });
 
-/** The first preset is the default background. */
+const brookes = (id: string, name: string, from: string, to: string) =>
+  twoStop(id, name, from, to, "brookes");
+const c = BROOKES_COLORS;
+
+/**
+ * Oxford Brookes gradients first, made only from the design system's colours,
+ * then generic ones. The first preset is the default background.
+ */
 export const GRADIENT_PRESETS: readonly GradientPreset[] = [
-  twoStop("brookes", "Brookes", "#424a52", "#d10373"),
+  brookes("brookes", "Brookes", c.charcoal, c.pink),
+  brookes("sunrise", "Sunrise", c.yellow, c.pink),
+  brookes("marigold", "Marigold", c.yellow, c.red),
+  brookes("blush", "Blush", c.red20, c.pink),
+  brookes("crimson", "Crimson", c.red, c.charcoal),
+  brookes("evergreen", "Evergreen", c.green, c.charcoal),
+  brookes("sage", "Sage", c.green20, c.green),
+  brookes("stone", "Stone", c.charcoal10, c.charcoal60),
   twoStop("lavender", "Lavender", "#c471f5", "#fa71cd"),
   twoStop("sunset", "Sunset", "#ff7e5f", "#feb47b"),
   twoStop("ocean", "Ocean", "#2193b0", "#6dd5ed"),
@@ -34,6 +68,7 @@ export const GRADIENT_PRESETS: readonly GradientPreset[] = [
   {
     id: "midnight",
     name: "Midnight",
+    group: "generic",
     angle: 135,
     stops: [
       { offset: 0, color: "#0f2027" },

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BROOKES_COLORS,
   DEFAULT_GRADIENT,
   getGradientPreset,
   GRADIENT_PRESETS,
@@ -102,6 +103,18 @@ describe("presets", () => {
       expect(parsed.success).toBe(true);
     }
     expect(GRADIENT_PRESETS.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("makes the Oxford Brookes gradients only from design system colours", () => {
+    const brand = new Set<string>(Object.values(BROOKES_COLORS));
+    const brookes = GRADIENT_PRESETS.filter((p) => p.group === "brookes");
+    expect(brookes.length).toBeGreaterThanOrEqual(6);
+    for (const preset of brookes)
+      for (const stop of preset.stops)
+        expect(brand.has(stop.color), `${preset.id} ${stop.color}`).toBe(true);
+    // Listed first, so the default is one of them.
+    expect(GRADIENT_PRESETS.slice(0, brookes.length)).toEqual(brookes);
+    expect(DEFAULT_GRADIENT.group).toBe("brookes");
   });
 
   it("can be looked up by id, and the default is the first", () => {
