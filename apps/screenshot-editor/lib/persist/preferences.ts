@@ -19,6 +19,14 @@ export function writePreference(key: string, value: string) {
   }
 }
 
+export function removePreference(key: string) {
+  try {
+    window.localStorage.removeItem(PREFIX + key);
+  } catch {
+    // Nothing to remove where storage is blocked.
+  }
+}
+
 /** Parsed JSON, or null if it is missing or not valid JSON. */
 export function readJsonPreference(key: string): unknown {
   const raw = readPreference(key);

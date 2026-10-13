@@ -9,6 +9,30 @@ const IMAGE_PREFIX = "image:";
 export const imageKey = (id: string) => `${IMAGE_PREFIX}${id}`;
 
 export type SavedDesign = { design: unknown; savedAt: number };
+
+function isSavedDesign(value: unknown): value is SavedDesign {
+  const saved = value as Partial<SavedDesign> | null | undefined;
+  return (
+    !!saved &&
+    typeof saved.savedAt === "number" &&
+    Number.isFinite(saved.savedAt) &&
+    migrateDesign(saved.design) !== null
+  );
+}
+
+/**
+ * The newer of the design in storage and the copy kept as the page closed
+ * (see useAutosave). A tie goes to the copy, written after the storage save.
+ */
+export function newerSavedDesign(
+  stored: unknown,
+  pending: unknown,
+): SavedDesign | undefined {
+  const a = isSavedDesign(stored) ? stored : undefined;
+  const b = isSavedDesign(pending) ? pending : undefined;
+  if (!a || !b) return b ?? a;
+  return b.savedAt >= a.savedAt ? b : a;
+}
 /**
  * An image as stored: its bytes, because WebKit in private browsing can't
  * store a Blob in IndexedDB (the write fails, and with it the design).

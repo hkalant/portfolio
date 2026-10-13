@@ -3,11 +3,19 @@
 import { useLayoutEffect } from "react";
 import { loadImageFromBlob } from "@/lib/image/load";
 import {
+  DESIGN_KEY,
+  newerSavedDesign,
   restoreSnapshot,
   saveSnapshot,
   saveSnapshotNow,
   type AutosaveStorage,
+  type SavedDesign,
 } from "@/lib/persist/autosave";
+import {
+  readJsonPreference,
+  removePreference,
+  writePreference,
+} from "@/lib/persist/preferences";
 import {
   deleteValue,
   listKeys,
@@ -23,6 +31,12 @@ const SAVE_MAX_WAIT_MS = 3000;
 // A storage that never answers (a stuck IndexedDB open) must not keep the
 // editor on "Restoring…" for good.
 const RESTORE_READ_TIMEOUT_MS = 5000;
+
+// A copy of the design written to localStorage as the page closes. The
+// IndexedDB write started then can be lost (WebKit drops it on a quick
+// reload); localStorage writes at once. Images aren't copied: they are
+// saved soon after they are added, and one that is missing is dropped.
+const PENDING_KEY = "pending-design";
 
 const storage: AutosaveStorage = {
   read: readValue,
@@ -55,15 +69,34 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
+const readWithTimeout = <T>(key: string) =>
+  withTimeout(readValue<T>(key), RESTORE_READ_TIMEOUT_MS).catch(
+    (error: unknown) => {
+      storageWorks = false;
+      throw error;
+    },
+  );
+
+// True when the restore used the localStorage copy, which storage doesn't
+// hold yet: the editor then saves it once.
+let restoredFromCopy = false;
+
 const restoreStorage: AutosaveStorage = {
   ...storage,
-  read: <T>(key: string) =>
-    withTimeout(readValue<T>(key), RESTORE_READ_TIMEOUT_MS).catch(
+  read: async <T>(key: string) => {
+    if (key !== DESIGN_KEY) return readWithTimeout<T>(key);
+    const pending = readJsonPreference(PENDING_KEY);
+    const stored = await readWithTimeout<SavedDesign>(key).catch(
       (error: unknown) => {
-        storageWorks = false;
-        throw error;
+        // Storage stopped answering: the copy is still worth restoring.
+        if (pending === null) throw error;
+        return undefined;
       },
-    ),
+    );
+    const newer = newerSavedDesign(stored, pending);
+    restoredFromCopy = newer !== undefined && newer === pending;
+    return newer as T | undefined;
+  },
 };
 
 // The store outlives the editor page (client-side navigation keeps it), so
@@ -89,7 +122,8 @@ function restoreOnce(): Promise<number> {
       state.loadDesign(restored.design, restored.images);
     else for (const image of restored?.images ?? []) image.release();
     store.getState().setRestoring(false);
-    return untouched ? store.getState().revision : -1;
+    // -1 also when the copy was restored, so storage gets it.
+    return untouched && !restoredFromCopy ? store.getState().revision : -1;
   })();
   return restoration;
 }
@@ -112,6 +146,8 @@ export function useAutosave() {
     let pendingSave = false;
     // The newest revision known to be in storage (or committed to it).
     let writtenRevision = -1;
+    // The revision of the copy in localStorage, if there is one.
+    let pendingRevision = -1;
     let unsubscribe: (() => void) | undefined;
 
     const save = async () => {
@@ -127,9 +163,14 @@ export function useAutosave() {
       const { design, images, revision } = store.getState();
       // A flush while this save waits may have written a newer design.
       const isCurrent = () => revision >= writtenRevision;
-      if (await saveSnapshot(storage, design, images, isCurrent))
+      if (await saveSnapshot(storage, design, images, isCurrent)) {
         writtenRevision = Math.max(writtenRevision, revision);
-      else storageWorks = false;
+        // Storage now holds the copy's design or a newer one.
+        if (pendingRevision >= 0 && revision >= pendingRevision) {
+          removePreference(PENDING_KEY);
+          pendingRevision = -1;
+        }
+      } else storageWorks = false;
       saving = false;
       if (pendingSave) {
         pendingSave = false;
@@ -155,6 +196,9 @@ export function useAutosave() {
     const flush = () => {
       const { design, images, revision } = store.getState();
       if (!storageWorks || revision <= writtenRevision) return;
+      const copy: SavedDesign = { design, savedAt: Date.now() };
+      writePreference(PENDING_KEY, JSON.stringify(copy));
+      pendingRevision = revision;
       if (saveSnapshotNow(storage, design, images)) writtenRevision = revision;
       void save();
     };
@@ -167,6 +211,8 @@ export function useAutosave() {
       // A tab that only shows what storage holds never writes it back, so it
       // can't overwrite another tab's newer work when it is hidden or closed.
       writtenRevision = cleanRevision;
+      // Clear the copy once storage holds it.
+      if (restoredFromCopy) pendingRevision = 0;
       let revision = store.getState().revision;
       unsubscribe = store.subscribe((next) => {
         if (next.revision === revision) return;

@@ -223,6 +223,35 @@ test("an edit made just before a reload is kept", async ({ page }) => {
   await expectDesignSize(page, 1368, 918);
 });
 
+test("an edit is kept when the browser drops the writes made on close", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await expect
+    .poll(async () => {
+      const design = (await savedDesign(page)) as {
+        layers?: { imageId?: string | null }[];
+      } | null;
+      return design?.layers?.[0]?.imageId ?? null;
+    })
+    .toEqual(expect.any(String));
+
+  await openTab(page, "Style");
+  const padding = page.getByRole("slider", { name: "Padding" });
+  await padding.focus();
+  for (let i = 0; i < 5; i += 1) await padding.press("ArrowRight");
+  await expectDesignSize(page, 1368, 918);
+  // As WebKit sometimes does on a quick reload: no IndexedDB write made from
+  // here on lands, neither the delayed save nor the one made on close.
+  await page.evaluate(() => {
+    IDBObjectStore.prototype.put = function () {
+      throw new DOMException("dropped", "AbortError");
+    };
+  });
+  await page.reload();
+  await expectDesignSize(page, 1368, 918);
+});
+
 test("a tab left untouched doesn't overwrite another tab's work", async ({
   page,
 }) => {

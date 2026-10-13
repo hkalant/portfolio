@@ -6,6 +6,7 @@ import { fakeImage } from "@/lib/testing/fakeImage";
 import {
   DESIGN_KEY,
   imageKey,
+  newerSavedDesign,
   restoreSnapshot,
   saveSnapshot,
   saveSnapshotNow,
@@ -220,5 +221,31 @@ describe("restoreSnapshot", () => {
     expect(await restoreSnapshot(storage, loadImage)).toBeNull();
     map.set(DESIGN_KEY, { design: { version: 99 }, savedAt: 1 });
     expect(await restoreSnapshot(storage, loadImage)).toBeNull();
+  });
+});
+
+describe("newerSavedDesign", () => {
+  const saved = (savedAt: number, padding = 64) => {
+    const design = createDefaultDesign();
+    return {
+      design: { ...design, layers: [{ ...design.layers[0], padding }] },
+      savedAt,
+    };
+  };
+
+  it("picks the newer of storage and the copy kept on close", () => {
+    expect(newerSavedDesign(saved(1), saved(2, 80))).toEqual(saved(2, 80));
+    expect(newerSavedDesign(saved(3), saved(2, 80))).toEqual(saved(3));
+    // A tie goes to the copy, written after the storage save.
+    expect(newerSavedDesign(saved(2), saved(2, 80))).toEqual(saved(2, 80));
+  });
+
+  it("ignores a missing or invalid save on either side", () => {
+    expect(newerSavedDesign(undefined, saved(1))).toEqual(saved(1));
+    expect(newerSavedDesign(saved(1), null)).toEqual(saved(1));
+    expect(
+      newerSavedDesign(saved(1), { design: { version: 99 }, savedAt: 5 }),
+    ).toEqual(saved(1));
+    expect(newerSavedDesign(null, "junk")).toBeUndefined();
   });
 });
