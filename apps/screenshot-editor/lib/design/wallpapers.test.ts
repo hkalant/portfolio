@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createFakeContext } from "@/lib/render/fakeContext";
 import { isHexColor } from "./colors";
 import {
+  BLOB_FALLOFF,
   DEFAULT_WALLPAPER,
   getWallpaper,
   WALLPAPER_SIZE,
@@ -63,6 +64,17 @@ describe("WALLPAPERS", () => {
       const { context, problems } = createFakeContext({ conic: false });
       wallpaper.draw(context, 800, 500);
       expect(problems, wallpaper.id).toEqual([]);
+    }
+  });
+});
+
+describe("BLOB_FALLOFF", () => {
+  it("fades from opaque at the centre to transparent at the edge", () => {
+    expect(BLOB_FALLOFF[0]).toEqual([0, 1]);
+    expect(BLOB_FALLOFF.at(-1)).toEqual([1, 0]);
+    for (let i = 1; i < BLOB_FALLOFF.length; i += 1) {
+      expect(BLOB_FALLOFF[i][0]).toBeGreaterThan(BLOB_FALLOFF[i - 1][0]);
+      expect(BLOB_FALLOFF[i][1]).toBeLessThan(BLOB_FALLOFF[i - 1][1]);
     }
   });
 });

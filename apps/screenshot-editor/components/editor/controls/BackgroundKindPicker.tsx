@@ -1,7 +1,6 @@
 import {
   Ban,
   Blend,
-  Droplets,
   ImageIcon,
   PaintBucket,
   Pipette,
@@ -12,7 +11,7 @@ import type { BackgroundKind } from "@/lib/design/schema";
 
 /** What the picker offers. Linear and radial are both "gradient". */
 export type BackgroundChoice =
-  "gradient" | "solid" | "mesh" | "image" | "fromImage" | "none";
+  "gradient" | "solid" | "image" | "fromImage" | "none";
 
 const CHOICES: readonly {
   value: BackgroundChoice;
@@ -21,7 +20,6 @@ const CHOICES: readonly {
 }[] = [
   { value: "gradient", label: "Gradient", icon: Blend },
   { value: "solid", label: "Solid", icon: PaintBucket },
-  { value: "mesh", label: "Mesh", icon: Droplets },
   { value: "image", label: "Image", icon: ImageIcon },
   { value: "fromImage", label: "From image", icon: Pipette },
   { value: "none", label: "None", icon: Ban },

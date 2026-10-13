@@ -83,7 +83,6 @@ describe("editor store: style", () => {
     state().setSolidColor("red");
     state().setBorder({ color: "#12" });
     state().setFrame({ kind: "tv" as never });
-    state().applyMeshPreset("nope");
     state().setWallpaper("nope");
     state().setCanvasPreset("nope");
     expect(state().design).toBe(before);
@@ -128,11 +127,6 @@ describe("editor store: style", () => {
     expect(state().design.background).toEqual({
       kind: "solid",
       color: "#ff0000",
-    });
-    state().applyMeshPreset("lagoon");
-    expect(state().design.background).toEqual({
-      kind: "mesh",
-      presetId: "lagoon",
     });
     state().setWallpaper("waves");
     expect(state().design.background).toEqual({
@@ -208,14 +202,14 @@ describe("editor store: style", () => {
     expect(shot().frame.url).toHaveLength(120);
     state().setImage(fakeImage("a"));
     state().setCanvasPreset("og");
-    state().applyMeshPreset("dusk");
+    state().setSolidColor("#123456");
     state().setRotation(10);
     state().resetStyle();
     expect(shot()).toMatchObject({ ...defaultShotStyle(), imageId: "a" });
     expect(state().design.canvas.preset).toBe("og");
     expect(state().design.background).toEqual({
-      kind: "mesh",
-      presetId: "dusk",
+      kind: "solid",
+      color: "#123456",
     });
   });
 });

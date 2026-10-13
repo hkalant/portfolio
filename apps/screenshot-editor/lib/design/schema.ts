@@ -44,7 +44,6 @@ export const backgroundSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("solid"), color: hexColorSchema }),
   linearBackgroundSchema,
   radialBackgroundSchema,
-  z.object({ kind: z.literal("mesh"), presetId: z.string().min(1) }),
   z.object({
     kind: z.literal("image"),
     source: z.discriminatedUnion("type", [

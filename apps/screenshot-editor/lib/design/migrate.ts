@@ -1,4 +1,4 @@
-import { createDefaultDesign } from "./defaults";
+import { createDefaultDesign, defaultBackground } from "./defaults";
 import { designSchema, designV1Schema, type Design } from "./schema";
 
 /** Size presets that were removed. Designs saved with one keep its size as a custom size. */
@@ -14,12 +14,22 @@ function withoutRetiredSize(value: unknown): unknown {
   return { ...value, canvas: { ...canvas, preset: "custom" } };
 }
 
+/** Mesh backgrounds were removed: a design saved with one gets the default background. */
+function withoutMesh(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) return value;
+  const { background } = value as { background?: unknown };
+  if ((background as { kind?: unknown } | null)?.kind !== "mesh") return value;
+  return { ...value, background: defaultBackground() };
+}
+
 /**
  * A valid current design from saved JSON of any known version, or null.
  * Fields added since that version get their defaults.
  */
 export function migrateDesign(value: unknown): Design | null {
-  const current = designSchema.safeParse(withoutRetiredSize(value));
+  const current = designSchema.safeParse(
+    withoutMesh(withoutRetiredSize(value)),
+  );
   if (current.success) return current.data;
 
   const v1 = designV1Schema.safeParse(value);

@@ -66,9 +66,6 @@ test("solid, transparent and uploaded backgrounds are what gets exported", async
   const fromImage = await cornerPixel(page);
   expect(fromImage[0]).toBeGreaterThan(fromImage[1] + 40);
 
-  await backgroundType(page, "Mesh").click();
-  expect((await cornerPixel(page))[3]).toBe(255);
-
   await backgroundType(page, "Gradient").click();
   await expect(page.getByRole("button", { name: "Brookes" })).toBeVisible();
 });

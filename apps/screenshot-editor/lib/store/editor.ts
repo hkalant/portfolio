@@ -21,7 +21,6 @@ import {
   SHADOW_OFFSET,
   SHOT_SCALE,
 } from "@/lib/design/limits";
-import { getMeshPreset } from "@/lib/design/meshes";
 import { referencedImageIds } from "@/lib/design/refs";
 import type {
   Background,
@@ -103,7 +102,6 @@ export type EditorState = {
   setGradientAngle: (degrees: number) => void;
   setGradientStop: (index: number, color: string) => void;
   setSolidColor: (color: string) => void;
-  applyMeshPreset: (id: string) => void;
   setWallpaper: (id: string) => void;
   setFromImage: () => void;
   setFromImageAngle: (degrees: number) => void;
@@ -374,11 +372,6 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     setSolidColor: (color) => {
       if (!isHexColor(color)) return;
       setBackgroundTo({ kind: "solid", color: color.toLowerCase() }, "solid");
-    },
-
-    applyMeshPreset: (id) => {
-      if (!getMeshPreset(id)) return;
-      setBackgroundTo({ kind: "mesh", presetId: id });
     },
 
     setWallpaper: (id) => {

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { defaultBackground } from "@/lib/design/defaults";
 import { GRADIENT_PRESETS, toCssLinearGradient } from "@/lib/design/gradients";
 import { ANGLE, BLUR } from "@/lib/design/limits";
-import { DEFAULT_MESH, MESH_PRESETS } from "@/lib/design/meshes";
 import type {
   Background,
   BackgroundFx,
@@ -17,7 +16,6 @@ import { ACCEPT_ATTR } from "@/lib/image/accept";
 import { dominantColors, sampleImagePixels } from "@/lib/image/colors";
 import { ingestFile } from "@/lib/image/ingest";
 import { fromImageStops } from "@/lib/render/fromImage";
-import { meshCss } from "@/lib/render/mesh";
 import { imageThumbnail, wallpaperThumbnail } from "@/lib/render/wallpaper";
 import {
   selectActiveImage,
@@ -52,12 +50,6 @@ const GRADIENT_SWATCHES: readonly Swatch[] = GRADIENT_PRESETS.map((preset) => ({
   style: { backgroundImage: toCssLinearGradient(preset.angle, preset.stops) },
 }));
 
-const MESH_SWATCHES: readonly Swatch[] = MESH_PRESETS.map((preset) => ({
-  id: preset.id,
-  name: preset.name,
-  style: meshCss(preset),
-}));
-
 /** The newest gradient in the undo history, so switching back restores it. */
 function lastGradient(past: readonly Design[]): Background | null {
   for (let i = past.length - 1; i >= 0; i -= 1) {
@@ -78,9 +70,6 @@ function chooseKind(choice: BackgroundChoice) {
     case "solid":
       state.setBackground({ kind: "solid", color: "#ffffff" });
       break;
-    case "mesh":
-      state.applyMeshPreset(DEFAULT_MESH.id);
-      break;
     case "image": {
       // Back to the last uploaded background, if there is one.
       const upload = selectLastBackgroundUpload(state);
@@ -100,7 +89,6 @@ function chooseKind(choice: BackgroundChoice) {
 export function BackgroundPanel() {
   const background = useEditorStore((state) => state.design.background);
   const fx = useEditorStore((state) => state.design.backgroundFx);
-  const applyMeshPreset = useEditorStore((state) => state.applyMeshPreset);
   const choice = backgroundChoice(background.kind);
 
   return (
@@ -111,14 +99,6 @@ export function BackgroundPanel() {
       )}
       {background.kind === "solid" && (
         <SolidControls color={background.color} />
-      )}
-      {background.kind === "mesh" && (
-        <SwatchGrid
-          label="Presets"
-          swatches={MESH_SWATCHES}
-          selectedId={background.presetId}
-          onSelect={applyMeshPreset}
-        />
       )}
       {background.kind === "image" && <ImageControls background={background} />}
       {background.kind === "fromImage" && (
