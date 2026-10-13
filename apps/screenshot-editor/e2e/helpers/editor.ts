@@ -88,20 +88,24 @@ export async function expectEmptyState(page: Page) {
   });
 }
 
-export async function openTab(
-  page: Page,
-  name: "Background" | "Frame" | "Style",
-) {
+export async function openTab(page: Page, name: "Background" | "Style") {
   await page.getByRole("combobox", { name: "Tool" }).selectOption(name);
 }
 
-/** Picks a window frame in the Frame tool, which changes the design size. */
+/** Picks a window frame in the Style tool, which changes the design size. */
 export async function chooseFrame(page: Page, name: string) {
-  await openTab(page, "Frame");
+  await openTab(page, "Style");
   await page
     .getByRole("radiogroup", { name: "Frame", exact: true })
     .getByRole("radio", { name, exact: true })
     .click();
+}
+
+/** A shadow preset in the Style tool ("None" also exists as a frame). */
+export function shadowOption(page: Page, name: string) {
+  return page
+    .getByRole("radiogroup", { name: "Shadow", exact: true })
+    .getByRole("radio", { name, exact: true });
 }
 
 /** Picks a canvas size from the top bar's size menu. */

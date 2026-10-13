@@ -57,13 +57,14 @@ function TextField({
   );
 }
 
-export function FramePanel() {
+/** The frame choice and its options, shown at the top of the Style panel. */
+export function FrameOptions() {
   const frame = useEditorStore((state) => selectShot(state).frame);
   const setFrame = useEditorStore((state) => state.setFrame);
 
   return (
     <div className="space-y-6">
-      {/* The panel heading already says "Frame", so the group isn't labelled twice on screen. */}
+      {/* The section heading already says "Frame", so the group isn't labelled twice on screen. */}
       <ToggleGroup.Root
         type="single"
         aria-label="Frame"

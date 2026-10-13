@@ -8,6 +8,7 @@ import {
   openTab,
   RED,
   setSlider,
+  shadowOption,
   stage,
   upload,
 } from "./helpers/editor";
@@ -101,11 +102,8 @@ test("the shadow is drawn below a screenshot with rounded corners", async ({
   // 20 export px below the bottom edge of the image, horizontally centred.
   const probe: [number, number] = [1344, (72 + 750) * 2 + 20];
 
-  await page.getByRole("radio", { name: "None" }).click();
-  await expect(page.getByRole("radio", { name: "None" })).toHaveAttribute(
-    "data-state",
-    "on",
-  );
+  await shadowOption(page, "None").click();
+  await expect(shadowOption(page, "None")).toHaveAttribute("data-state", "on");
   const [withoutShadow] = await samplePixels(
     page,
     (await exportPng(page)).png,

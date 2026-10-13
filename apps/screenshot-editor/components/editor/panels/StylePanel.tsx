@@ -7,6 +7,7 @@ import { selectShot, useEditorStore } from "@/lib/store/editor";
 import { ColorField } from "../controls/ColorField";
 import { LabeledSlider } from "../controls/LabeledSlider";
 import { Segmented } from "../controls/Segmented";
+import { FrameOptions } from "./FramePanel";
 
 const SHADOW_OPTIONS = SHADOW_PRESET_ORDER.map((id) => ({
   value: id,
@@ -33,6 +34,10 @@ export function StylePanel() {
 
   return (
     <div className="space-y-8">
+      <Section title="Frame">
+        <FrameOptions />
+      </Section>
+
       <Section title="Shadow">
         {/* No option is on while the shadow is hand-tuned ("custom"). */}
         <Segmented<ShadowPresetId | "custom">

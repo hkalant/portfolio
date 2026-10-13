@@ -39,7 +39,7 @@ import {
 import type { LoadedImage } from "@/lib/image/load";
 import { clamp } from "@/lib/utils";
 
-export type PanelId = "background" | "frame" | "style";
+export type PanelId = "background" | "style";
 /** The mobile layout also has a Size tab; null means its panel is closed. */
 export type MobilePanelId = PanelId | "size";
 

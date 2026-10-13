@@ -8,6 +8,7 @@ import {
   openTab,
   RED,
   setSlider,
+  shadowOption,
   upload,
 } from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
@@ -92,7 +93,7 @@ test("JPEG exports fill transparency with white", async ({ page }) => {
 test("window frames add a title bar above the screenshot", async ({ page }) => {
   // 1000 px wide: frame chrome at its base size.
   await upload(page, makeSolidPng(1000, 600, RED));
-  await openTab(page, "Frame");
+  await openTab(page, "Style");
   const frame = (name: string) =>
     page
       .getByRole("radiogroup", { name: "Frame", exact: true })
@@ -142,9 +143,10 @@ test("border and shadow", async ({ page }) => {
 
   // The shadow comes from the presets only.
   for (const name of ["None", "Soft", "Medium", "Floating"])
-    await expect(page.getByRole("radio", { name, exact: true })).toBeVisible();
-  await expect(page.getByRole("radio", { name: "Hard" })).toHaveCount(0);
-  await expect(
-    page.getByRole("radio", { name: "Floating", exact: true }),
-  ).toHaveAttribute("data-state", "on");
+    await expect(shadowOption(page, name)).toBeVisible();
+  await expect(shadowOption(page, "Hard")).toHaveCount(0);
+  await expect(shadowOption(page, "Floating")).toHaveAttribute(
+    "data-state",
+    "on",
+  );
 });
