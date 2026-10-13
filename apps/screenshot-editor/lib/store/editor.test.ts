@@ -221,10 +221,10 @@ describe("editor store: history", () => {
     state().undo();
     expect(shot()).toMatchObject({ padding: 100, radius: 12 });
     state().undo();
-    expect(shot().padding).toBe(64);
+    expect(shot().padding).toBe(72);
     expect(selectCanUndo(state())).toBe(false);
     state().undo(); // nothing left: no change
-    expect(shot().padding).toBe(64);
+    expect(shot().padding).toBe(72);
     state().redo();
     state().redo();
     expect(shot()).toMatchObject({ padding: 100, radius: 30 });
@@ -239,7 +239,7 @@ describe("editor store: history", () => {
     state().setPadding(90);
     expect(state().past).toHaveLength(1);
     state().undo();
-    expect(shot().padding).toBe(64);
+    expect(shot().padding).toBe(72);
   });
 
   it("starts a new step for another setting, after a pause, or after sealHistory", () => {
@@ -267,12 +267,12 @@ describe("editor store: history", () => {
 
   it("drops a merged run that ends where it began, and keeps that state", () => {
     state().setPadding(80);
-    state().setPadding(64);
+    state().setPadding(72);
     expect(state().past).toEqual([]);
     state().setPadding(70);
     expect(state().past).toHaveLength(1);
     state().undo();
-    expect(shot().padding).toBe(64);
+    expect(shot().padding).toBe(72);
   });
 
   it("merges a whole gesture however slow it is", () => {
@@ -292,7 +292,7 @@ describe("editor store: history", () => {
   });
 
   it("ignores changes that change nothing", () => {
-    state().setPadding(64);
+    state().setPadding(72);
     state().setShadowPreset("medium");
     expect(state().past).toEqual([]);
     expect(state().revision).toBe(0);

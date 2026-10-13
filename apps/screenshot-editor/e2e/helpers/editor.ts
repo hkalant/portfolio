@@ -95,6 +95,15 @@ export async function openTab(
   await page.getByRole("combobox", { name: "Tool" }).selectOption(name);
 }
 
+/** Picks a window frame in the Frame tool, which changes the design size. */
+export async function chooseFrame(page: Page, name: string) {
+  await openTab(page, "Frame");
+  await page
+    .getByRole("radiogroup", { name: "Frame", exact: true })
+    .getByRole("radio", { name, exact: true })
+    .click();
+}
+
 /** Picks a canvas size from the top bar's size menu. */
 export async function chooseCanvasSize(page: Page, name: string | RegExp) {
   await page.getByRole("button", { name: /^Canvas size/ }).click();

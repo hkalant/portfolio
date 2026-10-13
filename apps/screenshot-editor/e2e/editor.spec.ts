@@ -32,21 +32,21 @@ test("uploads a screenshot and exports it at 2x with rounded corners", async ({
     /click to add a screenshot/,
     makeSolidPng(1200, 750, RED),
   );
-  // 1200 x 750 plus 64px default padding on each side.
-  await expectDesignSize(page, 1328, 878);
+  // 1200 x 750 plus 72px default padding on each side.
+  await expectDesignSize(page, 1344, 894);
 
   const first = await exportPng(page);
   expect(first.name).toBe("fixture-2x.png");
-  expect(readPngSize(first.png)).toEqual({ width: 2656, height: 1756 });
-  // The image starts at (128, 128) in export pixels; with a 12px (24 export px)
+  expect(readPngSize(first.png)).toEqual({ width: 2688, height: 1788 });
+  // The image starts at (144, 144) in export pixels; with a 12px (24 export px)
   // radius, the pixel just inside its corner is cut away.
   const [center, background, roundedCorner] = await samplePixels(
     page,
     first.png,
     [
-      [1328, 878],
+      [1344, 894],
       [4, 4],
-      [129, 129],
+      [145, 145],
     ],
   );
   expect(isRed(center)).toBe(true);
@@ -58,18 +58,8 @@ test("uploads a screenshot and exports it at 2x with rounded corners", async ({
   const radius = await setSlider(page, "Corner radius", "Home");
   await expect(radius).toHaveAttribute("aria-valuenow", "0");
   const square = await exportPng(page);
-  const [squareCorner] = await samplePixels(page, square.png, [[129, 129]]);
+  const [squareCorner] = await samplePixels(page, square.png, [[145, 145]]);
   expect(isRed(squareCorner)).toBe(true);
-});
-
-test("padding changes the canvas size", async ({ page }) => {
-  await upload(page, makeSolidPng(1200, 750, RED));
-  await openTab(page, "Style");
-  const padding = await setSlider(page, "Padding", "End");
-  await expect(padding).toHaveAttribute("aria-valuenow", "200");
-  await expectDesignSize(page, 1600, 1150);
-  await setSlider(page, "Padding", "Home");
-  await expectDesignSize(page, 1200, 750);
 });
 
 test("the chosen gradient and angle are what gets drawn", async ({ page }) => {
@@ -116,7 +106,7 @@ test("the shadow is drawn below a screenshot with rounded corners", async ({
   await openTab(page, "Style");
 
   // 20 export px below the bottom edge of the image, horizontally centred.
-  const probe: [number, number] = [1328, (64 + 750) * 2 + 20];
+  const probe: [number, number] = [1344, (72 + 750) * 2 + 20];
 
   await page.getByRole("radio", { name: "None" }).click();
   await expect(page.getByRole("radio", { name: "None" })).toHaveAttribute(
@@ -158,24 +148,27 @@ test("clicking the active shadow option again keeps it selected", async ({
 test("the sample image loads", async ({ page }) => {
   await page.getByRole("button", { name: "Try a sample image" }).click();
   // The 2880 x 1800 sample is shown at 1600 x 1000, plus padding.
-  await expectDesignSize(page, 1728, 1128);
+  await expectDesignSize(page, 1744, 1144);
   const { name, png } = await exportPng(page);
   expect(name).toBe("sample-screenshot-2x.png");
-  expect(readPngSize(png)).toEqual({ width: 3456, height: 2256 });
+  expect(readPngSize(png)).toEqual({ width: 3488, height: 2288 });
 });
 
 test("replacing the image keeps the style", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
   await openTab(page, "Style");
-  await setSlider(page, "Padding", "Home");
-  await expectDesignSize(page, 400, 300);
+  await setSlider(page, "Corner radius", "End");
+  await expectDesignSize(page, 544, 444);
   await chooseFile(
     page,
     "Replace image",
     makeSolidPng(800, 600, [0, 0, 255, 255]),
     "second.png",
   );
-  await expectDesignSize(page, 800, 600);
+  await expectDesignSize(page, 944, 744);
+  await expect(
+    page.getByRole("slider", { name: "Corner radius" }),
+  ).toHaveAttribute("aria-valuenow", "64");
 });
 
 test("a large screenshot is downscaled and still exports sharp", async ({
@@ -183,11 +176,11 @@ test("a large screenshot is downscaled and still exports sharp", async ({
 }) => {
   // Longer than 3200px, so it is downscaled when loaded.
   await upload(page, makeSolidPng(4000, 2500, [0, 128, 255, 255]), "wide.png");
-  await expectDesignSize(page, 1728, 1128);
+  await expectDesignSize(page, 1744, 1144);
   const { name, png } = await exportPng(page);
   expect(name).toBe("wide-2x.png");
-  expect(readPngSize(png)).toEqual({ width: 3456, height: 2256 });
-  const [center] = await samplePixels(page, png, [[1728, 1128]]);
+  expect(readPngSize(png)).toEqual({ width: 3488, height: 2288 });
+  const [center] = await samplePixels(page, png, [[1744, 1144]]);
   expectColor(center, "#0080ff", 4);
   expect(center[3]).toBe(255);
 });

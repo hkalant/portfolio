@@ -1,22 +1,16 @@
-import { ChevronDown, RotateCcw } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Collapsible } from "radix-ui";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { alignedPosition, type Alignment } from "@/lib/design/layout";
 import {
   BORDER_WIDTH,
-  PADDING,
   RADIUS,
-  ROTATION,
   SHADOW_BLUR,
   SHADOW_OFFSET,
-  SHOT_SCALE,
 } from "@/lib/design/limits";
 import type { ShadowPresetId } from "@/lib/design/schema";
 import { SHADOW_LABELS, SHADOW_PRESET_ORDER } from "@/lib/design/shadows";
 import { selectShot, useEditorStore } from "@/lib/store/editor";
-import { useDesignLayout } from "@/lib/store/hooks";
-import { AlignGrid } from "../controls/AlignGrid";
 import { ColorField } from "../controls/ColorField";
 import { LabeledSlider } from "../controls/LabeledSlider";
 import { Segmented } from "../controls/Segmented";
@@ -39,14 +33,6 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export function StylePanel() {
   const shot = useEditorStore(selectShot);
-  const fixedCanvas = useEditorStore(
-    (state) => state.design.canvas.preset !== "auto",
-  );
-  const layout = useDesignLayout();
-  const setPadding = useEditorStore((state) => state.setPadding);
-  const setScale = useEditorStore((state) => state.setScale);
-  const alignTo = useEditorStore((state) => state.alignTo);
-  const setRotation = useEditorStore((state) => state.setRotation);
   const setRadius = useEditorStore((state) => state.setRadius);
   const setShadowPreset = useEditorStore((state) => state.setShadowPreset);
   const setShadow = useEditorStore((state) => state.setShadow);
@@ -57,76 +43,8 @@ export function StylePanel() {
   );
   const { shadow, border } = shot;
 
-  // Positions are stored to 4 places, so compare with a little slack.
-  const isAligned = (horizontal: Alignment, vertical: Alignment) => {
-    if (!layout) return false;
-    const target = alignedPosition(layout, shot.padding, horizontal, vertical);
-    return (
-      Math.abs(target.x - shot.position.x) < 1e-3 &&
-      Math.abs(target.y - shot.position.y) < 1e-3
-    );
-  };
-
   return (
     <div className="space-y-8">
-      <Section title="Layout">
-        <LabeledSlider
-          label="Padding"
-          value={shot.padding}
-          min={PADDING.min}
-          max={PADDING.max}
-          step={PADDING.step}
-          unit="px"
-          onChange={setPadding}
-        />
-        {fixedCanvas ? (
-          <>
-            <LabeledSlider
-              label="Scale"
-              value={percent(shot.scale)}
-              min={percent(SHOT_SCALE.min)}
-              max={percent(SHOT_SCALE.max)}
-              step={1}
-              unit="%"
-              onChange={(value) => setScale(value / 100)}
-            />
-            <AlignGrid
-              label="Position"
-              onAlign={alignTo}
-              isActive={isAligned}
-            />
-          </>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Scale and position need a fixed canvas size.
-          </p>
-        )}
-        <div className="flex items-end gap-2">
-          <div className="min-w-0 flex-1">
-            <LabeledSlider
-              label="Rotation"
-              value={shot.rotation}
-              min={ROTATION.min}
-              max={ROTATION.max}
-              step={ROTATION.step}
-              unit="°"
-              onChange={setRotation}
-            />
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            aria-label="Reset rotation"
-            title="Reset rotation"
-            disabled={shot.rotation === 0}
-            onClick={() => setRotation(0)}
-          >
-            <RotateCcw className="size-3.5" aria-hidden />
-          </Button>
-        </div>
-      </Section>
-
       <Section title="Corners">
         <LabeledSlider
           label="Corner radius"

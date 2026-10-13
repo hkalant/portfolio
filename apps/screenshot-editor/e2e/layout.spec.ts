@@ -4,7 +4,6 @@ import {
   expectDesignSize,
   expectEmptyState,
   RED,
-  setSlider,
   upload,
 } from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
@@ -71,13 +70,11 @@ test.describe("on a phone", () => {
     await page.goto("./editor/");
     await expectEmptyState(page);
     await upload(page, makeSolidPng(1200, 750, RED));
-    await expectDesignSize(page, 1328, 878);
+    await expectDesignSize(page, 1344, 894);
 
     const style = page.getByRole("button", { name: "Style", exact: true });
     await style.click();
     await expect(style).toHaveAttribute("aria-pressed", "true");
-    await setSlider(page, "Padding", "Home");
-    await expectDesignSize(page, 1200, 750);
 
     await page.getByRole("button", { name: "Size", exact: true }).click();
     await page.getByRole("radio", { name: /^Story/ }).click();
@@ -111,7 +108,7 @@ test.describe("on a phone", () => {
     await page.goto("./editor/");
     await upload(page, makeSolidPng(1200, 750, RED));
     await page.getByRole("button", { name: "Style", exact: true }).click();
-    const slider = page.getByRole("slider", { name: "Padding" });
+    const slider = page.getByRole("slider", { name: "Corner radius" });
     await slider.scrollIntoViewIfNeeded();
     const value = await slider.getAttribute("aria-valuenow");
     const measure = async () => {

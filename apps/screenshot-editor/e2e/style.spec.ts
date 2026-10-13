@@ -99,9 +99,9 @@ test("window frames add a title bar above the screenshot", async ({ page }) => {
       .getByRole("radio", { name, exact: true });
 
   await frame("macOS").click();
-  await expectDesignSize(page, 1128, 762);
-  const bar: [number, number] = [(64 + 500) * 2, (64 + 17) * 2];
-  const inside: [number, number] = [(64 + 500) * 2, (64 + 34 + 300) * 2];
+  await expectDesignSize(page, 1144, 778);
+  const bar: [number, number] = [(72 + 500) * 2, (72 + 17) * 2];
+  const inside: [number, number] = [(72 + 500) * 2, (72 + 34 + 300) * 2];
   const [lightBar, imagePixel] = await samplePixels(
     page,
     (await exportImage(page)).data,
@@ -119,15 +119,15 @@ test("window frames add a title bar above the screenshot", async ({ page }) => {
 
   await page.getByLabel("Window title").fill("My app");
   await frame("Browser").click();
-  await expectDesignSize(page, 1128, 776);
+  await expectDesignSize(page, 1144, 792);
   await page.getByLabel("Address").fill("example.com");
   await frame("Glass").click();
-  await expectDesignSize(page, 1148, 748);
+  await expectDesignSize(page, 1164, 764);
   await frame("None").click();
-  await expectDesignSize(page, 1128, 728);
+  await expectDesignSize(page, 1144, 744);
 });
 
-test("border, rotation and reset", async ({ page }) => {
+test("border and shadow", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
   await openTab(page, "Style");
 
@@ -136,16 +136,9 @@ test("border, rotation and reset", async ({ page }) => {
   const [borderPixel] = await samplePixels(
     page,
     (await exportImage(page)).data,
-    [[(64 + 5) * 2, (64 + 150) * 2]],
+    [[(72 + 5) * 2, (72 + 150) * 2]],
   );
   expect(borderPixel[1]).toBeGreaterThan(100);
-
-  await setSlider(page, "Rotation", "End");
-  await expect(page.getByRole("slider", { name: "Rotation" })).toHaveAttribute(
-    "aria-valuenow",
-    "45",
-  );
-  await exportImage(page);
 
   await page.getByRole("button", { name: "Customise shadow" }).click();
   await setSlider(page, "Shadow blur", "End");
