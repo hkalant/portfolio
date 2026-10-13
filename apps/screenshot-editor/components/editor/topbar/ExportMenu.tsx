@@ -1,0 +1,190 @@
+"use client";
+
+import { ChevronDown, Download, LoaderCircle } from "lucide-react";
+import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { runExport } from "@/lib/export/controller";
+import { canEncode, planExport } from "@/lib/export/exportImage";
+import {
+  EXPORT_FORMATS,
+  EXPORT_SCALES,
+  FORMAT_INFO,
+  sanitizeExportOptions,
+  type ExportFormat,
+  type ExportOptions,
+} from "@/lib/export/options";
+import { readJsonPreference, writePreference } from "@/lib/persist/preferences";
+import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
+import { useDesignLayout } from "@/lib/store/hooks";
+import { cn } from "@/lib/utils";
+import { LabeledSlider } from "../controls/LabeledSlider";
+import { Segmented } from "../controls/Segmented";
+
+const PREFERENCE = "export-options";
+
+/** Remembers the export options in this browser between visits. */
+function useRememberedExportOptions() {
+  useEffect(() => {
+    const saved = readJsonPreference(PREFERENCE);
+    if (saved) {
+      const options = sanitizeExportOptions(saved);
+      if (!canEncode(FORMAT_INFO[options.format].mime)) options.format = "png";
+      useEditorStore.getState().setExportOptions(options);
+    }
+    return useEditorStore.subscribe((state, previous) => {
+      if (state.exportOptions !== previous.exportOptions)
+        writePreference(PREFERENCE, JSON.stringify(state.exportOptions));
+    });
+  }, []);
+}
+
+export function exportLabel({ format, scale }: ExportOptions): string {
+  return `Export ${FORMAT_INFO[format].label} ${scale}×`;
+}
+
+const formatOptions = () =>
+  EXPORT_FORMATS.map((format) => {
+    const supported = canEncode(FORMAT_INFO[format].mime);
+    return {
+      value: format,
+      label: FORMAT_INFO[format].label,
+      disabled: !supported,
+      title: supported ? undefined : "This browser can't save this format",
+    };
+  });
+const SCALE_OPTIONS = EXPORT_SCALES.map((scale) => ({
+  value: String(scale),
+  label: `${scale}×`,
+}));
+
+function useCanExport() {
+  const image = useEditorStore(selectActiveImage);
+  const busy = useEditorStore(
+    (state) => state.exporting || state.loading || state.restoring,
+  );
+  return !!image && !busy;
+}
+
+/** Format, quality and scale, with the size the export will have. */
+function ExportOptionsForm() {
+  const options = useEditorStore((state) => state.exportOptions);
+  const setExportOptions = useEditorStore((state) => state.setExportOptions);
+  const layout = useDesignLayout();
+  const plan = layout ? planExport(layout.canvas, options.scale) : null;
+  const lossy = options.format !== "png";
+
+  return (
+    <div className="space-y-4">
+      <Segmented
+        label="Format"
+        value={options.format}
+        options={formatOptions()}
+        onChange={(format: ExportFormat) => setExportOptions({ format })}
+      />
+      {lossy && (
+        <LabeledSlider
+          label="Quality"
+          value={Math.round(options.quality * 100)}
+          min={50}
+          max={100}
+          step={1}
+          unit="%"
+          onChange={(quality) => setExportOptions({ quality: quality / 100 })}
+        />
+      )}
+      <Segmented
+        label="Scale"
+        value={String(options.scale)}
+        options={SCALE_OPTIONS}
+        onChange={(scale) =>
+          setExportOptions({ scale: Number(scale) as ExportOptions["scale"] })
+        }
+      />
+      <p
+        className="text-xs text-muted-foreground tabular-nums"
+        data-testid="export-size"
+      >
+        {plan
+          ? `${plan.pixels.width} × ${plan.pixels.height} px`
+          : "Add a screenshot to export."}
+        {plan?.capped &&
+          " · reduced to the largest size this browser can export"}
+        {options.format === "jpeg" && " · JPEG has no transparency"}
+      </p>
+    </div>
+  );
+}
+
+function ExportButton({ className }: { className?: string }) {
+  const options = useEditorStore((state) => state.exportOptions);
+  const exporting = useEditorStore((state) => state.exporting);
+  const canExport = useCanExport();
+  return (
+    <Button
+      size="sm"
+      onClick={() => void runExport()}
+      // Busy but not disabled while exporting, so the button keeps keyboard
+      // focus (runExport ignores clicks until the export is done).
+      disabled={!canExport && !exporting}
+      aria-disabled={exporting || undefined}
+      className={cn("aria-disabled:opacity-50", className)}
+    >
+      {exporting ? (
+        <LoaderCircle className="animate-spin" aria-hidden />
+      ) : (
+        <Download aria-hidden />
+      )}
+      {exportLabel(options)}
+    </Button>
+  );
+}
+
+/**
+ * The export button with its options popover. `compact` (the mobile bar) is a
+ * single icon that opens the popover, with the export button inside.
+ */
+export function ExportMenu({ compact = false }: { compact?: boolean }) {
+  useRememberedExportOptions();
+
+  if (compact) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button size="icon" aria-label="Export" title="Export">
+            <Download aria-hidden />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="space-y-4">
+          <ExportOptionsForm />
+          <ExportButton className="w-full" />
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  return (
+    <div className="flex items-center">
+      <ExportButton className="rounded-r-none" />
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            size="sm"
+            aria-label="Export options"
+            title="Export options"
+            className="rounded-l-none border-l border-primary-foreground/20 px-2"
+          >
+            <ChevronDown aria-hidden />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end">
+          <ExportOptionsForm />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}

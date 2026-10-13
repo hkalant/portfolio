@@ -1,57 +1,57 @@
 "use client";
 
-import { Palette, SlidersHorizontal } from "lucide-react";
-import { Tabs } from "radix-ui";
+import { ChevronDown } from "lucide-react";
+import { useId } from "react";
 import type { PanelId } from "@/lib/store/editor";
 import { useEditorStore } from "@/lib/store/editor";
-import { BackgroundPanel } from "./panels/BackgroundPanel";
-import { StylePanel } from "./panels/StylePanel";
+import { PANELS } from "./panels/registry";
 
-const TOOLS: readonly { id: PanelId; label: string; icon: typeof Palette }[] = [
-  { id: "background", label: "Background", icon: Palette },
-  { id: "style", label: "Style", icon: SlidersHorizontal },
-];
-
-/** The icon rail and the settings panel for the selected tool. */
+/** The settings sidebar: a tool picker at the top and the chosen tool's panel (desktop layout). */
 export function ToolRail() {
   const activePanel = useEditorStore((state) => state.activePanel);
   const setActivePanel = useEditorStore((state) => state.setActivePanel);
+  const id = useId();
+  const panel = PANELS.find((entry) => entry.id === activePanel) ?? PANELS[0];
+  const { Component, icon: Icon } = panel;
 
   return (
-    <Tabs.Root
-      value={activePanel}
-      onValueChange={(value) => setActivePanel(value as PanelId)}
-      orientation="vertical"
-      className="flex min-h-0 shrink-0"
+    <aside
+      aria-label="Tools"
+      className="flex w-72 shrink-0 flex-col overflow-hidden rounded-xl glass lg:w-80"
     >
-      <Tabs.List
-        aria-label="Tools"
-        className="flex w-20 flex-col items-center gap-1 border-r bg-background py-3"
-      >
-        {TOOLS.map(({ id, label, icon: Icon }) => (
-          <Tabs.Trigger
-            key={id}
-            value={id}
-            className="flex w-16 flex-col items-center gap-1 rounded-lg py-2 text-[11px] text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring data-[state=active]:bg-accent data-[state=active]:text-foreground"
+      <div className="p-3 pb-0">
+        <label htmlFor={id} className="sr-only">
+          Tool
+        </label>
+        <div className="relative">
+          <Icon
+            className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-foreground"
+            aria-hidden
+          />
+          <select
+            id={id}
+            value={panel.id}
+            onChange={(event) => setActivePanel(event.target.value as PanelId)}
+            className="h-10 w-full appearance-none rounded-full border border-input bg-background/50 pr-10 pl-10 text-sm font-semibold text-foreground outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <Icon className="size-5" aria-hidden />
-            {label}
-          </Tabs.Trigger>
-        ))}
-      </Tabs.List>
-      <div className="w-80 overflow-y-auto border-r bg-background">
-        {TOOLS.map(({ id, label }) => (
-          <Tabs.Content
-            key={id}
-            value={id}
-            tabIndex={-1}
-            className="p-5 outline-none"
-          >
-            <h2 className="mb-5 text-sm font-semibold">{label}</h2>
-            {id === "background" ? <BackgroundPanel /> : <StylePanel />}
-          </Tabs.Content>
-        ))}
+            {PANELS.map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-foreground"
+            aria-hidden
+          />
+        </div>
       </div>
-    </Tabs.Root>
+      <section
+        aria-label={panel.label}
+        className="min-h-0 flex-1 overflow-y-auto p-5"
+      >
+        <Component />
+      </section>
+    </aside>
   );
 }

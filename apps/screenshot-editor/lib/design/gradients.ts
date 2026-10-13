@@ -24,6 +24,7 @@ const twoStop = (
 
 /** The first preset is the default background. */
 export const GRADIENT_PRESETS: readonly GradientPreset[] = [
+  twoStop("brookes", "Brookes", "#424a52", "#d10373"),
   twoStop("lavender", "Lavender", "#c471f5", "#fa71cd"),
   twoStop("sunset", "Sunset", "#ff7e5f", "#feb47b"),
   twoStop("ocean", "Ocean", "#2193b0", "#6dd5ed"),
@@ -84,14 +85,34 @@ export function linearGradientPoints(
   };
 }
 
+/**
+ * A radial gradient centred on a w x h box that reaches the farthest corner,
+ * like CSS `radial-gradient(circle farthest-corner, ...)`.
+ */
+export function radialGradientGeometry(
+  width: number,
+  height: number,
+): { center: Point; radius: number } {
+  return {
+    center: { x: width / 2, y: height / 2 },
+    radius: Math.hypot(width, height) / 2,
+  };
+}
+
+const cssStops = (stops: readonly GradientStop[]) =>
+  stops
+    .map((stop) => `${stop.color} ${Math.round(stop.offset * 1000) / 10}%`)
+    .join(", ");
+
 export function toCssLinearGradient(
   angle: number,
   stops: readonly GradientStop[],
 ): string {
-  const parts = stops.map(
-    (stop) => `${stop.color} ${Math.round(stop.offset * 1000) / 10}%`,
-  );
-  return `linear-gradient(${angle}deg, ${parts.join(", ")})`;
+  return `linear-gradient(${angle}deg, ${cssStops(stops)})`;
+}
+
+export function toCssRadialGradient(stops: readonly GradientStop[]): string {
+  return `radial-gradient(circle farthest-corner, ${cssStops(stops)})`;
 }
 
 /** Konva wants a flat [offset, colour, offset, colour, ...] array. */

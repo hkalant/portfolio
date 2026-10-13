@@ -20,6 +20,7 @@ export function exportFilename(
   sourceName: string | null,
   scale: number,
   now = new Date(),
+  extension = "png",
 ): string {
   const stem = (sourceName ?? "").replace(/\.[^./]*$/, "");
   const cleaned = stem
@@ -34,5 +35,5 @@ export function exportFilename(
     cleaned && !GENERIC_NAMES.has(cleaned)
       ? cleaned
       : `screenshot-${timestamp(now)}`;
-  return `${base}-${scale}x.png`;
+  return `${base}-${scale}x.${extension}`;
 }

@@ -1,4 +1,5 @@
 import { expect, test } from "./helpers/fixtures";
+import { expectEmptyState } from "./helpers/editor";
 
 test("the home page links to the editor", async ({ page }) => {
   await page.goto("./");
@@ -7,13 +8,13 @@ test("the home page links to the editor", async ({ page }) => {
   );
   await page.getByRole("link", { name: "Open editor" }).click();
   await expect(page).toHaveURL(/\/editor\/$/);
-  await expect(page.getByTestId("empty-state")).toBeVisible();
+  await expectEmptyState(page);
 });
 
 test("the editor loads when opened directly", async ({ page }) => {
   await page.goto("./editor/");
   await expect(page).toHaveTitle("Editor · Screenshot Editor");
-  await expect(page.getByTestId("empty-state")).toBeVisible();
+  await expectEmptyState(page);
   await expect(
     page.getByRole("button", { name: "Export PNG 2×" }),
   ).toBeDisabled();

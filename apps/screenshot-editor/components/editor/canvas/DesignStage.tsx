@@ -1,53 +1,58 @@
 "use client";
 
 import type Konva from "konva";
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef } from "react";
 import { Layer, Stage } from "react-konva";
 import type { DesignLayout } from "@/lib/design/layout";
-import type { LinearBackground, ShadowSpec } from "@/lib/design/schema";
+import { registerExportStage } from "@/lib/export/controller";
 import { useDevicePixelRatio } from "@/lib/hooks/useDevicePixelRatio";
 import type { LoadedImage } from "@/lib/image/load";
+import {
+  selectBackgroundImage,
+  selectShot,
+  useEditorStore,
+} from "@/lib/store/editor";
 import { BackgroundNode } from "./nodes/Background";
+import { GuidesNode } from "./nodes/Guides";
 import { ShotNode } from "./nodes/Shot";
 
 type Props = {
   image: LoadedImage;
   layout: DesignLayout;
-  background: LinearBackground;
-  shadow: ShadowSpec;
   /** On-screen zoom. The export ignores it and renders at true size. */
   scale: number;
-  stageRef: RefObject<Konva.Stage | null>;
-  layerRef: RefObject<Konva.Layer | null>;
 };
 
-export function DesignStage({
-  image,
-  layout,
-  background,
-  shadow,
-  scale,
-  stageRef,
-  layerRef,
-}: Props) {
+export function DesignStage({ image, layout, scale }: Props) {
   const pixelRatio = useDevicePixelRatio();
+  const stageRef = useRef<Konva.Stage>(null);
+  const layerRef = useRef<Konva.Layer>(null);
+  const background = useEditorStore((state) => state.design.background);
+  const fx = useEditorStore((state) => state.design.backgroundFx);
+  const shot = useEditorStore(selectShot);
+  const backgroundImage = useEditorStore(selectBackgroundImage);
   // Whole pixels: Konva rounds bitmap sizes down, which would blur fractional sizes.
   const width = Math.max(1, Math.floor(layout.canvas.width * scale));
   const height = Math.max(1, Math.floor(layout.canvas.height * scale));
 
-  // Large screenshots are drawn much smaller than their size in the preview.
-  // "high" smoothing keeps them sharp; canvases reset it whenever they resize.
+  // The Stage remounts when the pixel ratio changes (key below), so register
+  // and set up the layer again each time.
   useEffect(() => {
+    const stage = stageRef.current;
     const layer = layerRef.current;
-    if (!layer) return;
+    if (!stage || !layer) return;
+    // Large screenshots are drawn much smaller than their size in the preview.
+    // "high" smoothing keeps them sharp; canvases reset it whenever they resize.
     layer.on("beforeDraw.quality", () => {
       layer.getContext()._context.imageSmoothingQuality = "high";
     });
     layer.batchDraw();
+    const unregister = registerExportStage(stage, layer);
     return () => {
       layer.off("beforeDraw.quality");
+      unregister();
     };
-  }, [layerRef, pixelRatio]);
+  }, [pixelRatio]);
 
   return (
     <div
@@ -57,7 +62,12 @@ export function DesignStage({
       data-width={layout.canvas.width}
       data-height={layout.canvas.height}
       className="shadow-[0_1px_2px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.08)]"
-      style={{ width, height }}
+      // A touch on a draggable shot moves it instead of panning the page.
+      style={{
+        width,
+        height,
+        touchAction: layout.draggable ? "none" : undefined,
+      }}
     >
       <Stage
         key={pixelRatio}
@@ -66,20 +76,19 @@ export function DesignStage({
         height={height}
         scaleX={scale}
         scaleY={scale}
-        listening={false}
+        // Only a draggable shot needs pointer events.
+        listening={layout.draggable}
       >
-        <Layer ref={layerRef} listening={false}>
+        <Layer ref={layerRef} listening={layout.draggable}>
           <BackgroundNode
-            width={layout.canvas.width}
-            height={layout.canvas.height}
+            canvas={layout.canvas}
             background={background}
+            fx={fx}
+            screenshot={image}
+            backgroundImage={backgroundImage}
           />
-          <ShotNode
-            image={image}
-            rect={layout.imageRect}
-            radius={layout.radius}
-            shadow={shadow}
-          />
+          <ShotNode image={image} shot={shot} layout={layout} zoom={scale} />
+          <GuidesNode canvas={layout.canvas} zoom={scale} />
         </Layer>
       </Stage>
     </div>

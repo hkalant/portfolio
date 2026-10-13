@@ -5,6 +5,8 @@ import { downscaleToCanvas, planDownscaleSteps } from "./downscale";
 export type LoadedImage = {
   id: string;
   name: string;
+  /** The original file, kept for autosave. */
+  blob: Blob;
   source: HTMLImageElement | HTMLCanvasElement;
   /** Original size in pixels, before any downscaling on load. */
   width: number;
@@ -40,10 +42,13 @@ function waitForLoad(image: HTMLImageElement, url: string): Promise<void> {
   });
 }
 
+/** Decodes an image file. `options.id` keeps a known id, as when restoring an autosave. */
 export async function loadImageFromBlob(
   blob: Blob,
   name: string,
+  options: { id?: string } = {},
 ): Promise<LoadedImage> {
+  const id = options.id ?? createImageId();
   const url = URL.createObjectURL(blob);
   const image = new Image();
   try {
@@ -67,8 +72,9 @@ export async function loadImageFromBlob(
       // The full-size image is no longer needed; it is freed once unreferenced.
       URL.revokeObjectURL(url);
       return {
-        id: createImageId(),
+        id,
         name,
+        blob,
         source: canvas,
         width,
         height,
@@ -81,8 +87,9 @@ export async function loadImageFromBlob(
 
     let released = false;
     return {
-      id: createImageId(),
+      id,
       name,
+      blob,
       source: image,
       width,
       height,

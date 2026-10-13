@@ -1,17 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { createDefaultDesign } from "./defaults";
 import {
+  alignedPosition,
   computeLayout,
   computePreviewScale,
   fitWithin,
   MIN_PREVIEW_SCALE,
 } from "./layout";
 import {
-  EXPORT_SCALE,
   MAX_CANVAS_AREA,
   MAX_CANVAS_SIDE,
   MAX_DESIGN_SIDE,
   PADDING,
 } from "./limits";
+import type { Design, FrameKind, ShotLayer } from "./schema";
 
 describe("fitWithin", () => {
   it("never enlarges", () => {
@@ -44,32 +46,178 @@ describe("fitWithin", () => {
   });
 });
 
-describe("computeLayout", () => {
+function design(
+  shotPatch: Partial<ShotLayer> = {},
+  canvas: Design["canvas"] = { preset: "auto" },
+): Design {
+  const base = createDefaultDesign();
+  return { ...base, canvas, layers: [{ ...base.layers[0], ...shotPatch }] };
+}
+
+const frame = (kind: FrameKind): ShotLayer["frame"] => ({
+  kind,
+  theme: "light",
+  title: "",
+  url: "",
+});
+
+describe("computeLayout on an auto canvas", () => {
   it("adds padding on every side", () => {
-    const layout = computeLayout({ width: 1200, height: 750 }, 64, 12);
-    expect(layout.canvas).toEqual({ width: 1328, height: 878 });
-    expect(layout.imageRect).toEqual({
-      x: 64,
-      y: 64,
-      width: 1200,
-      height: 750,
-    });
-    expect(layout.radius).toBe(12);
+    const { canvas, shot, draggable } = computeLayout(
+      { width: 1200, height: 750 },
+      design(),
+    );
+    expect(canvas).toEqual({ width: 1328, height: 878 });
+    expect(shot).toMatchObject({ x: 64, y: 64, width: 1200, height: 750 });
+    expect(shot.image).toEqual({ x: 0, y: 0, width: 1200, height: 750 });
+    expect(shot.radius).toBe(12);
+    expect(shot.imageRadii).toEqual([12, 12, 12, 12]);
+    expect(shot.chrome).toBeNull();
+    expect(draggable).toBe(false);
   });
 
   it("fits large screenshots before padding", () => {
-    const layout = computeLayout({ width: 4000, height: 2500 }, 64, 12);
+    const layout = computeLayout({ width: 4000, height: 2500 }, design());
     expect(layout.canvas).toEqual({ width: 1728, height: 1128 });
   });
 
   it("caps the radius at half the shorter side", () => {
-    expect(computeLayout({ width: 40, height: 20 }, 0, 64).radius).toBe(10);
+    const layout = computeLayout(
+      { width: 40, height: 20 },
+      design({ padding: 0, radius: 64 }),
+    );
+    expect(layout.shot.radius).toBe(10);
   });
 
-  it("keeps every possible M1 export inside browser canvas limits", () => {
+  it("ignores scale and position", () => {
+    const layout = computeLayout(
+      { width: 400, height: 300 },
+      design({ scale: 0.5, position: { x: 0, y: 1 } }),
+    );
+    expect(layout.shot).toMatchObject({
+      x: 64,
+      y: 64,
+      width: 400,
+      height: 300,
+    });
+  });
+
+  it("puts an inset around the image", () => {
+    const { canvas, shot } = computeLayout(
+      { width: 400, height: 300 },
+      design({ inset: { size: 20, color: "auto" }, radius: 30 }),
+    );
+    expect(canvas).toEqual({ width: 568, height: 468 });
+    expect(shot.content).toEqual({ x: 0, y: 0, width: 440, height: 340 });
+    expect(shot.image).toEqual({ x: 20, y: 20, width: 400, height: 300 });
+    // The inner corners follow the outer ones, inset by 20.
+    expect(shot.imageRadii).toEqual([10, 10, 10, 10]);
+  });
+
+  it("adds a title bar above the content, with square top corners below it", () => {
+    const { shot } = computeLayout(
+      { width: 1000, height: 600 },
+      design({ frame: frame("macos") }),
+    );
+    expect(shot.chrome).toEqual({ x: 0, y: 0, width: 1000, height: 34 });
+    expect(shot.image).toEqual({ x: 0, y: 34, width: 1000, height: 600 });
+    expect(shot.height).toBe(634);
+    expect(shot.imageRadii).toEqual([0, 0, 12, 12]);
+  });
+
+  it("puts the glass ring around everything", () => {
+    const { shot } = computeLayout(
+      { width: 1000, height: 600 },
+      design({ frame: frame("glass"), radius: 24 }),
+    );
+    expect(shot.width).toBe(1020);
+    expect(shot.image).toEqual({ x: 10, y: 10, width: 1000, height: 600 });
+    expect(shot.imageRadii).toEqual([14, 14, 14, 14]);
+  });
+
+  it("sizes frame chrome by the screenshot's width", () => {
+    const small = computeLayout(
+      { width: 300, height: 200 },
+      design({ frame: frame("browser") }),
+    );
+    const large = computeLayout(
+      { width: 1600, height: 1000 },
+      design({ frame: frame("browser") }),
+    );
+    expect(small.shot.chrome?.height).toBe(Math.round(48 * 0.6));
+    expect(large.shot.chrome?.height).toBe(Math.round(48 * 1.6));
+  });
+});
+
+describe("computeLayout on a fixed canvas", () => {
+  const fixed = { preset: "custom", width: 1600, height: 900 } as const;
+
+  it("fits the framed shot inside the padding and centres it", () => {
+    const { canvas, shot, draggable } = computeLayout(
+      { width: 1200, height: 600 },
+      design({ padding: 100 }, fixed),
+    );
+    expect(canvas).toEqual({ width: 1600, height: 900 });
+    expect(draggable).toBe(true);
+    // 1400 x 700 available: the 2:1 shot fills it exactly.
+    expect(shot.scale).toBeCloseTo(1400 / 1200);
+    expect(shot).toMatchObject({ x: 100, y: 100 });
+    expect(shot.width).toBeCloseTo(1400);
+    expect(shot.height).toBeCloseTo(700);
+  });
+
+  it("scales and moves the shot", () => {
+    const { shot } = computeLayout(
+      { width: 1200, height: 600 },
+      design(
+        { padding: 100, scale: 0.5, position: { x: 0.25, y: 0.5 } },
+        fixed,
+      ),
+    );
+    expect(shot.width).toBeCloseTo(700);
+    expect(shot.x).toBeCloseTo(400 - 350);
+    expect(shot.y).toBeCloseTo(450 - 175);
+  });
+
+  it("scales chrome and inset with the shot, but not the radius", () => {
+    const { shot } = computeLayout(
+      { width: 1000, height: 500 },
+      design(
+        { padding: 0, radius: 12, inset: { size: 10, color: "auto" } },
+        { preset: "custom", width: 510, height: 260 },
+      ),
+    );
+    expect(shot.scale).toBeCloseTo(0.5);
+    expect(shot.image.x).toBeCloseTo(5);
+    expect(shot.radius).toBe(12);
+  });
+});
+
+describe("auto canvas size", () => {
+  it("stays under the browser side limit at 4x for the largest unframed shot", () => {
+    // Bigger frames or exports are capped by safePixelRatio instead.
     const side = MAX_DESIGN_SIDE + 2 * PADDING.max;
-    expect(side * EXPORT_SCALE).toBeLessThanOrEqual(MAX_CANVAS_SIDE);
-    expect((side * EXPORT_SCALE) ** 2).toBeLessThanOrEqual(MAX_CANVAS_AREA);
+    expect(side * 4).toBeLessThanOrEqual(MAX_CANVAS_SIDE);
+    expect((side * 2) ** 2).toBeLessThanOrEqual(MAX_CANVAS_AREA);
+  });
+});
+
+describe("alignedPosition", () => {
+  it("lines the shot up with the padding", () => {
+    const layout = computeLayout(
+      { width: 800, height: 400 },
+      design(
+        { padding: 50, scale: 0.5 },
+        { preset: "custom", width: 1000, height: 1000 },
+      ),
+    );
+    // 900 px available, so the shot is 450 x 225 at scale 0.5.
+    const start = alignedPosition(layout, 50, "start", "start");
+    expect(start.x).toBeCloseTo((50 + 225) / 1000);
+    expect(start.y).toBeCloseTo((50 + 112.5) / 1000);
+    const end = alignedPosition(layout, 50, "end", "center");
+    expect(end.x).toBeCloseTo((1000 - 50 - 225) / 1000);
+    expect(end.y).toBe(0.5);
   });
 });
 
@@ -98,6 +246,17 @@ describe("computePreviewScale", () => {
         32,
       ),
     ).toBe(0.5);
+  });
+
+  it("shrinks a large canvas into a small container without clipping it", () => {
+    // 86 / 4000: under the old 5% floor, which drew the canvas too big.
+    expect(
+      computePreviewScale(
+        { width: 150, height: 150 },
+        { width: 4000, height: 4000 },
+      ),
+    ).toBeCloseTo(0.0215);
+    expect(MIN_PREVIEW_SCALE).toBeLessThanOrEqual(0.01);
   });
 
   it("returns the minimum for tiny or unmeasured containers", () => {

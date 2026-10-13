@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useEffectEvent } from "react";
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  // A paste dispatched on window has the Window as target, which is not an Element.
-  if (!(target instanceof Element)) return false;
-  if (target.closest("input, textarea, select")) return true;
-  return target instanceof HTMLElement && target.isContentEditable;
-}
+import { isEditableTarget } from "@/lib/dom";
 
 /** Calls `onFiles` with the files in any paste that is not aimed at a text field. */
 export function useWindowPaste(onFiles: (files: File[]) => void) {
