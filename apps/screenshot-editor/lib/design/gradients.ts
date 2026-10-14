@@ -49,26 +49,22 @@ const brookes = (
 
 /** Gradients made only from the Oxford Brookes design system's colours. */
 export const GRADIENT_PRESETS: readonly GradientPreset[] = [
-  // Soft tints first.
+  // Tints first.
+  brookes("sky", "Sky", c.blue20, c.mauve20),
   brookes("mist", "Mist", c.charcoal10, c.mauveTint),
   brookes("petal", "Petal", c.pinkTint, c.yellowTint),
   brookes("heather", "Heather", c.mauveTint, c.pinkTint),
   brookes("apricot", "Apricot", c.peachTint, c.pinkTint),
-  // Deeper tints.
   brookes("pebble", "Pebble", c.charcoal20, c.blue20),
   brookes("rose", "Rose", c.pink20, c.yellow20),
   brookes("lemon", "Lemon", c.yellow20, c.peach20),
   brookes("orchid", "Orchid", c.mauve20, c.pink20),
   brookes("coral", "Coral", c.red20, c.peach20),
   brookes("sorbet", "Sorbet", c.peach20, c.pink20),
-  brookes("sky", "Sky", c.blue20, c.mauve20),
   brookes("brookes", "Brookes", c.charcoal, c.pink),
   brookes("sunrise", "Sunrise", c.yellow, c.pink),
-  brookes("marigold", "Marigold", c.yellow, c.red),
   brookes("blush", "Blush", c.red20, c.pink),
   brookes("crimson", "Crimson", c.red, c.charcoal),
-  brookes("evergreen", "Evergreen", c.green, c.charcoal),
-  brookes("sage", "Sage", c.green20, c.green),
   brookes("stone", "Stone", c.charcoal10, c.charcoal60),
 ];
 

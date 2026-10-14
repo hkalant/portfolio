@@ -117,6 +117,7 @@ describe("presets", () => {
     expect(getGradientPreset("nope")).toBeUndefined();
     expect(DEFAULT_GRADIENT.id).toBe("brookes");
     expect(GRADIENT_PRESETS.slice(0, 11).map((preset) => preset.id)).toEqual([
+      "sky",
       "mist",
       "petal",
       "heather",
@@ -127,7 +128,6 @@ describe("presets", () => {
       "orchid",
       "coral",
       "sorbet",
-      "sky",
     ]);
   });
 });
