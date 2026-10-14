@@ -11,6 +11,7 @@ import {
   shadowOption,
   stage,
   upload,
+  useAutoSize,
 } from "./helpers/editor";
 import {
   brightness,
@@ -23,6 +24,7 @@ import {
 test.beforeEach(async ({ page }) => {
   await page.goto("./editor/");
   await expectEmptyState(page);
+  await useAutoSize(page);
 });
 
 test("uploads a screenshot and exports it at 2x with rounded corners", async ({

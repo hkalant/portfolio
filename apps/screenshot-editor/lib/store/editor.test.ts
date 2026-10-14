@@ -32,6 +32,16 @@ afterEach(() => {
 /** Moves the clock past the merge window, so the next change is its own step. */
 const later = () => vi.advanceTimersByTime(MERGE_WINDOW_MS + 1);
 
+describe("editor store: canvas size", () => {
+  it("starts on the Desktop size", () => {
+    expect(state().design.canvas).toEqual({
+      preset: "desktop",
+      width: 1920,
+      height: 1080,
+    });
+  });
+});
+
 describe("editor store: style", () => {
   it("sets an image and keeps the style settings", () => {
     state().setPadding(100);
@@ -198,6 +208,7 @@ describe("editor store: style", () => {
 
   it("nudges and aligns only on fixed canvases", () => {
     state().setImage(fakeImage("a", 800, 400));
+    state().setCanvasPreset("auto");
     state().nudge(10, 0);
     expect(shot().position).toEqual({ x: 0.5, y: 0.5 });
     state().setCustomSize(1000, 1000);

@@ -113,3 +113,15 @@ export async function chooseCanvasSize(page: Page, name: string | RegExp) {
   await page.getByRole("button", { name: /^Canvas size/ }).click();
   await page.getByRole("radio", { name }).click();
 }
+
+/**
+ * Switches a new design from the Desktop default to Auto, where the canvas is
+ * the screenshot plus padding, which the size checks in most tests rely on.
+ * This is one step in the undo history.
+ */
+export async function useAutoSize(page: Page) {
+  await chooseCanvasSize(page, /^Auto/);
+  await expect(
+    page.getByRole("button", { name: "Canvas size: Auto size" }),
+  ).toBeVisible();
+}

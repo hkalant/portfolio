@@ -9,6 +9,28 @@ import {
 import { expect, test } from "./helpers/fixtures";
 import { makeSolidPng, readPngSize } from "./helpers/png";
 
+test("a new design starts on the Desktop size, listed above Auto", async ({
+  page,
+}) => {
+  await page.goto("./editor/");
+  await expectEmptyState(page);
+  const sizeButton = page.getByRole("button", { name: /^Canvas size/ });
+  await expect(sizeButton).toHaveAccessibleName(
+    "Canvas size: Desktop, 1920 × 1080",
+  );
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await expectDesignSize(page, 1920, 1080);
+
+  await sizeButton.click();
+  const options = page.locator('[aria-label="Canvas size"]').getByRole("radio");
+  await expect(options.nth(0)).toHaveAccessibleName(/^Desktop/);
+  await expect(options.nth(0)).toHaveAttribute("aria-checked", "true");
+  await expect(options.nth(1)).toHaveAccessibleName(
+    /^Auto\s*Fits the screenshot and padding/,
+  );
+  await expect(options.nth(2)).toHaveAccessibleName(/^X post/);
+});
+
 test("the theme can be switched and is remembered", async ({ page }) => {
   await page.goto("./editor/");
   await expectEmptyState(page);
@@ -70,7 +92,8 @@ test.describe("on a phone", () => {
     await page.goto("./editor/");
     await expectEmptyState(page);
     await upload(page, makeSolidPng(1200, 750, RED));
-    await expectDesignSize(page, 1344, 894);
+    // A new design starts on the Desktop size.
+    await expectDesignSize(page, 1920, 1080);
 
     const style = page.getByRole("button", { name: "Style", exact: true });
     await style.click();

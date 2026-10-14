@@ -10,6 +10,7 @@ import {
   RED,
   stage,
   upload,
+  useAutoSize,
 } from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
 import {
@@ -24,6 +25,7 @@ import {
 test.beforeEach(async ({ page }) => {
   await page.goto("./editor/");
   await expectEmptyState(page);
+  await useAutoSize(page);
 });
 
 /** The autosaved design, read straight from IndexedDB. */
@@ -154,7 +156,13 @@ test("undo and redo with the buttons and the keyboard", async ({ page }) => {
   await undo.click();
   await undo.click();
   await expectEmptyState(page);
+  // Then the switch to Auto, back to the Desktop default.
+  await undo.click();
+  await expect(
+    page.getByRole("button", { name: /^Canvas size: Desktop/ }),
+  ).toBeVisible();
   await expect(undo).toBeDisabled();
+  await redo.click();
   await redo.click();
   await expectDesignSize(page, 1344, 894);
 });

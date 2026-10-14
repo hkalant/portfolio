@@ -10,6 +10,7 @@ import {
   setSlider,
   shadowOption,
   upload,
+  useAutoSize,
 } from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
 import { brightness, isRed, makeSolidPng, samplePixels } from "./helpers/png";
@@ -17,6 +18,7 @@ import { brightness, isRed, makeSolidPng, samplePixels } from "./helpers/png";
 test.beforeEach(async ({ page }) => {
   await page.goto("./editor/");
   await expectEmptyState(page);
+  await useAutoSize(page);
 });
 
 const backgroundType = (page: Page, name: string) =>

@@ -8,7 +8,7 @@ This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 
 - **Adding a screenshot:** the editor opens on an empty, dotted drop area. Drag a screenshot onto it, paste one with Ctrl+V or ⌘V, click the area to pick a file, or try the sample image.
 - **Zoom:** buttons under the canvas zoom the preview out and in (10% to 200%, scrolling when it is bigger than the workspace) and reset it to fit. A new screenshot starts fitted. Zooming never changes the export.
-- **Canvas sizes:** Auto (the screenshot plus padding), presets for X, LinkedIn, Open Graph, Instagram, stories and YouTube, or a custom size up to 4000 × 4000.
+- **Canvas sizes:** Desktop (1920 × 1080, the default), Auto (the screenshot plus padding), presets for X, LinkedIn, Open Graph, Instagram, stories and YouTube, or a custom size up to 4000 × 4000.
 - **Backgrounds:** linear gradients, solid colours, built-in wallpapers, your own image (with blur), a gradient made from the screenshot's colours, or transparent.
 - **Style:** the tool also holds the frame (macOS window, browser, Windows window, minimal bar or glass, each light or dark, with a window title or address), shadow presets (None, Soft, Medium, Floating; Floating by default) and a border. The padding can be set from 0 to 200px (72px by default). The corner radius is fixed at 15px and the screenshot is not rotated.
 - **Export:** PNG, JPEG or WebP at 1×, 2× or 3×, or copy a PNG to the clipboard. Exports larger than the browser allows are reduced to the largest size it can make, and the editor says so.
