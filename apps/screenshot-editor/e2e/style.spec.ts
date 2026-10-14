@@ -73,14 +73,15 @@ test("solid, transparent and uploaded backgrounds are what gets exported", async
   await expect(page.getByRole("button", { name: "Brookes" })).toBeVisible();
 });
 
-test("built-in wallpapers draw without errors", async ({ page }) => {
+test("the Image background offers an upload and no wallpapers", async ({
+  page,
+}) => {
   await upload(page, makeSolidPng(400, 300, RED));
   await backgroundType(page, "Image").click();
-  const first = page.getByRole("button", { name: "Waves" });
-  await first.click();
-  await expect(first).toHaveAttribute("aria-pressed", "true");
-  const corner = await cornerPixel(page);
-  expect(corner[3]).toBe(255);
+  await expect(
+    page.getByRole("button", { name: "Upload background" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Waves" })).toHaveCount(0);
 });
 
 test("JPEG exports fill transparency with white", async ({ page }) => {

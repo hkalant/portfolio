@@ -1,5 +1,5 @@
 import { ImageUp } from "lucide-react";
-import { useId, useMemo, useRef, type ChangeEvent } from "react";
+import { useId, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { defaultBackground } from "@/lib/design/defaults";
 import {
@@ -15,12 +15,11 @@ import type {
   LinearBackground,
   RadialBackground,
 } from "@/lib/design/schema";
-import { DEFAULT_WALLPAPER, WALLPAPERS } from "@/lib/design/wallpapers";
 import { ACCEPT_ATTR } from "@/lib/image/accept";
 import { dominantColors, sampleImagePixels } from "@/lib/image/colors";
 import { ingestFile } from "@/lib/image/ingest";
 import { fromImageStops } from "@/lib/render/fromImage";
-import { imageThumbnail, wallpaperThumbnail } from "@/lib/render/wallpaper";
+import { imageThumbnail } from "@/lib/render/wallpaper";
 import {
   selectActiveImage,
   selectLastBackgroundUpload,
@@ -51,7 +50,11 @@ function lastGradient(past: readonly Design[]): Background | null {
   return null;
 }
 
-/** Switches the background kind, starting from a sensible default for it. */
+/**
+ * Switches the background kind, starting from a sensible default for it.
+ * Image has no default: with nothing uploaded yet, the background stays as it
+ * is until a file is picked.
+ */
 function chooseKind(choice: BackgroundChoice) {
   const state = useEditorStore.getState();
   switch (choice) {
@@ -65,7 +68,6 @@ function chooseKind(choice: BackgroundChoice) {
       // Back to the last uploaded background, if there is one.
       const upload = selectLastBackgroundUpload(state);
       if (upload) state.setBackgroundImage(upload);
-      else state.setWallpaper(DEFAULT_WALLPAPER.id);
       break;
     }
     case "fromImage":
@@ -80,22 +82,37 @@ function chooseKind(choice: BackgroundChoice) {
 export function BackgroundPanel() {
   const background = useEditorStore((state) => state.design.background);
   const fx = useEditorStore((state) => state.design.backgroundFx);
-  const choice = backgroundChoice(background.kind);
+  // Image was picked but nothing is uploaded yet, so the background is unchanged.
+  const [awaitingUpload, setAwaitingUpload] = useState(false);
+  const choice =
+    awaitingUpload && background.kind !== "image"
+      ? "image"
+      : backgroundChoice(background.kind);
 
   return (
     <div className="space-y-6">
-      <BackgroundKindPicker value={choice} onChange={chooseKind} />
+      <BackgroundKindPicker
+        value={choice}
+        onChange={(next) => {
+          setAwaitingUpload(next === "image");
+          chooseKind(next);
+        }}
+      />
       {(background.kind === "linear" || background.kind === "radial") && (
         <GradientControls background={background} />
       )}
       {background.kind === "solid" && (
         <SolidControls color={background.color} />
       )}
-      {background.kind === "image" && <ImageControls background={background} />}
+      {choice === "image" && (
+        <ImageControls
+          background={background.kind === "image" ? background : null}
+        />
+      )}
       {background.kind === "fromImage" && (
         <FromImageControls angle={background.angle} />
       )}
-      {choice === "image" && <EffectsControls fx={fx} />}
+      {background.kind === "image" && <EffectsControls fx={fx} />}
     </div>
   );
 }
@@ -215,49 +232,27 @@ const UPLOAD_TILE_ID = "upload";
 function ImageControls({
   background,
 }: {
-  background: Extract<Background, { kind: "image" }>;
+  background: Extract<Background, { kind: "image" }> | null;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const setWallpaper = useEditorStore((state) => state.setWallpaper);
   const setBackgroundImage = useEditorStore(
     (state) => state.setBackgroundImage,
   );
-  // Stays in the grid after picking a wallpaper, so it can be picked again.
+  // Stays in the grid after switching away, so it can be picked again.
   const upload = useEditorStore(selectLastBackgroundUpload);
-  const wallpaperSwatches = useMemo(
-    () =>
-      WALLPAPERS.map((wallpaper): Swatch => {
-        const thumbnail = wallpaperThumbnail(wallpaper.id);
-        const [from, to] = wallpaper.swatch;
-        return {
-          id: wallpaper.id,
-          name: wallpaper.name,
-          style: {
-            backgroundImage: [
-              thumbnail && `url("${thumbnail}")`,
-              `linear-gradient(135deg, ${from}, ${to})`,
-            ]
-              .filter(Boolean)
-              .join(", "),
-          },
-        };
-      }),
-    [],
+  const thumbnail = useMemo(
+    () => (upload ? imageThumbnail(upload.source) : null),
+    [upload],
   );
-  const swatches = useMemo(() => {
-    const thumbnail = upload && imageThumbnail(upload.source);
-    if (!upload || !thumbnail) return wallpaperSwatches;
-    const uploadTile: Swatch = {
-      id: UPLOAD_TILE_ID,
-      name: "Uploaded image",
-      style: { backgroundImage: `url("${thumbnail}")` },
-    };
-    return [uploadTile, ...wallpaperSwatches];
-  }, [upload, wallpaperSwatches]);
   const selectedId =
-    background.source.type === "upload"
-      ? UPLOAD_TILE_ID
-      : background.source.wallpaperId;
+    background?.source.type === "upload" ? UPLOAD_TILE_ID : null;
+  const uploadTile: Swatch | null = thumbnail
+    ? {
+        id: UPLOAD_TILE_ID,
+        name: "Uploaded image",
+        style: { backgroundImage: `url("${thumbnail}")` },
+      }
+    : null;
 
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -267,18 +262,19 @@ function ImageControls({
 
   return (
     <div className="space-y-4">
-      <SwatchGrid
-        label="Wallpapers"
-        swatches={swatches}
-        selectedId={selectedId}
-        columns={3}
-        aspect="aspect-[4/3]"
-        onSelect={(id) => {
-          if (id !== UPLOAD_TILE_ID) setWallpaper(id);
-          else if (upload && background.source.type !== "upload")
-            setBackgroundImage(upload);
-        }}
-      />
+      {uploadTile && (
+        <SwatchGrid
+          label="Your image"
+          swatches={[uploadTile]}
+          selectedId={selectedId}
+          columns={3}
+          aspect="aspect-[4/3]"
+          onSelect={() => {
+            if (upload && background?.source.type !== "upload")
+              setBackgroundImage(upload);
+          }}
+        />
+      )}
       <Button
         variant="outline"
         size="sm"
