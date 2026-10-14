@@ -150,3 +150,17 @@ test("border and shadow", async ({ page }) => {
     "on",
   );
 });
+
+test("the padding slider changes the space around the screenshot", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await expectDesignSize(page, 1344, 894);
+  await openTab(page, "Style");
+  await setSlider(page, "Padding", "End");
+  await expectDesignSize(page, 1600, 1150);
+  await setSlider(page, "Padding", "Home");
+  await expectDesignSize(page, 1200, 750);
+  await page.getByRole("button", { name: "Reset style" }).click();
+  await expectDesignSize(page, 1344, 894);
+});

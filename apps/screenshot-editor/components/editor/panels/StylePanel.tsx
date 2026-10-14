@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { BORDER_WIDTH } from "@/lib/design/limits";
+import { BORDER_WIDTH, PADDING } from "@/lib/design/limits";
 import type { ShadowPresetId } from "@/lib/design/schema";
 import { SHADOW_LABELS, SHADOW_PRESET_ORDER } from "@/lib/design/shadows";
 import { selectShot, useEditorStore } from "@/lib/store/editor";
@@ -27,6 +27,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export function StylePanel() {
   const shot = useEditorStore(selectShot);
+  const setPadding = useEditorStore((state) => state.setPadding);
   const setShadowPreset = useEditorStore((state) => state.setShadowPreset);
   const setBorder = useEditorStore((state) => state.setBorder);
   const resetStyle = useEditorStore((state) => state.resetStyle);
@@ -34,6 +35,18 @@ export function StylePanel() {
 
   return (
     <div className="space-y-8">
+      <Section title="Layout">
+        <LabeledSlider
+          label="Padding"
+          value={shot.padding}
+          min={PADDING.min}
+          max={PADDING.max}
+          step={PADDING.step}
+          unit="px"
+          onChange={setPadding}
+        />
+      </Section>
+
       <Section title="Frame">
         <FrameOptions />
       </Section>
