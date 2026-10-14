@@ -48,8 +48,8 @@ export function TopBar({ onReplace }: Props) {
           <span className="hidden lg:inline">Replace image</span>
         </Button>
       )}
-      <ThemeToggle />
       <CopyButton />
+      <ThemeToggle />
       <ExportMenu />
       <HelpMenu />
     </header>
