@@ -74,7 +74,7 @@ export function ingestFile(
 
 export function ingestSample(
   url: string,
-  name = "sample-screenshot.png",
+  name = "sample-screenshot.jpg",
 ): Promise<void> {
   return ingest(
     "shot",

@@ -155,11 +155,11 @@ test("clicking the active shadow option again keeps it selected", async ({
 
 test("the sample image loads", async ({ page }) => {
   await page.getByRole("button", { name: "Try a sample image" }).click();
-  // The 2880 x 1800 sample is shown at 1600 x 1000, plus padding.
-  await expectDesignSize(page, 1744, 1144);
+  // The 2000 x 1354 sample is shown at 1600 x 1083, plus padding.
+  await expectDesignSize(page, 1744, 1227);
   const { name, png } = await exportPng(page);
   expect(name).toBe("sample-screenshot-2x.png");
-  expect(readPngSize(png)).toEqual({ width: 3488, height: 2288 });
+  expect(readPngSize(png)).toEqual({ width: 3488, height: 2454 });
 });
 
 test("replacing the image keeps the style", async ({ page }) => {

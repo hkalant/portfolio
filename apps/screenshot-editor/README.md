@@ -45,7 +45,6 @@ Run these from `apps/screenshot-editor/`. Use Node 22 (see `.nvmrc`).
 | `npm test`                        | Unit tests (Vitest)                                                       |
 | `npm run test:e2e`                | Browser tests (Playwright) against the built `out/` folder                |
 | `npm run test:publish`            | Tests the Bitbucket deploy script against local git repos                 |
-| `npm run make:sample`             | Re-render the sample screenshot in `assets/samples/`                      |
 
 Always run ESLint and TypeScript through these scripts. Global installs of newer versions (ESLint 10, TypeScript 6+) behave differently.
 
@@ -151,8 +150,8 @@ lib/render/             Canvas drawing helpers (wallpapers, blur, frames)
 lib/export/             Export, copy, size limits and file names
 lib/persist/            Autosave (IndexedDB) and preferences (localStorage)
 lib/hooks/              Browser hooks (resize, paste, drop, pixel ratio, shortcuts, autosave, theme)
-assets/samples/         Sample screenshot (made by scripts/make-sample-image.mjs)
-scripts/                Static server, sample generator, Bitbucket deploy scripts and tests
+assets/samples/         Sample screenshot (an Oxford Brookes Moodle course page)
+scripts/                Static server, Bitbucket deploy scripts and tests
 e2e/                    Playwright tests
 ```
 
