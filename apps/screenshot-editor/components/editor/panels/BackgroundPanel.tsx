@@ -1,5 +1,5 @@
 import { ImageUp } from "lucide-react";
-import { useId, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useId, useMemo, useRef, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { defaultBackground } from "@/lib/design/defaults";
 import {
@@ -50,26 +50,17 @@ function lastGradient(past: readonly Design[]): Background | null {
   return null;
 }
 
-/**
- * Switches the background kind, starting from a sensible default for it.
- * Image has no default: with nothing uploaded yet, the background stays as it
- * is until a file is picked.
- */
+/** Switches the background kind, starting from a sensible default for it. */
 function chooseKind(choice: BackgroundChoice) {
   const state = useEditorStore.getState();
   switch (choice) {
-    case "gradient":
+    case "image":
+      // A gradient; an uploaded image can be picked from the same panel.
       state.setBackground(lastGradient(state.past) ?? defaultBackground());
       break;
     case "solid":
       state.setBackground({ kind: "solid", color: "#ffffff" });
       break;
-    case "image": {
-      // Back to the last uploaded background, if there is one.
-      const upload = selectLastBackgroundUpload(state);
-      if (upload) state.setBackgroundImage(upload);
-      break;
-    }
     case "fromImage":
       state.setFromImage();
       break;
@@ -82,32 +73,28 @@ function chooseKind(choice: BackgroundChoice) {
 export function BackgroundPanel() {
   const background = useEditorStore((state) => state.design.background);
   const fx = useEditorStore((state) => state.design.backgroundFx);
-  // Image was picked but nothing is uploaded yet, so the background is unchanged.
-  const [awaitingUpload, setAwaitingUpload] = useState(false);
-  const choice =
-    awaitingUpload && background.kind !== "image"
-      ? "image"
-      : backgroundChoice(background.kind);
+  const isGradient =
+    background.kind === "linear" || background.kind === "radial";
 
   return (
     <div className="space-y-6">
       <BackgroundKindPicker
-        value={choice}
-        onChange={(next) => {
-          setAwaitingUpload(next === "image");
-          chooseKind(next);
-        }}
+        value={backgroundChoice(background.kind)}
+        onChange={chooseKind}
       />
-      {(background.kind === "linear" || background.kind === "radial") && (
-        <GradientControls background={background} />
+      {(isGradient || background.kind === "image") && (
+        <>
+          <GradientSwatches
+            presetId={isGradient ? background.presetId : null}
+          />
+          <ImageControls
+            background={background.kind === "image" ? background : null}
+          />
+        </>
       )}
+      {isGradient && <GradientControls background={background} />}
       {background.kind === "solid" && (
         <SolidControls color={background.color} />
-      )}
-      {choice === "image" && (
-        <ImageControls
-          background={background.kind === "image" ? background : null}
-        />
       )}
       {background.kind === "fromImage" && (
         <FromImageControls angle={background.angle} />
@@ -117,14 +104,25 @@ export function BackgroundPanel() {
   );
 }
 
+function GradientSwatches({ presetId }: { presetId: string | null }) {
+  const applyGradientPreset = useEditorStore(
+    (state) => state.applyGradientPreset,
+  );
+  return (
+    <SwatchGrid
+      label="Oxford Brookes"
+      swatches={GRADIENT_SWATCHES}
+      selectedId={presetId}
+      onSelect={applyGradientPreset}
+    />
+  );
+}
+
 function GradientControls({
   background,
 }: {
   background: LinearBackground | RadialBackground;
 }) {
-  const applyGradientPreset = useEditorStore(
-    (state) => state.applyGradientPreset,
-  );
   const setGradientAngle = useEditorStore((state) => state.setGradientAngle);
   const setGradientStop = useEditorStore((state) => state.setGradientStop);
   const swapGradientStops = useEditorStore((state) => state.swapGradientStops);
@@ -133,12 +131,6 @@ function GradientControls({
 
   return (
     <>
-      <SwatchGrid
-        label="Oxford Brookes"
-        swatches={GRADIENT_SWATCHES}
-        selectedId={background.presetId}
-        onSelect={applyGradientPreset}
-      />
       {background.kind === "linear" && (
         <LabeledSlider
           label="Angle"

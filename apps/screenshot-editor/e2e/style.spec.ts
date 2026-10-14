@@ -69,15 +69,24 @@ test("solid, transparent and uploaded backgrounds are what gets exported", async
   const fromImage = await cornerPixel(page);
   expect(fromImage[0]).toBeGreaterThan(fromImage[1] + 40);
 
-  await backgroundType(page, "Gradient").click();
+  // Back to Image: a gradient again, with the upload still on offer.
+  await backgroundType(page, "Image").click();
   await expect(page.getByRole("button", { name: "Brookes" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Uploaded image" }),
+  ).toBeVisible();
 });
 
-test("the Image background offers an upload and no wallpapers", async ({
+test("the Image background offers gradients and an upload", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(400, 300, RED));
-  await backgroundType(page, "Image").click();
+  await expect(backgroundType(page, "Image")).toHaveAttribute(
+    "data-state",
+    "on",
+  );
+  await expect(backgroundType(page, "Gradient")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Brookes" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Upload background" }),
   ).toBeVisible();

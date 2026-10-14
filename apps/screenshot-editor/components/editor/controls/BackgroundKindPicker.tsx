@@ -1,6 +1,5 @@
 import {
   Ban,
-  Blend,
   ImageIcon,
   PaintBucket,
   Pipette,
@@ -9,18 +8,16 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { BackgroundKind } from "@/lib/design/schema";
 
-/** What the picker offers. Linear and radial are both "gradient". */
-export type BackgroundChoice =
-  "gradient" | "solid" | "image" | "fromImage" | "none";
+/** What the picker offers. Gradients and uploaded images are both "image". */
+export type BackgroundChoice = "image" | "solid" | "fromImage" | "none";
 
 const CHOICES: readonly {
   value: BackgroundChoice;
   label: string;
   icon: LucideIcon;
 }[] = [
-  { value: "gradient", label: "Gradient", icon: Blend },
-  { value: "solid", label: "Solid", icon: PaintBucket },
   { value: "image", label: "Image", icon: ImageIcon },
+  { value: "solid", label: "Solid", icon: PaintBucket },
   { value: "fromImage", label: "From image", icon: Pipette },
   { value: "none", label: "None", icon: Ban },
 ];
@@ -29,7 +26,8 @@ export function backgroundChoice(kind: BackgroundKind): BackgroundChoice {
   switch (kind) {
     case "linear":
     case "radial":
-      return "gradient";
+    case "image":
+      return "image";
     case "transparent":
       return "none";
     default:
@@ -53,7 +51,7 @@ export function BackgroundKindPicker({ value, onChange }: Props) {
         const choice = CHOICES.find((option) => option.value === next);
         if (choice) onChange(choice.value);
       }}
-      className="grid grid-cols-3 gap-1 rounded-lg p-1"
+      className="grid grid-cols-4 gap-1 rounded-lg p-1"
     >
       {CHOICES.map(({ value: option, label, icon: Icon }) => (
         <ToggleGroupItem
