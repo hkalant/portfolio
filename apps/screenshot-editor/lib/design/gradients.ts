@@ -47,7 +47,6 @@ export const GRADIENT_PRESETS: readonly GradientPreset[] = [
   // Soft tints first.
   brookes("mist", "Mist", c.charcoal10, c.mauveTint),
   brookes("petal", "Petal", c.pinkTint, c.yellowTint),
-  brookes("cream", "Cream", c.yellowTint, c.peachTint),
   brookes("heather", "Heather", c.mauveTint, c.pinkTint),
   brookes("apricot", "Apricot", c.peachTint, c.pinkTint),
   brookes("brookes", "Brookes", c.charcoal, c.pink),

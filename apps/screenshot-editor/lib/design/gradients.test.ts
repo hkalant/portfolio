@@ -116,10 +116,9 @@ describe("presets", () => {
     expect(getGradientPreset("stone")?.name).toBe("Stone");
     expect(getGradientPreset("nope")).toBeUndefined();
     expect(DEFAULT_GRADIENT.id).toBe("brookes");
-    expect(GRADIENT_PRESETS.slice(0, 5).map((preset) => preset.id)).toEqual([
+    expect(GRADIENT_PRESETS.slice(0, 4).map((preset) => preset.id)).toEqual([
       "mist",
       "petal",
-      "cream",
       "heather",
       "apricot",
     ]);
