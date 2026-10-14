@@ -19,6 +19,10 @@ export const BROOKES_COLORS = {
   red20: "#f2ced9",
   green: "#006338",
   green20: "#cedfd8",
+  pinkTint: "#fae5f1",
+  yellowTint: "#fef9e6",
+  mauveTint: "#f0e9ee",
+  peachTint: "#fdf3e7",
 } as const;
 
 const c = BROOKES_COLORS;
@@ -38,11 +42,14 @@ const brookes = (
   ],
 });
 
-/**
- * Gradients made only from the Oxford Brookes design system's colours. The
- * first preset is the default background.
- */
+/** Gradients made only from the Oxford Brookes design system's colours. */
 export const GRADIENT_PRESETS: readonly GradientPreset[] = [
+  // Soft tints first.
+  brookes("mist", "Mist", c.charcoal10, c.mauveTint),
+  brookes("petal", "Petal", c.pinkTint, c.yellowTint),
+  brookes("cream", "Cream", c.yellowTint, c.peachTint),
+  brookes("heather", "Heather", c.mauveTint, c.pinkTint),
+  brookes("apricot", "Apricot", c.peachTint, c.pinkTint),
   brookes("brookes", "Brookes", c.charcoal, c.pink),
   brookes("sunrise", "Sunrise", c.yellow, c.pink),
   brookes("marigold", "Marigold", c.yellow, c.red),
@@ -53,11 +60,11 @@ export const GRADIENT_PRESETS: readonly GradientPreset[] = [
   brookes("stone", "Stone", c.charcoal10, c.charcoal60),
 ];
 
-export const DEFAULT_GRADIENT = GRADIENT_PRESETS[0];
-
 export function getGradientPreset(id: string): GradientPreset | undefined {
   return GRADIENT_PRESETS.find((preset) => preset.id === id);
 }
+
+export const DEFAULT_GRADIENT = getGradientPreset("brookes")!;
 
 /** Whole degrees in [0, 360). */
 export function normalizeAngle(degrees: number): number {

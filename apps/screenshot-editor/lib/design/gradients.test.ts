@@ -112,9 +112,16 @@ describe("presets", () => {
         expect(brand.has(stop.color), `${preset.id} ${stop.color}`).toBe(true);
   });
 
-  it("can be looked up by id, and the default is the first", () => {
+  it("can be looked up by id, and the default is Brookes", () => {
     expect(getGradientPreset("stone")?.name).toBe("Stone");
     expect(getGradientPreset("nope")).toBeUndefined();
-    expect(DEFAULT_GRADIENT).toBe(GRADIENT_PRESETS[0]);
+    expect(DEFAULT_GRADIENT.id).toBe("brookes");
+    expect(GRADIENT_PRESETS.slice(0, 5).map((preset) => preset.id)).toEqual([
+      "mist",
+      "petal",
+      "cream",
+      "heather",
+      "apricot",
+    ]);
   });
 });
