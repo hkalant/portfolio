@@ -140,6 +140,7 @@ test("border and shadow", async ({ page }) => {
     [(72 + 1) * 2, (72 + 150) * 2],
     [(72 - 2) * 2, (72 + 150) * 2],
   ];
+  await setSlider(page, "Border width", "Home");
   const [, before] = await samplePixels(
     page,
     (await exportImage(page)).data,

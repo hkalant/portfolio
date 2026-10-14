@@ -224,19 +224,19 @@ test("an edit made just before a reload is kept", async ({ page }) => {
   const border = page.getByRole("slider", { name: "Border width" });
   await border.focus();
   for (let i = 0; i < 5; i += 1) await border.press("ArrowRight");
-  await expect(border).toHaveAttribute("aria-valuenow", "5");
+  await expect(border).toHaveAttribute("aria-valuenow", "15");
   // Quick arrow-key steps on a slider are one undo step.
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(border).toHaveAttribute("aria-valuenow", "0");
+  await expect(border).toHaveAttribute("aria-valuenow", "10");
   await page.getByRole("button", { name: "Redo" }).click();
-  await expect(border).toHaveAttribute("aria-valuenow", "5");
+  await expect(border).toHaveAttribute("aria-valuenow", "15");
 
   // Straight away, well inside the save delay.
   await page.reload();
   await openTab(page, "Style");
   await expect(
     page.getByRole("slider", { name: "Border width" }),
-  ).toHaveAttribute("aria-valuenow", "5");
+  ).toHaveAttribute("aria-valuenow", "15");
 });
 
 test("an edit is kept when the browser drops the writes made on close", async ({
@@ -256,7 +256,7 @@ test("an edit is kept when the browser drops the writes made on close", async ({
   const border = page.getByRole("slider", { name: "Border width" });
   await border.focus();
   for (let i = 0; i < 5; i += 1) await border.press("ArrowRight");
-  await expect(border).toHaveAttribute("aria-valuenow", "5");
+  await expect(border).toHaveAttribute("aria-valuenow", "15");
   // As WebKit sometimes does on a quick reload: no IndexedDB write made from
   // here on lands, neither the delayed save nor the one made on close.
   await page.evaluate(() => {
@@ -268,7 +268,7 @@ test("an edit is kept when the browser drops the writes made on close", async ({
   await openTab(page, "Style");
   await expect(
     page.getByRole("slider", { name: "Border width" }),
-  ).toHaveAttribute("aria-valuenow", "5");
+  ).toHaveAttribute("aria-valuenow", "15");
 });
 
 test("a tab left untouched doesn't overwrite another tab's work", async ({
