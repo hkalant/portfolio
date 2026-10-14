@@ -1,8 +1,8 @@
 import { ToggleGroup } from "radix-ui";
 import { useId } from "react";
 import {
-  FRAME_KINDS,
   FRAME_LABELS,
+  FRAME_OPTIONS,
   FRAMES_WITH_TITLE,
   FRAMES_WITH_URL,
   isFrameKind,
@@ -75,7 +75,7 @@ export function FrameOptions() {
         }}
         className="grid grid-cols-3 gap-2"
       >
-        {FRAME_KINDS.map((kind) => (
+        {FRAME_OPTIONS.map((kind) => (
           <ToggleGroup.Item
             key={kind}
             value={kind}
