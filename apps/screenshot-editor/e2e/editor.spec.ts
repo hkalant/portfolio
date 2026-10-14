@@ -213,3 +213,13 @@ test.describe("broken images", () => {
     await expectEmptyState(page);
   });
 });
+
+test("the book button opens the tutorials", async ({ page }) => {
+  await page.getByRole("button", { name: "Tutorials" }).click();
+  await expect(page.getByTestId("video-tutorial-placeholder")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Read the text tutorial" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("video-tutorial-placeholder")).toHaveCount(0);
+});

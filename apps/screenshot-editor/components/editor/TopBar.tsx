@@ -7,6 +7,7 @@ import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { BrookesLogo } from "./BrookesLogo";
 import { CopyButton } from "./topbar/CopyButton";
 import { ExportMenu } from "./topbar/ExportMenu";
+import { HelpMenu } from "./topbar/HelpMenu";
 import { HistoryButtons } from "./topbar/HistoryButtons";
 import { SizeMenu } from "./topbar/SizeMenu";
 import { ThemeToggle } from "./topbar/ThemeToggle";
@@ -50,6 +51,7 @@ export function TopBar({ onReplace }: Props) {
       <ThemeToggle />
       <CopyButton />
       <ExportMenu />
+      <HelpMenu />
     </header>
   );
 }
