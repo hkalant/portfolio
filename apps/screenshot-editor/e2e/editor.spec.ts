@@ -214,12 +214,13 @@ test.describe("broken images", () => {
   });
 });
 
-test("the book button opens the tutorials", async ({ page }) => {
-  await page.getByRole("button", { name: "Tutorials" }).click();
-  await expect(page.getByTestId("video-tutorial-placeholder")).toBeVisible();
+test("the info button lists the tutorials", async ({ page }) => {
+  await page.getByRole("button", { name: "Help" }).click();
+  const tutorials = page.getByRole("navigation", { name: "Tutorials" });
   await expect(
-    page.getByRole("link", { name: "Read the text tutorial" }),
+    tutorials.getByRole("link", { name: "Watch the video tutorial" }),
   ).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByTestId("video-tutorial-placeholder")).toHaveCount(0);
+  await tutorials.getByRole("link", { name: "Read the text tutorial" }).click();
+  await expect(tutorials).toHaveCount(0);
+  await expect(page).toHaveURL(/\/editor\/$/);
 });
