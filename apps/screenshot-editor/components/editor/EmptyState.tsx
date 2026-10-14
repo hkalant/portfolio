@@ -1,11 +1,7 @@
 "use client";
 
-import { ImagePlus, LoaderCircle } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { currentPlatform, pasteShortcutLabel } from "@/lib/platform";
-
-const subscribe = () => () => {};
 
 type Props = {
   loading: boolean;
@@ -17,46 +13,46 @@ type Props = {
 
 export function EmptyState({ loading, restoring, onUpload, onSample }: Props) {
   const busy = loading || restoring;
-  const pasteKey = useSyncExternalStore(
-    subscribe,
-    () => pasteShortcutLabel(currentPlatform()),
-    () => "Ctrl+V",
-  );
 
   return (
     <div
-      className="flex min-h-full items-center justify-center p-8"
+      className="flex min-h-full flex-col gap-3 p-4 sm:p-6"
       data-testid="empty-state"
     >
-      <div className="flex w-full max-w-lg flex-col items-center gap-3">
-        <button
-          type="button"
-          onClick={onUpload}
-          disabled={busy}
-          className="flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-muted-foreground/25 bg-background/60 px-8 py-14 text-center transition-colors outline-none hover:border-muted-foreground/45 hover:bg-background focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-progress"
-        >
-          <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            {busy ? (
-              <LoaderCircle className="size-6 animate-spin" aria-hidden />
-            ) : (
-              <ImagePlus className="size-6" aria-hidden />
-            )}
-          </span>
-          <span className="text-base font-medium">
-            {restoring
-              ? "Restoring your last design…"
-              : loading
-                ? "Loading image…"
-                : "Drop, paste or click to add a screenshot"}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            Paste with {pasteKey} · PNG, JPG or WebP · up to 50 MB
-          </span>
-        </button>
-        <Button variant="ghost" size="sm" onClick={onSample} disabled={busy}>
-          Try a sample image
-        </Button>
-      </div>
+      {/* The whole workspace is the drop zone; a click opens the file picker. */}
+      <button
+        type="button"
+        onClick={onUpload}
+        disabled={busy}
+        className="flex min-h-64 flex-1 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dotted border-muted-foreground/40 bg-transparent px-6 py-10 text-center transition-colors outline-none hover:border-muted-foreground/70 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-progress"
+      >
+        {busy && (
+          <LoaderCircle
+            className="size-6 animate-spin text-muted-foreground"
+            aria-hidden
+          />
+        )}
+        <span className="text-xl font-semibold text-balance sm:text-2xl">
+          {restoring
+            ? "Restoring your last design…"
+            : loading
+              ? "Loading image…"
+              : "Drag and drop your screenshot here"}
+        </span>
+        <span className="max-w-md text-sm text-balance text-muted-foreground">
+          Tip: If you have copied a screenshot, you can paste it here with
+          Ctrl+V (Windows) or Cmd+V (Mac)
+        </span>
+      </button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="self-center"
+        onClick={onSample}
+        disabled={busy}
+      >
+        Try a sample image
+      </Button>
     </div>
   );
 }

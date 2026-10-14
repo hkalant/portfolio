@@ -30,7 +30,7 @@ test("uploads a screenshot and exports it at 2x with rounded corners", async ({
 }) => {
   await chooseFile(
     page,
-    /click to add a screenshot/,
+    /Drag and drop your screenshot here/,
     makeSolidPng(1200, 750, RED),
   );
   // 1200 x 750 plus 72px default padding on each side.

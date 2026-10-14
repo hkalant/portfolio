@@ -6,6 +6,8 @@ This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 
 ## Features
 
+- **Adding a screenshot:** the editor opens on an empty, dotted drop area. Drag a screenshot onto it, paste one with Ctrl+V or ⌘V, click the area to pick a file, or try the sample image.
+- **Zoom:** buttons under the canvas zoom the preview out and in (10% to 200%, scrolling when it is bigger than the workspace) and reset it to fit. A new screenshot starts fitted. Zooming never changes the export.
 - **Canvas sizes:** Auto (the screenshot plus padding), presets for X, LinkedIn, Open Graph, Instagram, stories and YouTube, or a custom size up to 4000 × 4000.
 - **Backgrounds:** linear gradients, solid colours, built-in wallpapers, your own image (with blur), a gradient made from the screenshot's colours, or transparent.
 - **Style:** the tool also holds the frame (macOS window, browser, Windows window, minimal bar or glass, each light or dark, with a window title or address), shadow presets (None, Soft, Medium, Floating; Floating by default) and a border. The padding is fixed at 72px, the corner radius at 15px and the screenshot is not rotated.
@@ -159,7 +161,7 @@ e2e/                    Playwright tests
 ## Notes
 
 - **Rendering.** The canvas uses Konva. Without a frame, the screenshot is one Konva `Image` with `cornerRadius` and shadow properties; Konva draws the rounded image into a buffer first, so the shadow follows the corners (and the outline of a transparent PNG). This relies on Konva internals, which is why `konva` is pinned exactly and an e2e test checks the pixels.
-- **Export.** The export renders the layer at its true size times the chosen scale, whatever the on-screen zoom, so a 1328 × 878 design exports at 2× as 2656 × 1756. Browsers limit canvases (Safari to 16,777,216 pixels in area, all to 16,384 px a side); larger exports are scaled down to fit.
+- **Export.** The export renders the layer at its true size times the chosen scale, whatever the on-screen zoom, so a 1328 × 878 design exports at 2× as 2656 × 1756. Browsers limit canvases (Safari to 16,777,216 pixels in area, all to 16,384 px a side); larger exports are scaled down to fit. The same limits cap the zoom, and a zoomed-in preview on a high-density screen is drawn at a slightly lower pixel density when it would pass them.
 - **Large images.** Images over 50 megapixels or 50 MB are refused. Images longer than 3200 px on a side are downscaled when loaded. Screenshots are shown at most 1600 px long in the design, so 3× exports scale them up.
 - **Storage.** Autosave uses an IndexedDB database named `screenshot-editor`, and preferences use localStorage keys starting with `screenshot-editor:`, because every app on the same `bitbucket.io` site shares one browser origin. Private windows or blocked storage just turn autosave off.
 - **WebP.** Browsers that can't encode WebP (some Safari versions) show the option disabled.

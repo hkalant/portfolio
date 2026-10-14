@@ -431,3 +431,69 @@ test("leaving the editor and coming back keeps the design and its history", asyn
   await page.reload();
   await expectDesignSize(page, FRAMED_W, FRAMED_H);
 });
+
+test("the empty editor shows a dotted drop area with the paste tip", async ({
+  page,
+}) => {
+  const dropArea = page.getByRole("button", {
+    name: /Drag and drop your screenshot here/,
+  });
+  await expect(dropArea).toContainText(
+    "Tip: If you have copied a screenshot, you can paste it here with Ctrl+V (Windows) or Cmd+V (Mac)",
+  );
+  await expect(dropArea).toHaveCSS("border-top-style", "dotted");
+  await expect(dropArea).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(stage(page)).toHaveCount(0);
+  await expect(page.getByRole("toolbar", { name: "Zoom" })).toHaveCount(0);
+});
+
+test("zooms the canvas in, out and back to fit", async ({ page }) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await expectDesignSize(page, 1344, 894);
+  const level = page.getByTestId("zoom-level");
+  const zoomIn = page.getByRole("button", { name: "Zoom in" });
+  const zoomOut = page.getByRole("button", { name: "Zoom out" });
+  const reset = page.getByRole("button", { name: "Reset zoom" });
+  const scroller = page.getByTestId("canvas-scroller");
+  const percent = async () =>
+    Number((await level.textContent())!.trim().replace("%", ""));
+  const stageWidth = async () => (await stage(page).boundingBox())!.width;
+
+  await expect(reset).toBeDisabled();
+  const fit = await percent();
+  expect(fit).toBeLessThan(100);
+  const fitWidth = await stageWidth();
+
+  await zoomIn.click();
+  await expect.poll(percent).toBeGreaterThan(fit);
+  expect(await stageWidth()).toBeGreaterThan(fitWidth);
+  await expect(reset).toBeEnabled();
+
+  // Up to 200%, where the design is bigger than the workspace and scrolls.
+  while (await zoomIn.isEnabled()) await zoomIn.click();
+  await expect(level).toHaveText("200%");
+  expect(await stageWidth()).toBe(1344 * 2);
+  expect(
+    await scroller.evaluate(
+      (element) => element.scrollWidth > element.clientWidth,
+    ),
+  ).toBe(true);
+
+  await zoomOut.click();
+  await expect(level).toHaveText("150%");
+
+  // Zooming only changes the view: the export keeps its own size.
+  const { data } = await exportImage(page);
+  expect(readPngSize(data)).toEqual({ width: 2688, height: 1788 });
+
+  await reset.click();
+  await expect.poll(percent).toBe(fit);
+  await expect(reset).toBeDisabled();
+  expect(await stageWidth()).toBe(fitWidth);
+
+  // A new screenshot starts fitted again.
+  await zoomIn.click();
+  await upload(page, makeSolidPng(800, 600, RED), "second.png");
+  await expectDesignSize(page, 944, 744);
+  await expect(reset).toBeDisabled();
+});
