@@ -16,15 +16,9 @@ import type {
   RadialBackground,
 } from "@/lib/design/schema";
 import { ACCEPT_ATTR } from "@/lib/image/accept";
-import { dominantColors, sampleImagePixels } from "@/lib/image/colors";
 import { ingestFile } from "@/lib/image/ingest";
-import { fromImageStops } from "@/lib/render/fromImage";
 import { imageThumbnail } from "@/lib/render/wallpaper";
-import {
-  selectActiveImage,
-  selectLastBackgroundUpload,
-  useEditorStore,
-} from "@/lib/store/editor";
+import { selectLastBackgroundUpload, useEditorStore } from "@/lib/store/editor";
 import {
   backgroundChoice,
   BackgroundKindPicker,
@@ -61,9 +55,6 @@ function chooseKind(choice: BackgroundChoice) {
     case "solid":
       state.setBackground({ kind: "solid", color: "#ffffff" });
       break;
-    case "fromImage":
-      state.setFromImage();
-      break;
     case "none":
       state.setTransparent();
       break;
@@ -95,9 +86,6 @@ export function BackgroundPanel() {
       {isGradient && <GradientControls background={background} />}
       {background.kind === "solid" && (
         <SolidControls color={background.color} />
-      )}
-      {background.kind === "fromImage" && (
-        <FromImageControls angle={background.angle} />
       )}
       {background.kind === "image" && <EffectsControls fx={fx} />}
     </div>
@@ -190,9 +178,7 @@ const BROOKES_SOLID_COLORS: readonly { name: string; color: string }[] = [
   { name: "Charcoal 10%", color: BROOKES_COLORS.charcoal10 },
   { name: "Pink", color: BROOKES_COLORS.pink },
   { name: "Yellow", color: BROOKES_COLORS.yellow },
-  { name: "Red", color: BROOKES_COLORS.red },
   { name: "Red 20%", color: BROOKES_COLORS.red20 },
-  { name: "Green", color: BROOKES_COLORS.green },
   { name: "Green 20%", color: BROOKES_COLORS.green20 },
 ];
 
@@ -210,7 +196,7 @@ function SolidControls({ color }: { color: string }) {
         label="Oxford Brookes"
         swatches={BROOKES_SOLID_SWATCHES}
         selectedId={color}
-        columns={10}
+        columns={8}
         shape="dot"
         // A click is its own undo step, unlike dragging in the colour picker.
         onSelect={(next) => setBackground({ kind: "solid", color: next })}
@@ -286,49 +272,6 @@ function ImageControls({
         data-testid="background-file-input"
         onChange={onFileChange}
       />
-    </div>
-  );
-}
-
-function FromImageControls({ angle }: { angle: number }) {
-  const setFromImageAngle = useEditorStore((state) => state.setFromImageAngle);
-  const screenshot = useEditorStore(selectActiveImage);
-  const source = screenshot?.source ?? null;
-  const preview = useMemo(() => {
-    const pixels = source && sampleImagePixels(source);
-    const stops = pixels && fromImageStops(dominantColors(pixels));
-    return stops ? toCssLinearGradient(90, stops) : null;
-  }, [source]);
-
-  return (
-    <div className="space-y-4">
-      <LabeledSlider
-        label="Angle"
-        value={angle}
-        min={ANGLE.min}
-        max={ANGLE.max}
-        step={ANGLE.step}
-        unit="°"
-        onChange={setFromImageAngle}
-      />
-      {screenshot ? (
-        preview && (
-          <div className="space-y-2">
-            <div
-              className="h-6 rounded-md border"
-              style={{ backgroundImage: preview }}
-              aria-hidden
-            />
-            <p className="text-xs text-muted-foreground">
-              Colours picked from your screenshot.
-            </p>
-          </div>
-        )
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Add a screenshot to build a gradient from its colours.
-        </p>
-      )}
     </div>
   );
 }

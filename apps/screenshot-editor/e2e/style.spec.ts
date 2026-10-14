@@ -64,11 +64,6 @@ test("solid, transparent and uploaded backgrounds are what gets exported", async
   await setSlider(page, "Blur", "End");
   expectColor(await cornerPixel(page), "#0000ff", 8);
 
-  await backgroundType(page, "From image").click();
-  // A red screenshot makes a red gradient.
-  const fromImage = await cornerPixel(page);
-  expect(fromImage[0]).toBeGreaterThan(fromImage[1] + 40);
-
   // Back to Image: a gradient again, with the upload still on offer.
   await backgroundType(page, "Image").click();
   await expect(page.getByRole("button", { name: "Brookes" })).toBeVisible();
@@ -86,6 +81,7 @@ test("the Image background offers gradients and an upload", async ({
     "on",
   );
   await expect(backgroundType(page, "Gradient")).toHaveCount(0);
+  await expect(backgroundType(page, "From image")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Brookes" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Upload background" }),
