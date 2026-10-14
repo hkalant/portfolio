@@ -197,3 +197,20 @@
     @apply bg-background font-sans text-foreground antialiased;
   }
 }
+
+/* The "Copied to clipboard" tooltip: a quick fade and drop into place. */
+@keyframes copied-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -4px) scale(0.96);
+  }
+}
+
+@utility animate-copied {
+  transform: translateX(-50%);
+  animation: copied-in 160ms ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation-duration: 1ms;
+  }
+}

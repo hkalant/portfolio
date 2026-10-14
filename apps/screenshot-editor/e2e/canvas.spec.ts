@@ -404,8 +404,20 @@ test("copies the design to the clipboard as a PNG", async ({
   );
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await upload(page, makeSolidPng(400, 300, RED));
-  await page.getByRole("button", { name: "Copy image" }).click();
-  await expect(page.getByTestId("notice")).toContainText("Copied to clipboard");
+  const copyButton = page.getByRole("button", { name: "Copy image" });
+  await copyButton.click();
+  // Shown as a tooltip under the button, not as a notice.
+  const tooltip = page.getByTestId("copied-tooltip");
+  await expect(tooltip).toHaveText("Copied to clipboard");
+  await expect(page.getByTestId("notice")).toHaveCount(0);
+  const [button, tip] = [
+    (await copyButton.boundingBox())!,
+    (await tooltip.boundingBox())!,
+  ];
+  expect(tip.y).toBeGreaterThan(button.y + button.height);
+  expect(
+    Math.abs(tip.x + tip.width / 2 - (button.x + button.width / 2)),
+  ).toBeLessThan(2);
   const copied = await page.evaluate(async () => {
     const [item] = await navigator.clipboard.read();
     const bitmap = await createImageBitmap(await item.getType("image/png"));
@@ -414,13 +426,12 @@ test("copies the design to the clipboard as a PNG", async ({
   // (400 + 2 x 72) x (300 + 2 x 72) at the default 2x.
   expect(copied).toEqual({ width: 1088, height: 888 });
 
+  // The tooltip goes away on its own.
+  await expect(tooltip).toHaveCount(0);
+
   // The keyboard shortcut does the same when no text is selected.
-  await page
-    .getByTestId("notice")
-    .getByRole("button", { name: "Dismiss" })
-    .click();
   await page.keyboard.press("ControlOrMeta+c");
-  await expect(page.getByTestId("notice")).toContainText("Copied to clipboard");
+  await expect(tooltip).toHaveText("Copied to clipboard");
 });
 
 test("leaving the editor and coming back keeps the design and its history", async ({
