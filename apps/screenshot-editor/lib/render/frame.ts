@@ -108,6 +108,28 @@ export function insideStroke(
   };
 }
 
+/**
+ * A stroke of `strokeWidth` that sits just outside a rounded `size` box, so it
+ * adds to the box instead of covering its edge.
+ */
+export function outsideStroke(
+  size: Size,
+  radius: number,
+  strokeWidth: number,
+): StrokeBox | null {
+  if (!(strokeWidth > 0)) return null;
+  const half = strokeWidth / 2;
+  return {
+    x: -half,
+    y: -half,
+    width: size.width + strokeWidth,
+    height: size.height + strokeWidth,
+    // Square corners stay square; rounded ones keep the same centre.
+    cornerRadius: radius > 0 ? radius + half : 0,
+    strokeWidth,
+  };
+}
+
 /** Anything that can trace a path: a canvas 2D context or Konva's. */
 export type PathContext = {
   moveTo(x: number, y: number): void;

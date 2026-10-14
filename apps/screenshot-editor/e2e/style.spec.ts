@@ -134,14 +134,25 @@ test("border and shadow", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
   await openTab(page, "Style");
 
-  // A white border at 60 % over red is pink.
-  await setSlider(page, "Border width", "End");
-  const [borderPixel] = await samplePixels(
+  // The border goes around the outside: the screenshot's edge stays red, and
+  // the background just outside it turns lighter under the white border.
+  const points: [number, number][] = [
+    [(72 + 1) * 2, (72 + 150) * 2],
+    [(72 - 2) * 2, (72 + 150) * 2],
+  ];
+  const [, before] = await samplePixels(
     page,
     (await exportImage(page)).data,
-    [[(72 + 5) * 2, (72 + 150) * 2]],
+    points,
   );
-  expect(borderPixel[1]).toBeGreaterThan(100);
+  await setSlider(page, "Border width", "End");
+  const [edge, after] = await samplePixels(
+    page,
+    (await exportImage(page)).data,
+    points,
+  );
+  expect(isRed(edge)).toBe(true);
+  expect(brightness(after)).toBeGreaterThan(brightness(before) + 40);
 
   // The shadow comes from the presets only.
   for (const name of ["None", "Soft", "Medium", "Floating"])

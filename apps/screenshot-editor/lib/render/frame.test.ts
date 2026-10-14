@@ -9,6 +9,7 @@ import {
   framePalette,
   hasShadow,
   insideStroke,
+  outsideStroke,
   isPlainShot,
   roundedRectPath,
   TRAFFIC_LIGHT_COLORS,
@@ -254,5 +255,25 @@ describe("address bar", () => {
     const { text, lock } = addressContents(pill, 0, 2);
     expect(text.fontSize).toBe(26);
     expect(lock.body.width).toBe(18);
+  });
+});
+
+describe("outsideStroke", () => {
+  it("grows the path by half the width so the stroke stays outside", () => {
+    expect(outsideStroke({ width: 200, height: 100 }, 12, 4)).toEqual({
+      x: -2,
+      y: -2,
+      width: 204,
+      height: 104,
+      cornerRadius: 14,
+      strokeWidth: 4,
+    });
+    expect(outsideStroke({ width: 200, height: 100 }, 0, 4)?.cornerRadius).toBe(
+      0,
+    );
+  });
+
+  it("draws nothing for width 0", () => {
+    expect(outsideStroke({ width: 200, height: 100 }, 12, 0)).toBeNull();
   });
 });

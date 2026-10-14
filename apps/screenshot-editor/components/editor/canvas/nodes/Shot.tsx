@@ -10,6 +10,7 @@ import {
   framePalette,
   hasShadow,
   insideStroke,
+  outsideStroke,
   isPlainShot,
   roundedRectPath,
 } from "@/lib/render/frame";
@@ -108,17 +109,14 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
   const size = { width: box.width, height: box.height };
   const clipToOutline = (context: Konva.Context) =>
     roundedRectPath(context, box.width, box.height, box.radius);
-  const borderBox = insideStroke(size, box.radius, border.width);
-  // Clipped: once the width passes twice the radius the stroke's path has
-  // square corners, and its outer edge would leave the rounded outline.
+  // Around the outside, so the border never covers the screenshot.
+  const borderBox = outsideStroke(size, box.radius, border.width);
   const borderNode = borderBox && (
-    <Group clipFunc={clipToOutline} listening={false}>
-      <Rect
-        {...borderBox}
-        stroke={hexToRgba(border.color, border.opacity)}
-        listening={false}
-      />
-    </Group>
+    <Rect
+      {...borderBox}
+      stroke={hexToRgba(border.color, border.opacity)}
+      listening={false}
+    />
   );
   const imageNode = (withShadow: boolean) => (
     <KonvaImage
