@@ -49,7 +49,7 @@ export const SHADOW_LABELS: Record<ShadowPresetId, string> = {
   floating: "Floating",
 };
 
-export const DEFAULT_SHADOW: ShadowPresetId = "floating";
+export const DEFAULT_SHADOW: ShadowPresetId = "medium";
 
 export function isShadowPresetId(value: string): value is ShadowPresetId {
   return (SHADOW_PRESET_IDS as readonly string[]).includes(value);

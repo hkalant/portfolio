@@ -320,7 +320,7 @@ describe("editor store: history", () => {
 
   it("ignores changes that change nothing", () => {
     state().setPadding(72);
-    state().setShadowPreset("floating");
+    state().setShadowPreset("medium");
     expect(state().past).toEqual([]);
     expect(state().revision).toBe(0);
   });

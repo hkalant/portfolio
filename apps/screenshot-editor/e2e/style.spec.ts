@@ -159,7 +159,7 @@ test("border and shadow", async ({ page }) => {
   for (const name of ["None", "Soft", "Medium", "Floating"])
     await expect(shadowOption(page, name)).toBeVisible();
   await expect(shadowOption(page, "Hard")).toHaveCount(0);
-  await expect(shadowOption(page, "Floating")).toHaveAttribute(
+  await expect(shadowOption(page, "Medium")).toHaveAttribute(
     "data-state",
     "on",
   );
