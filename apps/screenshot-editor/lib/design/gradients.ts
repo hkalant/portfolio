@@ -51,7 +51,6 @@ const brookes = (
 export const GRADIENT_PRESETS: readonly GradientPreset[] = [
   // Tints first.
   brookes("sky", "Sky", c.blue20, c.mauve20),
-  brookes("mist", "Mist", c.charcoal10, c.mauveTint),
   brookes("petal", "Petal", c.pinkTint, c.yellowTint),
   brookes("heather", "Heather", c.mauveTint, c.pinkTint),
   brookes("apricot", "Apricot", c.peachTint, c.pinkTint),
