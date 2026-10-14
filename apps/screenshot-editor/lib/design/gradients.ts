@@ -23,6 +23,11 @@ export const BROOKES_COLORS = {
   yellowTint: "#fef9e6",
   mauveTint: "#f0e9ee",
   peachTint: "#fdf3e7",
+  pink20: "#f6cde3",
+  yellow20: "#fef4ce",
+  mauve20: "#e1d3dc",
+  peach20: "#fae7ce",
+  blue20: "#cfdeec",
 } as const;
 
 const c = BROOKES_COLORS;
@@ -49,6 +54,14 @@ export const GRADIENT_PRESETS: readonly GradientPreset[] = [
   brookes("petal", "Petal", c.pinkTint, c.yellowTint),
   brookes("heather", "Heather", c.mauveTint, c.pinkTint),
   brookes("apricot", "Apricot", c.peachTint, c.pinkTint),
+  // Deeper tints.
+  brookes("pebble", "Pebble", c.charcoal20, c.blue20),
+  brookes("rose", "Rose", c.pink20, c.yellow20),
+  brookes("lemon", "Lemon", c.yellow20, c.peach20),
+  brookes("orchid", "Orchid", c.mauve20, c.pink20),
+  brookes("coral", "Coral", c.red20, c.peach20),
+  brookes("sorbet", "Sorbet", c.peach20, c.pink20),
+  brookes("sky", "Sky", c.blue20, c.mauve20),
   brookes("brookes", "Brookes", c.charcoal, c.pink),
   brookes("sunrise", "Sunrise", c.yellow, c.pink),
   brookes("marigold", "Marigold", c.yellow, c.red),

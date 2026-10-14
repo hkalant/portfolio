@@ -116,11 +116,18 @@ describe("presets", () => {
     expect(getGradientPreset("stone")?.name).toBe("Stone");
     expect(getGradientPreset("nope")).toBeUndefined();
     expect(DEFAULT_GRADIENT.id).toBe("brookes");
-    expect(GRADIENT_PRESETS.slice(0, 4).map((preset) => preset.id)).toEqual([
+    expect(GRADIENT_PRESETS.slice(0, 11).map((preset) => preset.id)).toEqual([
       "mist",
       "petal",
       "heather",
       "apricot",
+      "pebble",
+      "rose",
+      "lemon",
+      "orchid",
+      "coral",
+      "sorbet",
+      "sky",
     ]);
   });
 });
