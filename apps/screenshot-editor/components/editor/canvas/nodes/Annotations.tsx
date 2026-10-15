@@ -1,7 +1,8 @@
 import Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Circle, Ellipse, Group, Rect, Text, Transformer } from "react-konva";
+import { create } from "zustand";
 import {
   clickBox,
   dragBox,
@@ -21,6 +22,7 @@ import type { Rect as LayoutRect } from "@/lib/design/layout";
 import type {
   Annotation,
   ShapeAnnotation,
+  ShapeKind,
   StepAnnotation,
 } from "@/lib/design/schema";
 import { EXPORT_HIDDEN } from "@/lib/export/exportImage";
@@ -29,14 +31,48 @@ import { FRAME_FONT_FAMILY } from "@/lib/render/frame";
 import { useEditorStore } from "@/lib/store/editor";
 import { useFrameFont } from "./Chrome";
 
-/** Marks annotation nodes, so a press on one doesn't clear the selection. */
+/** Marks annotation nodes, so a press on one picks it up instead of drawing. */
 const ANNOTATION_NAME = "annotation";
 
 const SELECTION_COLOR = "#0a84ff";
 
+/** Screen px: a step, or an outline's border, can be pressed this far out. */
+const MIN_HIT = 12;
+
+/** Where the selected annotation is on screen, in stage px. Not part of the design. */
+export type SelectionFrame = {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+/** Read by the delete button over the canvas. Null while nothing is selected or it is moving. */
+export const useSelectionFrame = create<{ frame: SelectionFrame | null }>()(
+  () => ({ frame: null }),
+);
+
+function setFrame(frame: SelectionFrame | null) {
+  const current = useSelectionFrame.getState().frame;
+  const same =
+    current === frame ||
+    (current &&
+      frame &&
+      current.id === frame.id &&
+      (["x", "y", "width", "height"] as const).every(
+        (key) => Math.abs(current[key] - frame[key]) < 0.5,
+      ));
+  if (!same) useSelectionFrame.setState({ frame });
+}
+
 type Props = {
   /** The screenshot, relative to the shot. Annotations are drawn over it. */
   image: LayoutRect;
+  /** On-screen zoom of the stage, for sizes kept in screen pixels. */
+  zoom: number;
+  /** Whether the shot itself can be dragged (with the select tool). */
+  shotDraggable: boolean;
 };
 
 function setCursor(node: Konva.Node | null, cursor: string) {
@@ -44,8 +80,18 @@ function setCursor(node: Konva.Node | null, cursor: string) {
   if (container) container.style.cursor = cursor;
 }
 
-function StepNode({ step, unit }: { step: StepAnnotation; unit: number }) {
+function StepNode({
+  step,
+  unit,
+  zoom,
+}: {
+  step: StepAnnotation;
+  unit: number;
+  zoom: number;
+}) {
   const radius = STEP_RADIUS * unit;
+  // Small steps (zoomed out, on a phone) are still easy to press.
+  const hitRadius = Math.max(radius, MIN_HIT / zoom);
   const digits = String(step.number).length;
   const fontSize = radius * (digits >= 3 ? 0.78 : digits === 2 ? 0.98 : 1.12);
   return (
@@ -57,6 +103,12 @@ function StepNode({ step, unit }: { step: StepAnnotation; unit: number }) {
         shadowOpacity={0.28}
         shadowBlur={radius * 0.8}
         shadowOffsetY={radius * 0.2}
+        hitFunc={(context, shape) => {
+          context.beginPath();
+          context.arc(0, 0, hitRadius, 0, Math.PI * 2, false);
+          context.closePath();
+          context.fillStrokeShape(shape);
+        }}
       />
       <Text
         text={String(step.number)}
@@ -76,27 +128,44 @@ function StepNode({ step, unit }: { step: StepAnnotation; unit: number }) {
   );
 }
 
+const cornerRadius = (
+  shape: ShapeKind,
+  width: number,
+  height: number,
+  unit: number,
+) =>
+  shape === "rounded"
+    ? Math.min(SHAPE_CORNER * unit, width / 2, height / 2)
+    : 0;
+
 /** A shape drawn from its box's top-left corner. */
 function ShapeBody({
   shape,
   width,
   height,
   unit,
+  zoom,
+  borderOnly = false,
 }: {
   shape: Pick<ShapeAnnotation, "shape" | "color" | "filled">;
   width: number;
   height: number;
   unit: number;
+  zoom: number;
+  /** An outline is pressed only by its border, so steps and shapes can go inside. */
+  borderOnly?: boolean;
 }) {
+  const strokeWidth = SHAPE_STROKE * unit;
   const paint = shape.filled
     ? { fill: shape.color }
     : {
         stroke: shape.color,
-        strokeWidth: SHAPE_STROKE * unit,
-        // Transparent but still pressable inside, to select and move it.
+        strokeWidth,
+        hitStrokeWidth: Math.max(strokeWidth, MIN_HIT / zoom),
+        // Transparent, but pressable inside to pick it up.
         fill: "rgba(0, 0, 0, 0)",
+        fillEnabled: !borderOnly,
       };
-  // A resize stretches the node until it ends; the border keeps its width.
   if (shape.shape === "circle")
     return (
       <Ellipse
@@ -104,7 +173,6 @@ function ShapeBody({
         y={height / 2}
         radiusX={width / 2}
         radiusY={height / 2}
-        strokeScaleEnabled={false}
         {...paint}
       />
     );
@@ -112,19 +180,47 @@ function ShapeBody({
     <Rect
       width={width}
       height={height}
-      cornerRadius={
-        shape.shape === "rounded"
-          ? Math.min(SHAPE_CORNER * unit, width / 2, height / 2)
-          : 0
-      }
-      strokeScaleEnabled={false}
+      cornerRadius={cornerRadius(shape.shape, width, height, unit)}
       {...paint}
     />
   );
 }
 
+/** The size of a shape annotation's node, in canvas px. */
+function shapeSize(group: Konva.Group) {
+  const body = group.getChildren()[0];
+  if (body instanceof Konva.Ellipse)
+    return { width: 2 * body.radiusX(), height: 2 * body.radiusY() };
+  return { width: body?.width() ?? 0, height: body?.height() ?? 0 };
+}
+
+/** Puts a shape annotation's node at a box in canvas px, unstretched. */
+function placeShape(
+  group: Konva.Group,
+  box: Box,
+  shape: ShapeKind,
+  unit: number,
+) {
+  group.setAttrs({ x: box.x, y: box.y, scaleX: 1, scaleY: 1 });
+  const body = group.getChildren()[0];
+  const { width, height } = box;
+  if (body instanceof Konva.Ellipse)
+    body.setAttrs({
+      x: width / 2,
+      y: height / 2,
+      radiusX: width / 2,
+      radiusY: height / 2,
+    });
+  else
+    body?.setAttrs({
+      width,
+      height,
+      cornerRadius: cornerRadius(shape, width, height, unit),
+    });
+}
+
 /** Steps and shapes over the screenshot, and the tools that add and edit them. */
-export function AnnotationsNode({ image }: Props) {
+export function AnnotationsNode({ image, zoom, shotDraggable }: Props) {
   const annotations = useEditorStore((state) => state.design.annotations);
   const tool = useEditorStore((state) => state.annotationTool);
   const selectedId = useEditorStore((state) => state.selectedAnnotationId);
@@ -134,18 +230,22 @@ export function AnnotationsNode({ image }: Props) {
   const rootRef = useRef<Konva.Group>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const nodes = useRef(new Map<string, Konva.Group>());
+  // While the selection is dragged or resized, its delete button hides.
+  const moving = useRef(false);
   const [draft, setDraft] = useState<Box | null>(null);
 
   // Lengths are in image widths; this turns them into canvas px.
   const unit = image.width;
   const aspect = imageAspect(image);
   const selecting = tool === "select";
-  const selected = selecting
-    ? (annotations.find((annotation) => annotation.id === selectedId) ?? null)
-    : null;
+  // Any tool can pick up, move and delete an annotation.
+  const selected =
+    annotations.find((annotation) => annotation.id === selectedId) ?? null;
+  // The cursor away from annotations.
+  const restCursor = selecting ? (shotDraggable ? "grab" : "") : "crosshair";
 
-  // Pressing the canvas adds a step or starts a shape; in select mode, a
-  // press away from every annotation clears the selection.
+  // Pressing the canvas away from every annotation clears the selection, and
+  // with a drawing tool adds a step or starts a shape.
   useEffect(() => {
     const root = rootRef.current;
     const stage = root?.getStage();
@@ -185,14 +285,15 @@ export function AnnotationsNode({ image }: Props) {
         .closest<HTMLElement>(`[${CANVAS_FOCUS_ATTRIBUTE}]`);
       canvas?.focus({ preventScroll: true });
       if (event.evt.button !== undefined && event.evt.button !== 0) return;
+      // An annotation selects itself; the selection box resizes.
       const target = event.target;
-      if (tool === "select") {
-        const onAnnotation =
-          target.findAncestor(`.${ANNOTATION_NAME}`, true) ||
-          target.findAncestor("Transformer", true);
-        if (!onAnnotation) store().selectAnnotation(null);
+      if (
+        target.findAncestor(`.${ANNOTATION_NAME}`, true) ||
+        target.findAncestor("Transformer", true)
+      )
         return;
-      }
+      store().selectAnnotation(null);
+      if (tool === "select") return;
       const point = pointer();
       if (!point || !onImage(point, aspect)) return;
       if (tool === "step") {
@@ -230,22 +331,50 @@ export function AnnotationsNode({ image }: Props) {
     transformer.getLayer()?.batchDraw();
   }, [selected]);
 
+  /** Tells the delete button where the selection is now. */
+  const showFrame = (id: string | undefined) => {
+    const node = id ? nodes.current.get(id) : undefined;
+    if (!id || !node || !node.getStage()) {
+      setFrame(null);
+      return;
+    }
+    const rect = node.getClientRect({ skipShadow: true });
+    setFrame({ id, ...rect });
+  };
+
+  // After every render: the selection, the layout or the zoom may have changed.
+  useLayoutEffect(() => {
+    if (!moving.current) showFrame(selected?.id);
+  });
+  useEffect(() => () => setFrame(null), []);
+
   const register = (id: string) => (node: Konva.Group | null) => {
     if (node) nodes.current.set(id, node);
     else nodes.current.delete(id);
   };
 
+  const startMoving = () => {
+    moving.current = true;
+    setFrame(null);
+    useEditorStore.getState().beginGesture();
+  };
+  const stopMoving = (id: string) => {
+    moving.current = false;
+    useEditorStore.getState().sealHistory();
+    showFrame(id);
+  };
+
   const dragProps = (annotation: Annotation) => ({
-    draggable: selecting,
-    onPointerDown: () => {
-      if (selecting) useEditorStore.getState().selectAnnotation(annotation.id);
+    draggable: true,
+    onPointerDown: (event: KonvaEventObject<PointerEvent>) => {
+      if (event.evt.button !== undefined && event.evt.button !== 0) return;
+      useEditorStore.getState().selectAnnotation(annotation.id);
     },
     onDragStart: (event: KonvaEventObject<DragEvent>) => {
       // Not the shot's drag too.
       event.cancelBubble = true;
-      const store = useEditorStore.getState();
-      store.selectAnnotation(annotation.id);
-      store.beginGesture();
+      useEditorStore.getState().selectAnnotation(annotation.id);
+      startMoving();
       setCursor(event.target, "grabbing");
     },
     onDragMove: (event: KonvaEventObject<DragEvent>) => {
@@ -273,35 +402,66 @@ export function AnnotationsNode({ image }: Props) {
     },
     onDragEnd: (event: KonvaEventObject<DragEvent>) => {
       event.cancelBubble = true;
-      useEditorStore.getState().sealHistory();
+      stopMoving(annotation.id);
       setCursor(event.target, "grab");
     },
     onMouseEnter: (event: KonvaEventObject<MouseEvent>) => {
-      if (selecting) setCursor(event.target, "grab");
+      setCursor(event.target, "grab");
     },
     onMouseLeave: (event: KonvaEventObject<MouseEvent>) => {
-      if (selecting) setCursor(event.target, "");
+      if (!moving.current) setCursor(event.target, restCursor);
     },
   });
 
-  const onTransformEnd = (shape: ShapeAnnotation) => () => {
-    const node = nodes.current.get(shape.id);
-    if (!node) return;
-    const box = fitBoxToImage(
-      {
-        x: node.x() / unit,
-        y: node.y() / unit,
-        width: shape.width * node.scaleX(),
-        height: shape.height * node.scaleY(),
-      },
-      aspect,
-      shape.shape === "circle",
-    );
-    node.scale({ x: 1, y: 1 });
-    const store = useEditorStore.getState();
-    store.resizeShape(shape.id, box);
-    store.sealHistory();
-  };
+  const transformProps = (shape: ShapeAnnotation) => ({
+    onTransformStart: startMoving,
+    // The stretch goes into the shape's size as it happens, so the border
+    // keeps its width.
+    onTransform: (event: KonvaEventObject<Event>) => {
+      const node = event.currentTarget as Konva.Group;
+      const size = shapeSize(node);
+      placeShape(
+        node,
+        {
+          x: node.x(),
+          y: node.y(),
+          width: size.width * node.scaleX(),
+          height: size.height * node.scaleY(),
+        },
+        shape.shape,
+        unit,
+      );
+    },
+    onTransformEnd: (event: KonvaEventObject<Event>) => {
+      const node = event.currentTarget as Konva.Group;
+      const size = shapeSize(node);
+      const box = fitBoxToImage(
+        {
+          x: node.x() / unit,
+          y: node.y() / unit,
+          width: (size.width * node.scaleX()) / unit,
+          height: (size.height * node.scaleY()) / unit,
+        },
+        aspect,
+        shape.shape === "circle",
+      );
+      // Set here too: if the box ends where it began, nothing re-renders it.
+      placeShape(
+        node,
+        {
+          x: box.x * unit,
+          y: box.y * unit,
+          width: box.width * unit,
+          height: box.height * unit,
+        },
+        shape.shape,
+        unit,
+      );
+      transformerRef.current?.forceUpdate();
+      useEditorStore.getState().resizeShape(shape.id, box);
+      stopMoving(shape.id);
+    },
+  });
 
   const selectedShape = selected?.kind === "shape" ? selected : null;
 
@@ -317,7 +477,7 @@ export function AnnotationsNode({ image }: Props) {
             y={annotation.y * unit}
             {...dragProps(annotation)}
           >
-            <StepNode step={annotation} unit={unit} />
+            <StepNode step={annotation} unit={unit} zoom={zoom} />
           </Group>
         ) : (
           <Group
@@ -326,8 +486,7 @@ export function AnnotationsNode({ image }: Props) {
             name={ANNOTATION_NAME}
             x={annotation.x * unit}
             y={annotation.y * unit}
-            onTransformStart={() => useEditorStore.getState().beginGesture()}
-            onTransformEnd={onTransformEnd(annotation)}
+            {...transformProps(annotation)}
             {...dragProps(annotation)}
           >
             <ShapeBody
@@ -335,6 +494,8 @@ export function AnnotationsNode({ image }: Props) {
               width={annotation.width * unit}
               height={annotation.height * unit}
               unit={unit}
+              zoom={zoom}
+              borderOnly={!selecting}
             />
           </Group>
         ),
@@ -356,6 +517,7 @@ export function AnnotationsNode({ image }: Props) {
             width={draft.width * unit}
             height={draft.height * unit}
             unit={unit}
+            zoom={zoom}
           />
         </Group>
       )}

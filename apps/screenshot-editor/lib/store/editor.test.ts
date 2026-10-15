@@ -434,6 +434,24 @@ describe("editor store: annotations", () => {
     expect(annotations().at(-1)).toMatchObject({ kind: "step", number: 1 });
   });
 
+  it("keeps a selection with any tool, and a new annotation clears it", () => {
+    state().setAnnotationTool("step");
+    state().addStep({ x: 0.1, y: 0.1 });
+    const first = annotations()[0].id;
+    state().selectAnnotation(first);
+    expect(state().selectedAnnotationId).toBe(first);
+    expect(state().annotationTool).toBe("step");
+    state().addStep({ x: 0.5, y: 0.2 });
+    expect(state().selectedAnnotationId).toBeNull();
+    state().selectAnnotation(first);
+    state().addShape("rect", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    expect(state().selectedAnnotationId).toBeNull();
+    state().selectAnnotation(first);
+    state().removeAnnotation(first);
+    expect(annotations().map((a) => a.id)).not.toContain(first);
+    expect(state().selectedAnnotationId).toBeNull();
+  });
+
   it("uses the chosen colour, and only the three allowed ones", () => {
     state().setAnnotationColor("#f9c909");
     state().addStep({ x: 0.1, y: 0.1 });

@@ -189,6 +189,9 @@ function updateShot(design: Design, patch: Partial<ShotLayer>): Design {
 
 const shotOf = (design: Design) => design.layers[0];
 
+/** Adding an annotation leaves the old selection behind. */
+const NO_SELECTION = { selectedAnnotationId: null };
+
 /** A new screenshot starts without the old one's annotations. */
 const withoutAnnotations = (design: Design): Design =>
   design.annotations.length === 0 && design.nextStep === 1
@@ -275,10 +278,14 @@ function commitDesign(
 
 export const useEditorStore = create<EditorState>()((set, get) => {
   /** For actions that only change the design. A null recipe result changes nothing. */
-  const commit = (recipe: (design: Design) => Design | null, key?: string) =>
+  const commit = (
+    recipe: (design: Design) => Design | null,
+    key?: string,
+    extra?: Partial<EditorState>,
+  ) =>
     set((state) => {
       const next = recipe(state.design);
-      return next ? commitDesign(state, next, key) : state;
+      return next ? commitDesign(state, next, key, extra) : state;
     });
 
   const commitShot = (
@@ -753,44 +760,52 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       }),
 
     addStep: (point) =>
-      commit((design) => {
-        if (!finite(point.x) || !finite(point.y)) return null;
-        const number = Math.min(design.nextStep, MAX_STEP_NUMBER);
-        return {
-          ...design,
-          annotations: [
-            ...design.annotations,
-            {
-              id: newAnnotationId(),
-              kind: "step",
-              ...roundPoint(point),
-              number,
-              color: get().annotationColor,
-            },
-          ],
-          nextStep: Math.min(number + 1, MAX_STEP_NUMBER),
-        };
-      }),
+      commit(
+        (design) => {
+          if (!finite(point.x) || !finite(point.y)) return null;
+          const number = Math.min(design.nextStep, MAX_STEP_NUMBER);
+          return {
+            ...design,
+            annotations: [
+              ...design.annotations,
+              {
+                id: newAnnotationId(),
+                kind: "step",
+                ...roundPoint(point),
+                number,
+                color: get().annotationColor,
+              },
+            ],
+            nextStep: Math.min(number + 1, MAX_STEP_NUMBER),
+          };
+        },
+        undefined,
+        NO_SELECTION,
+      ),
 
     addShape: (shape, box) =>
-      commit((design) => {
-        if (![box.x, box.y, box.width, box.height].every(finite)) return null;
-        if (box.width <= 0 || box.height <= 0) return null;
-        return {
-          ...design,
-          annotations: [
-            ...design.annotations,
-            {
-              id: newAnnotationId(),
-              kind: "shape",
-              shape,
-              ...roundBox(box),
-              color: get().annotationColor,
-              filled: get().shapeFilled,
-            },
-          ],
-        };
-      }),
+      commit(
+        (design) => {
+          if (![box.x, box.y, box.width, box.height].every(finite)) return null;
+          if (box.width <= 0 || box.height <= 0) return null;
+          return {
+            ...design,
+            annotations: [
+              ...design.annotations,
+              {
+                id: newAnnotationId(),
+                kind: "shape",
+                shape,
+                ...roundBox(box),
+                color: get().annotationColor,
+                filled: get().shapeFilled,
+              },
+            ],
+          };
+        },
+        undefined,
+        NO_SELECTION,
+      ),
 
     moveAnnotation: (id, point) => {
       if (!finite(point.x) || !finite(point.y)) return;

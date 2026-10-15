@@ -225,7 +225,11 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
     >
       {body}
       {borderNode}
-      <AnnotationsNode image={box.image} />
+      <AnnotationsNode
+        image={box.image}
+        zoom={zoom}
+        shotDraggable={draggable}
+      />
     </Group>
   );
 }

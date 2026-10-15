@@ -46,6 +46,15 @@ async function drag(page: Page, from: [number, number], to: [number, number]) {
   await page.mouse.up();
 }
 
+/** Waits until the canvas has redrawn, so what was just drawn can be pressed. */
+const nextFrame = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+
 /** Export pixels at points given as fractions of the screenshot (2x export). */
 async function pixelsOnImage(page: Page, points: [number, number][]) {
   return samplePixels(
@@ -170,4 +179,212 @@ test("Escape puts the tool down and undo removes an annotation", async ({
   await page.getByRole("button", { name: "Undo", exact: true }).first().click();
   const [undone] = await pixelsOnImage(page, [[0.5, 0.5]]);
   expect(isRed(undone)).toBe(true);
+});
+
+test("annotations move with any tool on, and pressing one never adds another", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await tool(page, "Add step 1").click();
+  const point = await onImage(page, 0.2, 0.3);
+  await page.mouse.click(point.x, point.y);
+  await nextFrame(page);
+  // Still the step tool: the step is picked up and moved, not stacked on.
+  await drag(page, [0.2, 0.3], [0.6, 0.6]);
+  await expect(tool(page, "Add step 2")).toBeVisible();
+  await expect(tool(page, "Add step 2")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  await tool(page, "Rectangle").click();
+  await tool(page, "Filled shape").click();
+  await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
+  await drag(page, [0.1, 0.6], [0.3, 0.9]);
+  await nextFrame(page);
+  // Still the rectangle tool: dragging the rectangle moves it.
+  await drag(page, [0.2, 0.75], [0.75, 0.25]);
+
+  const [moved, oldStep, rectangle, oldRectangle, between] =
+    await pixelsOnImage(page, [
+      [0.6 - 5 / IMAGE.width, 0.6],
+      [0.2 - 5 / IMAGE.width, 0.3],
+      [0.75, 0.25],
+      [0.2, 0.75],
+      [0.45, 0.5],
+    ]);
+  expectColor(moved, "#d10373", 20);
+  expect(isRed(oldStep)).toBe(true);
+  expectColor(rectangle, "#424a52", 6);
+  expect(isRed(oldRectangle)).toBe(true);
+  // No second rectangle drawn along the drag.
+  expect(isRed(between)).toBe(true);
+});
+
+test("a step goes inside an outline shape, which moves by its border", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await tool(page, "Rectangle").click();
+  await tool(page, "Outline shape").click();
+  await toolbar(page).getByRole("radio", { name: "Yellow" }).click();
+  await drag(page, [0.2, 0.2], [0.8, 0.8]);
+
+  await tool(page, "Add step 1").click();
+  await toolbar(page).getByRole("radio", { name: "Pink" }).click();
+  const centre = await onImage(page, 0.5, 0.5);
+  await page.mouse.click(centre.x, centre.y);
+  await nextFrame(page);
+  await expect(tool(page, "Add step 2")).toBeVisible();
+
+  // Picked up by its left edge, with the step tool still on.
+  await drag(page, [0.2, 0.5], [0.1, 0.5]);
+  await expect(tool(page, "Add step 2")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Delete rectangle" }),
+  ).toBeVisible();
+
+  const [step, newEdge, oldEdge] = await pixelsOnImage(page, [
+    [0.5 - 5 / IMAGE.width, 0.5],
+    [0.1, 0.5],
+    [0.2, 0.5],
+  ]);
+  expectColor(step, "#d10373", 20);
+  expectColor(newEdge, "#f9c909", 40);
+  expect(isRed(oldEdge)).toBe(true);
+});
+
+test("the button by a selected annotation deletes it, as does Delete", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await tool(page, "Add step 1").click();
+  const point = await onImage(page, 0.3, 0.4);
+  await page.mouse.click(point.x, point.y);
+  await expect(page.getByRole("button", { name: "Delete step 1" })).toHaveCount(
+    0,
+  );
+  // Pressing the step (step tool still on) selects it.
+  await nextFrame(page);
+  await page.mouse.click(point.x, point.y);
+  await page.getByRole("button", { name: "Delete step 1" }).click();
+  await expect(page.getByRole("button", { name: "Delete step 1" })).toHaveCount(
+    0,
+  );
+
+  await tool(page, "Circle").click();
+  await tool(page, "Filled shape").click();
+  await drag(page, [0.6, 0.5], [0.75, 0.7]);
+  await nextFrame(page);
+  const circle = await onImage(page, 0.675, 0.6);
+  await page.mouse.click(circle.x, circle.y);
+  await expect(
+    page.getByRole("button", { name: "Delete circle" }),
+  ).toBeVisible();
+  await page.keyboard.press("Delete");
+  await expect(page.getByRole("button", { name: "Delete circle" })).toHaveCount(
+    0,
+  );
+
+  const [step, shape] = await pixelsOnImage(page, [
+    [0.3 - 5 / IMAGE.width, 0.4],
+    [0.675, 0.6],
+  ]);
+  expect(isRed(step)).toBe(true);
+  expect(isRed(shape)).toBe(true);
+  // The screenshot itself stays.
+  await expect(toolbar(page)).toBeVisible();
+});
+
+test("an outline keeps its border width when zoomed out and resized", async ({
+  page,
+}) => {
+  const big = { width: 1600, height: 1000 };
+  await upload(page, makeSolidPng(big.width, big.height, RED));
+  const zoomOut = page.getByRole("button", { name: "Zoom out" });
+  while (
+    (await stage(page).evaluate(
+      (element) =>
+        element.getBoundingClientRect().width /
+        Number(element.getAttribute("data-width")),
+    )) > 0.35
+  )
+    await zoomOut.click();
+  const box = await stage(page).boundingBox();
+  if (!box) throw new Error("No stage");
+  const scale = box.width / (big.width + 2 * PADDING);
+  const at = (fx: number, fy: number) => ({
+    x: box.x + (PADDING + fx * big.width) * scale,
+    y: box.y + (PADDING + fy * big.height) * scale,
+  });
+
+  await tool(page, "Rectangle").click();
+  await tool(page, "Outline shape").click();
+  await toolbar(page).getByRole("radio", { name: "Yellow" }).click();
+  let from = at(0.25, 0.25);
+  let to = at(0.5, 0.5);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 6 });
+  await page.mouse.up();
+
+  await nextFrame(page);
+  // Select it by its border and pull its bottom-right corner out, once the
+  // handles are drawn.
+  const border = at(0.25, 0.375);
+  await page.mouse.click(border.x, border.y);
+  await expect(
+    page.getByRole("button", { name: "Delete rectangle" }),
+  ).toBeVisible();
+  await nextFrame(page);
+  from = at(0.5, 0.5);
+  to = at(0.75, 0.75);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 6 });
+  await page.mouse.up();
+  await page.keyboard.press("Escape");
+
+  // Yellow pixels across the left border, in the preview: as wide as the
+  // border at this zoom (0.004 of the image width), not wider.
+  const yellow = await stage(page).evaluate(
+    (element, { x, y }) => {
+      const canvas = element.querySelector("canvas");
+      const context = canvas?.getContext("2d");
+      if (!canvas || !context) return 0;
+      const ratio = canvas.width / element.getBoundingClientRect().width;
+      const data = context.getImageData(
+        Math.round((x - 12) * ratio),
+        Math.round(y * ratio),
+        Math.round(24 * ratio),
+        1,
+      ).data;
+      let count = 0;
+      for (let index = 0; index < data.length; index += 4)
+        if (data[index + 1] > 100) count += 1;
+      // In screen pixels.
+      return count / ratio;
+    },
+    {
+      x: (PADDING + 0.25 * big.width) * scale,
+      y: (PADDING + 0.6 * big.height) * scale,
+    },
+  );
+  const width = 0.004 * big.width * scale;
+  expect(yellow).toBeGreaterThanOrEqual(1);
+  expect(yellow).toBeLessThanOrEqual(Math.ceil(width) + 1);
+
+  // The export has the resized rectangle with its edge near 0.75 (the
+  // frame insets the screenshot a little), and none at the old edge.
+  const exported = (await exportImage(page)).data;
+  const near = (fx: number, fy: number) =>
+    Array.from({ length: 21 }, (_, index): [number, number] => [
+      (PADDING + fx * big.width) * 2 - 30 + index * 3,
+      (PADDING + fy * big.height) * 2,
+    ]);
+  const isYellow = ([r, g, b]: number[]) => r > 200 && g > 150 && b < 80;
+  const edge = await samplePixels(page, exported, near(0.75, 0.6));
+  const oldEdge = await samplePixels(page, exported, near(0.5, 0.4));
+  expect(edge.some(isYellow)).toBe(true);
+  expect(oldEdge.some(isYellow)).toBe(false);
 });
