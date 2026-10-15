@@ -42,5 +42,7 @@ export function createDefaultDesign(): Design {
     layers: [
       { id: SHOT_LAYER_ID, kind: "shot", imageId: null, ...defaultShotStyle() },
     ],
+    annotations: [],
+    nextStep: 1,
   };
 }

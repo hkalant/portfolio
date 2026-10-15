@@ -16,6 +16,7 @@ import {
 } from "@/lib/render/frame";
 import { NO_GUIDES, snapDrag } from "@/lib/render/snap";
 import { useEditorStore } from "@/lib/store/editor";
+import { AnnotationsNode } from "./Annotations";
 import { ChromeNode } from "./Chrome";
 import { useGuides } from "./Guides";
 
@@ -50,7 +51,11 @@ function setCursor(event: KonvaEventObject<unknown>, cursor: string) {
  */
 export function ShotNode({ image, shot, layout, zoom }: Props) {
   const box = layout.shot;
-  const { draggable } = layout;
+  // While a step or shape tool is on, presses draw instead of moving the shot.
+  const selecting = useEditorStore(
+    (state) => state.annotationTool === "select",
+  );
+  const draggable = layout.draggable && selecting;
   const setPosition = useEditorStore((state) => state.setPosition);
   const sealHistory = useEditorStore((state) => state.sealHistory);
   const beginGesture = useEditorStore((state) => state.beginGesture);
@@ -84,6 +89,8 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
     ? {
         draggable: true,
         onDragStart: (event: KonvaEventObject<DragEvent>) => {
+          // An annotation's drag is its own.
+          if (event.target !== event.currentTarget) return;
           dragging.current = true;
           // The whole drag is one undo step, however slow.
           beginGesture();
@@ -91,13 +98,16 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
         },
         onDragMove,
         onDragEnd: (event: KonvaEventObject<DragEvent>) => {
+          if (event.target !== event.currentTarget) return;
           dragging.current = false;
           useGuides.setState(NO_GUIDES);
           sealHistory();
           setCursor(event, "grab");
         },
-        onMouseEnter: (event: KonvaEventObject<MouseEvent>) =>
-          setCursor(event, dragging.current ? "grabbing" : "grab"),
+        onMouseEnter: (event: KonvaEventObject<MouseEvent>) => {
+          if (event.target.findAncestor(".annotation", true)) return;
+          setCursor(event, dragging.current ? "grabbing" : "grab");
+        },
         onMouseLeave: (event: KonvaEventObject<MouseEvent>) => {
           if (!dragging.current) setCursor(event, "");
         },
@@ -211,11 +221,11 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
       offsetX={box.width / 2}
       offsetY={box.height / 2}
       rotation={box.rotation}
-      listening={draggable}
       {...dragProps}
     >
       {body}
       {borderNode}
+      <AnnotationsNode image={box.image} />
     </Group>
   );
 }

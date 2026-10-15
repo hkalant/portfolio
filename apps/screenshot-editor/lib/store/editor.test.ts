@@ -414,3 +414,82 @@ describe("editor store: interface state", () => {
     expect(state().exportOptions).toMatchObject({ scale: 2, quality: 0.5 });
   });
 });
+
+describe("editor store: annotations", () => {
+  const annotations = () => state().design.annotations;
+
+  beforeEach(() => {
+    state().setImage(fakeImage("shot", 1000, 500));
+  });
+
+  it("numbers steps in order and can start again from 1", () => {
+    state().addStep({ x: 0.1, y: 0.1 });
+    state().addStep({ x: 0.2, y: 0.1 });
+    expect(annotations().map((a) => a.kind === "step" && a.number)).toEqual([
+      1, 2,
+    ]);
+    expect(state().design.nextStep).toBe(3);
+    state().resetStepCount();
+    state().addStep({ x: 0.3, y: 0.1 });
+    expect(annotations().at(-1)).toMatchObject({ kind: "step", number: 1 });
+  });
+
+  it("uses the chosen colour, and only the three allowed ones", () => {
+    state().setAnnotationColor("#f9c909");
+    state().addStep({ x: 0.1, y: 0.1 });
+    state().setAnnotationColor("#ff0000");
+    expect(state().annotationColor).toBe("#f9c909");
+    expect(annotations()[0].color).toBe("#f9c909");
+  });
+
+  it("adds filled or outline shapes, and changes the selected one", () => {
+    state().setShapeFilled(true);
+    state().addShape("rounded", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    const [shape] = annotations();
+    expect(shape).toMatchObject({
+      kind: "shape",
+      shape: "rounded",
+      filled: true,
+    });
+    state().selectAnnotation(shape.id);
+    state().setShapeFilled(false);
+    state().setAnnotationColor("#424a52");
+    expect(annotations()[0]).toMatchObject({ filled: false, color: "#424a52" });
+  });
+
+  it("sets a step's number and counts on from the highest", () => {
+    state().addStep({ x: 0.1, y: 0.1 });
+    const [step] = annotations();
+    state().setStepNumber(step.id, 7);
+    expect(annotations()[0]).toMatchObject({ number: 7 });
+    expect(state().design.nextStep).toBe(8);
+    state().setStepNumber(step.id, 0);
+    state().setStepNumber(step.id, 2.5);
+    expect(annotations()[0]).toMatchObject({ number: 7 });
+  });
+
+  it("moves, nudges and removes annotations, with undo", () => {
+    state().addStep({ x: 0.1, y: 0.1 });
+    const [step] = annotations();
+    later();
+    state().moveAnnotation(step.id, { x: 0.5, y: 0.25 });
+    expect(annotations()[0]).toMatchObject({ x: 0.5, y: 0.25 });
+    later();
+    // The screenshot is 1000 x 500 design px, drawn 1 : 1 on the canvas here.
+    state().nudgeAnnotation(step.id, 2000, 0);
+    expect(annotations()[0].x).toBe(1);
+    state().selectAnnotation(step.id);
+    state().removeAnnotation(step.id);
+    expect(annotations()).toEqual([]);
+    expect(state().selectedAnnotationId).toBeNull();
+    state().undo();
+    expect(annotations()).toHaveLength(1);
+  });
+
+  it("starts a new screenshot without the old one's annotations", () => {
+    state().addStep({ x: 0.1, y: 0.1 });
+    state().setImage(fakeImage("other"));
+    expect(annotations()).toEqual([]);
+    expect(state().design.nextStep).toBe(1);
+  });
+});

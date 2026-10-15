@@ -9,7 +9,7 @@ import {
   shortcutApplies,
   type ShortcutContext,
 } from "@/lib/shortcuts";
-import { useEditorStore } from "@/lib/store/editor";
+import { selectSelectedAnnotation, useEditorStore } from "@/lib/store/editor";
 
 /** Marks the focusable element around the design stage (arrow keys nudge there). */
 export const CANVAS_FOCUS_ATTRIBUTE = "data-design-canvas";
@@ -33,7 +33,7 @@ function focusContext(event: KeyboardEvent): ShortcutContext {
   };
 }
 
-/** Undo, redo, export, copy, open, delete and nudge from the keyboard. */
+/** Undo, redo, export, copy, open, delete, escape and nudge from the keyboard. */
 export function useShortcuts({ onOpen }: { onOpen: () => void }) {
   const open = useEffectEvent(onOpen);
 
@@ -60,14 +60,29 @@ export function useShortcuts({ onOpen }: { onOpen: () => void }) {
         case "open":
           open();
           break;
-        case "delete":
-          if (!state.design.layers[0].imageId) return;
-          state.clearImage();
+        case "delete": {
+          // The selected annotation first, then the screenshot.
+          const selected = selectSelectedAnnotation(state);
+          if (selected) state.removeAnnotation(selected.id);
+          else if (state.design.layers[0].imageId) state.clearImage();
+          else return;
           break;
-        case "nudge":
-          if (state.design.canvas.preset === "auto") return;
-          state.nudge(command.dx, command.dy);
+        }
+        case "escape":
+          // Deselect, then put the drawing tool down.
+          if (state.selectedAnnotationId) state.selectAnnotation(null);
+          else if (state.annotationTool !== "select")
+            state.setAnnotationTool("select");
+          else return;
           break;
+        case "nudge": {
+          const selected = selectSelectedAnnotation(state);
+          if (selected)
+            state.nudgeAnnotation(selected.id, command.dx, command.dy);
+          else if (state.design.canvas.preset === "auto") return;
+          else state.nudge(command.dx, command.dy);
+          break;
+        }
       }
       event.preventDefault();
     };

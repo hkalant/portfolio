@@ -63,6 +63,10 @@ describe("matchShortcut", () => {
     });
   });
 
+  it("puts tools down with Escape", () => {
+    expect(matchShortcut(key("Escape"), true)).toEqual({ type: "escape" });
+  });
+
   it("deletes with Delete or Backspace, and ignores Alt and unknown keys", () => {
     expect(matchShortcut(key("Backspace"), true)).toEqual({ type: "delete" });
     expect(matchShortcut(key("Delete"), false)).toEqual({ type: "delete" });

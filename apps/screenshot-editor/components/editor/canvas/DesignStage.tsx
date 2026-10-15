@@ -73,12 +73,9 @@ export function DesignStage({ image, layout, scale }: Props) {
       data-width={layout.canvas.width}
       data-height={layout.canvas.height}
       className="shadow-[0_1px_2px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.08)]"
-      // A touch on a draggable shot moves it instead of panning the page.
-      style={{
-        width,
-        height,
-        touchAction: layout.draggable ? "none" : undefined,
-      }}
+      // A touch moves the shot or an annotation, or draws, instead of
+      // panning the page.
+      style={{ width, height, touchAction: "none" }}
     >
       <Stage
         key={pixelRatio}
@@ -87,10 +84,8 @@ export function DesignStage({ image, layout, scale }: Props) {
         height={height}
         scaleX={scale}
         scaleY={scale}
-        // Only a draggable shot needs pointer events.
-        listening={layout.draggable}
       >
-        <Layer ref={layerRef} listening={layout.draggable}>
+        <Layer ref={layerRef}>
           <BackgroundNode
             canvas={layout.canvas}
             background={background}

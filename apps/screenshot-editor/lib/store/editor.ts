@@ -1,4 +1,16 @@
 import { create } from "zustand";
+import {
+  clampToImage,
+  DEFAULT_ANNOTATION_COLOR,
+  fitBoxToImage,
+  isAnnotationColor,
+  MAX_STEP_NUMBER,
+  newAnnotationId,
+  roundBox,
+  roundPoint,
+  type Box,
+  type Point,
+} from "@/lib/design/annotations";
 import { isHexColor } from "@/lib/design/colors";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { isFrameKind } from "@/lib/design/frames";
@@ -22,10 +34,13 @@ import {
 } from "@/lib/design/limits";
 import { referencedImageIds } from "@/lib/design/refs";
 import type {
+  Annotation,
+  AnnotationColor,
   Background,
   Design,
   FrameSpec,
   ShadowSpec,
+  ShapeKind,
   ShotLayer,
 } from "@/lib/design/schema";
 import { isShadowPresetId, SHADOW_PRESETS } from "@/lib/design/shadows";
@@ -40,6 +55,8 @@ import type { LoadedImage } from "@/lib/image/load";
 import { clamp } from "@/lib/utils";
 
 export type PanelId = "background" | "style";
+/** What a press on the canvas does: select and move, add a step, or draw a shape. */
+export type AnnotationTool = "select" | "step" | ShapeKind;
 /** The mobile layout also has a Size tab; null means its panel is closed. */
 export type MobilePanelId = PanelId | "size";
 
@@ -81,6 +98,13 @@ export type EditorState = {
   exporting: boolean;
   notice: Notice | null;
   exportOptions: ExportOptions;
+
+  annotationTool: AnnotationTool;
+  /** The colour new steps and shapes get. */
+  annotationColor: AnnotationColor;
+  /** Whether new shapes are filled, or transparent with a border. */
+  shapeFilled: boolean;
+  selectedAnnotationId: string | null;
 
   undo: () => void;
   redo: () => void;
@@ -125,6 +149,24 @@ export type EditorState = {
   setFrame: (patch: FramePatch) => void;
   resetStyle: () => void;
 
+  setAnnotationTool: (tool: AnnotationTool) => void;
+  /** Also recolours the selected annotation. */
+  setAnnotationColor: (color: string) => void;
+  /** Also changes the selected shape. */
+  setShapeFilled: (filled: boolean) => void;
+  selectAnnotation: (id: string | null) => void;
+  /** Adds a step numbered `nextStep` at a point on the screenshot. */
+  addStep: (point: Point) => void;
+  addShape: (shape: ShapeKind, box: Box) => void;
+  moveAnnotation: (id: string, point: Point) => void;
+  /** Moves an annotation by canvas pixels, keeping it on the screenshot. */
+  nudgeAnnotation: (id: string, dx: number, dy: number) => void;
+  resizeShape: (id: string, box: Box) => void;
+  setStepNumber: (id: string, number: number) => void;
+  removeAnnotation: (id: string) => void;
+  /** The next step is numbered 1 again. */
+  resetStepCount: () => void;
+
   /** Replaces the design (an autosave restore). Clears the history. */
   loadDesign: (design: Design, images: LoadedImage[]) => void;
 
@@ -146,6 +188,28 @@ function updateShot(design: Design, patch: Partial<ShotLayer>): Design {
 }
 
 const shotOf = (design: Design) => design.layers[0];
+
+/** A new screenshot starts without the old one's annotations. */
+const withoutAnnotations = (design: Design): Design =>
+  design.annotations.length === 0 && design.nextStep === 1
+    ? design
+    : { ...design, annotations: [], nextStep: 1 };
+
+function updateAnnotation(
+  design: Design,
+  id: string,
+  update: (annotation: Annotation) => Annotation | null,
+): Design | null {
+  let changed = false;
+  const annotations = design.annotations.map((annotation) => {
+    if (annotation.id !== id) return annotation;
+    const next = update(annotation);
+    if (!next) return annotation;
+    changed = true;
+    return next;
+  });
+  return changed ? { ...design, annotations } : null;
+}
 
 const round = (value: number, places: number) => {
   const factor = 10 ** places;
@@ -245,6 +309,10 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     exporting: false,
     notice: null,
     exportOptions: { ...DEFAULT_EXPORT_OPTIONS },
+    annotationTool: "select",
+    annotationColor: DEFAULT_ANNOTATION_COLOR,
+    shapeFilled: false,
+    selectedAnnotationId: null,
 
     undo: () =>
       set((state) => {
@@ -285,13 +353,25 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       set((state) =>
         commitDesign(
           state,
-          updateShot(state.design, { imageId: image.id }),
+          updateShot(withoutAnnotations(state.design), { imageId: image.id }),
           undefined,
-          { images: { ...state.images, [image.id]: image }, notice: null },
+          {
+            images: { ...state.images, [image.id]: image },
+            notice: null,
+            selectedAnnotationId: null,
+          },
         ),
       ),
 
-    clearImage: () => commitShot(() => ({ imageId: null })),
+    clearImage: () =>
+      set((state) =>
+        commitDesign(
+          state,
+          updateShot(withoutAnnotations(state.design), { imageId: null }),
+          undefined,
+          { selectedAnnotationId: null },
+        ),
+      ),
 
     pruneImages: () => {
       const { images, design, past, future } = get();
@@ -625,6 +705,203 @@ export const useEditorStore = create<EditorState>()((set, get) => {
 
     resetStyle: () => commitShot(() => defaultShotStyle()),
 
+    setAnnotationTool: (tool) =>
+      set(() => ({ annotationTool: tool, selectedAnnotationId: null })),
+
+    setAnnotationColor: (color) => {
+      if (!isAnnotationColor(color)) return;
+      set(() => ({ annotationColor: color }));
+      const id = get().selectedAnnotationId;
+      if (id)
+        commit((design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.color === color ? null : { ...annotation, color },
+          ),
+        );
+    },
+
+    setShapeFilled: (filled) => {
+      set(() => ({ shapeFilled: filled }));
+      const id = get().selectedAnnotationId;
+      if (id)
+        commit((design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind !== "shape" || annotation.filled === filled
+              ? null
+              : { ...annotation, filled },
+          ),
+        );
+    },
+
+    selectAnnotation: (id) =>
+      set((state) => {
+        if (state.selectedAnnotationId === id) return state;
+        const annotation = id
+          ? state.design.annotations.find((item) => item.id === id)
+          : undefined;
+        if (id && !annotation) return state;
+        // The toolbar shows the selected annotation's colour and fill.
+        return {
+          selectedAnnotationId: id,
+          ...(annotation && {
+            annotationColor: annotation.color,
+            ...(annotation.kind === "shape" && {
+              shapeFilled: annotation.filled,
+            }),
+          }),
+        };
+      }),
+
+    addStep: (point) =>
+      commit((design) => {
+        if (!finite(point.x) || !finite(point.y)) return null;
+        const number = Math.min(design.nextStep, MAX_STEP_NUMBER);
+        return {
+          ...design,
+          annotations: [
+            ...design.annotations,
+            {
+              id: newAnnotationId(),
+              kind: "step",
+              ...roundPoint(point),
+              number,
+              color: get().annotationColor,
+            },
+          ],
+          nextStep: Math.min(number + 1, MAX_STEP_NUMBER),
+        };
+      }),
+
+    addShape: (shape, box) =>
+      commit((design) => {
+        if (![box.x, box.y, box.width, box.height].every(finite)) return null;
+        if (box.width <= 0 || box.height <= 0) return null;
+        return {
+          ...design,
+          annotations: [
+            ...design.annotations,
+            {
+              id: newAnnotationId(),
+              kind: "shape",
+              shape,
+              ...roundBox(box),
+              color: get().annotationColor,
+              filled: get().shapeFilled,
+            },
+          ],
+        };
+      }),
+
+    moveAnnotation: (id, point) => {
+      if (!finite(point.x) || !finite(point.y)) return;
+      const to = roundPoint(point);
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.x === to.x && annotation.y === to.y
+              ? null
+              : { ...annotation, ...to },
+          ),
+        `annotation-move-${id}`,
+      );
+    },
+
+    nudgeAnnotation: (id, dx, dy) => {
+      if (!finite(dx) || !finite(dy)) return;
+      const state = get();
+      const image = selectActiveImage(state);
+      if (!image) return;
+      const { shot } = computeLayout(image, state.design);
+      const unit = shot.image.width;
+      const aspect = shot.image.height / unit;
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) => {
+            const moved = {
+              x: annotation.x + dx / unit,
+              y: annotation.y + dy / unit,
+            };
+            const to =
+              annotation.kind === "step"
+                ? clampToImage(moved, aspect)
+                : fitBoxToImage(
+                    { ...annotation, ...moved },
+                    aspect,
+                    annotation.shape === "circle",
+                  );
+            const rounded = roundPoint(to);
+            return rounded.x === annotation.x && rounded.y === annotation.y
+              ? null
+              : { ...annotation, x: rounded.x, y: rounded.y };
+          }),
+        `annotation-move-${id}`,
+      );
+    },
+
+    resizeShape: (id, box) => {
+      if (![box.x, box.y, box.width, box.height].every(finite)) return;
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind === "shape"
+              ? { ...annotation, ...roundBox(box) }
+              : null,
+          ),
+        `annotation-resize-${id}`,
+      );
+    },
+
+    setStepNumber: (id, number) => {
+      if (!Number.isInteger(number) || number < 1 || number > MAX_STEP_NUMBER)
+        return;
+      commit((design) => {
+        const next = updateAnnotation(design, id, (annotation) =>
+          annotation.kind === "step" && annotation.number !== number
+            ? { ...annotation, number }
+            : null,
+        );
+        if (!next) return null;
+        // Carry on counting from the highest step.
+        const highest = Math.max(
+          ...next.annotations.map((item) =>
+            item.kind === "step" ? item.number : 0,
+          ),
+        );
+        return {
+          ...next,
+          nextStep: Math.min(
+            Math.max(next.nextStep, highest + 1),
+            MAX_STEP_NUMBER,
+          ),
+        };
+      }, `step-number-${id}`);
+    },
+
+    removeAnnotation: (id) =>
+      set((state) => {
+        const annotations = state.design.annotations.filter(
+          (annotation) => annotation.id !== id,
+        );
+        if (annotations.length === state.design.annotations.length)
+          return state;
+        return commitDesign(
+          state,
+          { ...state.design, annotations },
+          undefined,
+          {
+            selectedAnnotationId:
+              state.selectedAnnotationId === id
+                ? null
+                : state.selectedAnnotationId,
+          },
+        );
+      }),
+
+    resetStepCount: () =>
+      commit((design) =>
+        design.nextStep === 1 ? null : { ...design, nextStep: 1 },
+      ),
+
     loadDesign: (design, images) =>
       set((state) => {
         // A new copy of an image already held replaces it: free the old one.
@@ -638,6 +915,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           future: [],
           revision: state.revision + 1,
           mergeKey: null,
+          selectedAnnotationId: null,
           images: {
             ...state.images,
             ...Object.fromEntries(images.map((image) => [image.id, image])),
@@ -703,6 +981,17 @@ export const selectLastBackgroundUpload = (
     if (image) return image;
   }
   return null;
+};
+
+/** The selected annotation, if it is still in the design (undo can remove it). */
+export const selectSelectedAnnotation = (
+  state: EditorState,
+): Annotation | null => {
+  const id = state.selectedAnnotationId;
+  return id
+    ? (state.design.annotations.find((annotation) => annotation.id === id) ??
+        null)
+    : null;
 };
 
 export const selectCanUndo = (state: EditorState) => state.past.length > 0;

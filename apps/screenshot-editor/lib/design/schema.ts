@@ -138,6 +138,48 @@ export const shotLayerSchema = z.object({
   frame: frameSpecSchema,
 });
 
+// Annotations drawn on the screenshot. Positions and sizes are in "image
+// widths": 1 is the screenshot's width, so they follow it when it moves or
+// is resized. x runs 0 to 1 across, y 0 to height / width down.
+
+/** The only colours steps and shapes may use (the Oxford Brookes palette). */
+export const ANNOTATION_COLORS = ["#424a52", "#d10373", "#f9c909"] as const;
+export const annotationColorSchema = z.enum(ANNOTATION_COLORS);
+
+export const SHAPE_KINDS = ["rect", "rounded", "circle"] as const;
+export const MAX_STEP_NUMBER = 999;
+
+const imageUnit = z.number().min(0).max(100);
+
+export const stepAnnotationSchema = z.object({
+  id: z.string().min(1),
+  kind: z.literal("step"),
+  /** The circle's centre. */
+  x: imageUnit,
+  y: imageUnit,
+  number: z.number().int().min(1).max(MAX_STEP_NUMBER),
+  color: annotationColorSchema,
+});
+
+export const shapeAnnotationSchema = z.object({
+  id: z.string().min(1),
+  kind: z.literal("shape"),
+  shape: z.enum(SHAPE_KINDS),
+  /** Top-left corner of the shape's box. A circle's box is square. */
+  x: imageUnit,
+  y: imageUnit,
+  width: imageUnit.positive(),
+  height: imageUnit.positive(),
+  color: annotationColorSchema,
+  /** Filled with the colour, or a transparent shape with a coloured border. */
+  filled: z.boolean(),
+});
+
+export const annotationSchema = z.discriminatedUnion("kind", [
+  stepAnnotationSchema,
+  shapeAnnotationSchema,
+]);
+
 export const designSchema = z.object({
   version: z.literal(2),
   canvas: canvasSpecSchema,
@@ -145,6 +187,10 @@ export const designSchema = z.object({
   backgroundFx: backgroundFxSchema,
   // Exactly one screenshot layer until later milestones add more kinds.
   layers: z.tuple([shotLayerSchema]),
+  // Designs saved before annotations existed get none.
+  annotations: z.array(annotationSchema).max(500).default([]),
+  /** The number the next step gets. */
+  nextStep: z.number().int().min(1).max(MAX_STEP_NUMBER).default(1),
 });
 
 /** The milestone 1 design, kept so older saved designs can be migrated. */
@@ -177,5 +223,10 @@ export type FrameKind = (typeof FRAME_KINDS)[number];
 export type FrameSpec = z.infer<typeof frameSpecSchema>;
 export type ShotLayer = z.infer<typeof shotLayerSchema>;
 export type ShotStyle = Omit<ShotLayer, "id" | "kind" | "imageId">;
+export type AnnotationColor = (typeof ANNOTATION_COLORS)[number];
+export type ShapeKind = (typeof SHAPE_KINDS)[number];
+export type StepAnnotation = z.infer<typeof stepAnnotationSchema>;
+export type ShapeAnnotation = z.infer<typeof shapeAnnotationSchema>;
+export type Annotation = z.infer<typeof annotationSchema>;
 export type Design = z.infer<typeof designSchema>;
 export type DesignV1 = z.infer<typeof designV1Schema>;
