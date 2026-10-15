@@ -732,51 +732,54 @@ test("a blur box blurs the screenshot under it, and its slider sets how much", a
   expect(light[0]).toBeLessThan(inside[0]);
 });
 
-test("a highlight has a solid border and a see-through fill in its colour", async ({
+test("a highlight is a see-through fill in its colour, square or rounded", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
   await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
   await tool(page, "Highlight").click();
-  // Always a border and a fill: no choice between them.
+  // Always just a fill: no choice between filled and outline.
   await expect(tool(page, "Filled shape")).toHaveCount(0);
   await drag(page, [0.3, 0.3], [0.7, 0.7]);
   await nextFrame(page);
-  const [border, inside] = await pixelsOnImage(page, [
-    [0.3, 0.5],
+  // No border at the edge; inside, the screenshot shows through, tinted.
+  const [edge, inside, outside] = await pixelsOnImage(page, [
+    [0.3 + 1 / IMAGE.width, 0.5],
     [0.5, 0.5],
+    [0.2, 0.5],
   ]);
-  expectColor(border, "#424a52", 20);
-  // The screenshot shows through, a little tinted.
+  expectColor(
+    edge,
+    `#${inside
+      .slice(0, 3)
+      .map((c) => c.toString(16).padStart(2, "0"))
+      .join("")}`,
+    6,
+  );
   expect(isRed(inside)).toBe(true);
-  expect(inside[0]).toBeLessThan(250);
+  expect(inside[0]).toBeLessThan(outside[0] - 20);
 
-  // Recolouring changes the border and the fill together.
+  // Recolouring changes the fill.
   const at = await onImage(page, 0.5, 0.5);
   await page.mouse.click(at.x, at.y);
   await expect(
     page.getByRole("button", { name: "Delete highlight" }),
   ).toBeVisible();
   await toolbar(page).getByRole("radio", { name: "Yellow" }).click();
-  const [yellowBorder, yellowInside] = await pixelsOnImage(page, [
-    [0.3, 0.5],
-    [0.5, 0.5],
-  ]);
-  expectColor(yellowBorder, "#f9c909", 20);
-  expect(yellowInside[1]).toBeGreaterThan(inside[1] + 10);
-
-  // Square corners by default; rounded ones cut the corner off.
   const corner: [number, number] = [
-    0.3 + 0.2 / IMAGE.width,
-    0.3 + 0.2 / IMAGE.height,
+    0.3 + 0.5 / IMAGE.width,
+    0.3 + 0.5 / IMAGE.height,
   ];
-  const [square] = await pixelsOnImage(page, [corner]);
-  expectColor(square, "#f9c909", 30);
+  const [yellow, square] = await pixelsOnImage(page, [[0.5, 0.5], corner]);
+  expect(yellow[1]).toBeGreaterThan(inside[1] + 20);
+
+  // Square corners by default; rounded ones leave the corner bare.
+  expect(square[1]).toBeGreaterThan(20);
   await tool(page, "Rounded corners").click();
   await expect(tool(page, "Rounded corners")).toHaveAttribute(
     "aria-pressed",
     "true",
   );
   const [rounded] = await pixelsOnImage(page, [corner]);
-  expect(isRed(rounded)).toBe(true);
+  expect(rounded[1]).toBeLessThan(10);
 });

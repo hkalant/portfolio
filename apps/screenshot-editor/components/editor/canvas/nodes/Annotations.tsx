@@ -225,13 +225,8 @@ function ShapeBody({
   const strokeWidth = SHAPE_STROKE * unit;
   const paint =
     shape.shape === "highlight"
-      ? {
-          // A solid border round a see-through fill of the same colour.
-          stroke: shape.color,
-          strokeWidth,
-          hitStrokeWidth: Math.max(strokeWidth, MIN_HIT / zoom),
-          fill: hexToRgba(shape.color, HIGHLIGHT_FILL_OPACITY),
-        }
+      ? // A see-through fill, no border.
+        { fill: hexToRgba(shape.color, HIGHLIGHT_FILL_OPACITY) }
       : shape.filled
         ? { fill: shape.color }
         : {

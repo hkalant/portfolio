@@ -147,7 +147,7 @@ export const ANNOTATION_COLORS = ["#424a52", "#d10373", "#f9c909"] as const;
 export const annotationColorSchema = z.enum(ANNOTATION_COLORS);
 
 /**
- * A "highlight" is a rectangle with a solid border and a see-through fill; a
+ * A "highlight" is a see-through rectangle with no border; a
  * "blur" box blurs the screenshot under it instead of drawing a shape.
  */
 export const SHAPE_KINDS = [

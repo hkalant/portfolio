@@ -32,8 +32,8 @@ export function isAnnotationColor(value: string): value is AnnotationColor {
 export const STEP_RADIUS = 0.019;
 /** Border of an outline shape. */
 export const SHAPE_STROKE = 0.004;
-/** How opaque a highlight's fill is; its border is solid. */
-export const HIGHLIGHT_FILL_OPACITY = 0.1;
+/** How opaque a highlight's fill is. It has no border. */
+export const HIGHLIGHT_FILL_OPACITY = 0.2;
 /** Corner radius of a rounded rectangle. */
 export const SHAPE_CORNER = 0.012;
 /** A click without a drag makes an arrow this long, pointing at the click. */
