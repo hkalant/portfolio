@@ -34,10 +34,6 @@ export const STEP_RADIUS = 0.019;
 export const SHAPE_STROKE = 0.004;
 /** Corner radius of a rounded rectangle. */
 export const SHAPE_CORNER = 0.012;
-/** Width of an arrow's line. */
-export const ARROW_STROKE = 0.006;
-/** Length of an arrow's head, from its base to its tip. */
-export const ARROW_HEAD = 0.028;
 /** A click without a drag makes an arrow this long, pointing at the click. */
 export const DEFAULT_ARROW = { x: 0.1, y: 0.07 };
 /** A click without a drag makes a shape this size, centred on the click. */
@@ -239,39 +235,6 @@ export function fitArrow(start: Point, delta: Point, area: Box): Point {
       area.y + Math.max(0, -delta.y),
       Math.max(area.y, area.y + area.height - Math.max(0, delta.y)),
     ),
-  };
-}
-
-/**
- * An arrow's line and head, in px from its tail, for an arrow `delta` px
- * long drawn `width` px wide. The line stops inside the head, so its round
- * end never shows past the tip.
- */
-export function arrowGeometry(
-  delta: Point,
-  width: number,
-  headLength: number,
-): { line: number[]; head: number[] } {
-  const length = Math.hypot(delta.x, delta.y);
-  if (length === 0) return { line: [0, 0, 0, 0], head: [0, 0, 0, 0, 0, 0] };
-  // A short arrow gets a smaller head.
-  const head = Math.min(headLength, length * 0.6);
-  const half = head * 0.55;
-  const ux = delta.x / length;
-  const uy = delta.y / length;
-  const baseX = delta.x - ux * head;
-  const baseY = delta.y - uy * head;
-  const lineEnd = Math.max(0, length - head + Math.min(width, head) / 2);
-  return {
-    line: [0, 0, ux * lineEnd, uy * lineEnd],
-    head: [
-      delta.x,
-      delta.y,
-      baseX - uy * half,
-      baseY + ux * half,
-      baseX + uy * half,
-      baseY - ux * half,
-    ],
   };
 }
 

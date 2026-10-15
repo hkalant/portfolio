@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  arrowGeometry,
   clickArrow,
   clickBox,
   dragBox,
@@ -169,16 +168,6 @@ describe("arrows", () => {
       x: 0.7,
       y: 0.3,
     });
-  });
-
-  it("end their line inside the head, which ends at the tip", () => {
-    const { line, head } = arrowGeometry({ x: 100, y: 0 }, 4, 20);
-    expect(line).toEqual([0, 0, 82, 0]);
-    expect(head.slice(0, 2)).toEqual([100, 0]);
-    expect(head[2]).toBe(80);
-    expect(Math.abs(head[3] - head[5])).toBeCloseTo(22);
-    // A short arrow gets a smaller head.
-    expect(arrowGeometry({ x: 0, y: 10 }, 4, 20).head[3]).toBeCloseTo(4);
   });
 
   it("are saved with the design", () => {

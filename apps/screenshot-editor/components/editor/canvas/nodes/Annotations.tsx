@@ -1,20 +1,17 @@
 import Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Circle,
   Ellipse,
   Group,
-  Line,
   Rect,
+  Shape,
   Text,
   Transformer,
 } from "react-konva";
 import { create } from "zustand";
 import {
-  ARROW_HEAD,
-  ARROW_STROKE,
-  arrowGeometry,
   clampStepSize,
   clampToArea,
   clickArrow,
@@ -33,11 +30,18 @@ import {
   type Box,
   type Point,
 } from "@/lib/design/annotations";
+import {
+  arrowCurve,
+  arrowShape,
+  bendToward,
+  paintArrow,
+} from "@/lib/design/arrowShape";
 import type { Rect as LayoutRect } from "@/lib/design/layout";
 import type {
   Annotation,
   AnnotationColor,
   ArrowAnnotation,
+  ArrowStyle,
   ShapeAnnotation,
   ShapeKind,
   StepAnnotation,
@@ -55,7 +59,7 @@ const SELECTION_COLOR = "#0a84ff";
 
 /** Screen px: a step, an outline's border or an arrow can be pressed this far out. */
 const MIN_HIT = 12;
-/** Screen px: the radius of the handles on a selected arrow's ends. */
+/** Screen px: the radius of the handles on a selected arrow's ends and middle. */
 const END_HANDLE = 5;
 
 /** Where the selected annotation is on screen, in stage px. Not part of the design. */
@@ -71,6 +75,27 @@ export type SelectionFrame = {
 export const useSelectionFrame = create<{ frame: SelectionFrame | null }>()(
   () => ({ frame: null }),
 );
+
+/**
+ * The arrow under the mouse, for the style menu below it. It lingers a moment
+ * after the mouse leaves, so the menu can be reached.
+ */
+export const useArrowHover = create<{ frame: SelectionFrame | null }>()(() => ({
+  frame: null,
+}));
+let hoverTimer: ReturnType<typeof setTimeout> | undefined;
+export function keepArrowHover() {
+  clearTimeout(hoverTimer);
+}
+export function endArrowHover(delay = 300) {
+  clearTimeout(hoverTimer);
+  if (delay === 0) useArrowHover.setState({ frame: null });
+  else
+    hoverTimer = setTimeout(
+      () => useArrowHover.setState({ frame: null }),
+      delay,
+    );
+}
 
 function setFrame(frame: SelectionFrame | null) {
   const current = useSelectionFrame.getState().frame;
@@ -207,40 +232,70 @@ function ShapeBody({
   );
 }
 
-/** An arrow drawn from its tail, `delta` px to the tip of its head. */
+/** An arrow drawn from its tail, `delta` px to its tip, in one of the styles. */
 function ArrowBody({
   delta,
+  style,
+  bend,
   color,
   unit,
   zoom,
 }: {
   delta: Point;
+  style: ArrowStyle;
+  bend: number;
   color: AnnotationColor;
   unit: number;
   zoom: number;
 }) {
-  const width = ARROW_STROKE * unit;
-  const { line, head } = arrowGeometry(delta, width, ARROW_HEAD * unit);
+  const { x: dx, y: dy } = delta;
+  const shape = useMemo(
+    () => arrowShape(style, { x: 0, y: 0 }, { x: dx, y: dy }, bend, unit),
+    [style, dx, dy, bend, unit],
+  );
+  if (!shape) return null;
+  const { bounds } = shape;
+  // Thin arrows (zoomed out, on a phone) are still easy to press.
+  const hitWidth = Math.max(
+    shape.stroke?.width ?? 0.006 * unit,
+    MIN_HIT / zoom,
+  );
   return (
-    <>
-      <Line
-        points={line}
-        stroke={color}
-        strokeWidth={width}
-        lineCap="round"
-        // Thin arrows (zoomed out, on a phone) are still easy to press.
-        hitStrokeWidth={Math.max(width, MIN_HIT / zoom)}
-      />
-      <Line
-        points={head}
-        closed
-        fill={color}
-        // Softens the head's corners without moving its tip.
-        stroke={color}
-        strokeWidth={width * 0.4}
-        lineJoin="round"
-      />
-    </>
+    <Shape
+      // Its box is the arrow's, so the delete button and style menu sit by it.
+      x={bounds.x}
+      y={bounds.y}
+      width={bounds.width}
+      height={bounds.height}
+      fill={color}
+      stroke={color}
+      strokeWidth={0.001}
+      hitStrokeWidth={hitWidth}
+      lineCap="round"
+      lineJoin="round"
+      sceneFunc={(context) => {
+        const ctx = context._context;
+        ctx.save();
+        ctx.translate(-bounds.x, -bounds.y);
+        paintArrow(ctx, shape, color);
+        ctx.restore();
+      }}
+      hitFunc={(context, node) => {
+        context.translate(-bounds.x, -bounds.y);
+        context.beginPath();
+        shape.spine.forEach((p, i) =>
+          i === 0 ? context.moveTo(p.x, p.y) : context.lineTo(p.x, p.y),
+        );
+        context.strokeShape(node);
+        context.beginPath();
+        shape.head.forEach((p, i) =>
+          i === 0 ? context.moveTo(p.x, p.y) : context.lineTo(p.x, p.y),
+        );
+        context.closePath();
+        context.fillShape(node);
+        context.strokeShape(node);
+      }}
+    />
   );
 }
 
@@ -284,6 +339,7 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
   const selectedId = useEditorStore((state) => state.selectedAnnotationId);
   const color = useEditorStore((state) => state.annotationColor);
   const filled = useEditorStore((state) => state.shapeFilled);
+  const arrowStyle = useEditorStore((state) => state.arrowStyle);
   const fontReady = useFrameFont();
   const rootRef = useRef<Konva.Group>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -613,6 +669,65 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
     },
   });
 
+  // Hovering an arrow shows its style menu (also shown while it's selected).
+  const arrowHoverProps = (arrow: ArrowAnnotation) => ({
+    onMouseEnter: (event: KonvaEventObject<MouseEvent>) => {
+      setCursor(event.target, "grab");
+      if (moving.current) return;
+      keepArrowHover();
+      const node = nodes.current.get(arrow.id);
+      if (node)
+        useArrowHover.setState({
+          frame: { id: arrow.id, ...node.getClientRect({ skipShadow: true }) },
+        });
+    },
+    onMouseLeave: (event: KonvaEventObject<MouseEvent>) => {
+      if (!moving.current) setCursor(event.target, restCursor);
+      endArrowHover();
+    },
+    onDragStart: (event: KonvaEventObject<DragEvent>) => {
+      endArrowHover(0);
+      dragProps(arrow).onDragStart(event);
+    },
+  });
+
+  // The handle in a selected arrow's middle bends it to either side. It only
+  // moves across the arrow, so the curve stays even from tail to tip.
+  const bendProps = (arrow: ArrowAnnotation) => ({
+    draggable: true,
+    onDragStart: (event: KonvaEventObject<DragEvent>) => {
+      event.cancelBubble = true;
+      endArrowHover(0);
+      startMoving();
+    },
+    onDragMove: (event: KonvaEventObject<DragEvent>) => {
+      event.cancelBubble = true;
+      const node = event.target;
+      const current = useEditorStore
+        .getState()
+        .design.annotations.find((item) => item.id === arrow.id);
+      if (current?.kind !== "arrow") return;
+      const tail = { x: current.x * unit, y: current.y * unit };
+      const tip = {
+        x: (current.x + current.dx) * unit,
+        y: (current.y + current.dy) * unit,
+      };
+      const bend = bendToward(tail, tip, node.position());
+      node.position(arrowCurve(tail, tip, bend).handle);
+      useEditorStore.getState().setArrowBend(arrow.id, bend);
+    },
+    onDragEnd: (event: KonvaEventObject<DragEvent>) => {
+      event.cancelBubble = true;
+      stopMoving(arrow.id);
+    },
+    onMouseEnter: (event: KonvaEventObject<MouseEvent>) => {
+      setCursor(event.target, "move");
+    },
+    onMouseLeave: (event: KonvaEventObject<MouseEvent>) => {
+      if (!moving.current) setCursor(event.target, restCursor);
+    },
+  });
+
   const selectedShape = selected?.kind === "shape" ? selected : null;
   const selectedArrow = selected?.kind === "arrow" ? selected : null;
   // Steps and circles keep their proportions, from the corners.
@@ -630,9 +745,12 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
             x={annotation.x * unit}
             y={annotation.y * unit}
             {...dragProps(annotation)}
+            {...arrowHoverProps(annotation)}
           >
             <ArrowBody
               delta={{ x: annotation.dx * unit, y: annotation.dy * unit }}
+              style={annotation.style}
+              bend={annotation.bend}
               color={annotation.color}
               unit={unit}
               zoom={zoom}
@@ -708,6 +826,8 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
               x: (arrowDraft.end.x - arrowDraft.start.x) * unit,
               y: (arrowDraft.end.y - arrowDraft.start.y) * unit,
             }}
+            style={arrowStyle}
+            bend={0}
             color={color}
             unit={unit}
             zoom={zoom}
@@ -744,6 +864,34 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
             />
           );
         })}
+      {selectedArrow &&
+        (() => {
+          const tail = { x: selectedArrow.x * unit, y: selectedArrow.y * unit };
+          const tip = {
+            x: (selectedArrow.x + selectedArrow.dx) * unit,
+            y: (selectedArrow.y + selectedArrow.dy) * unit,
+          };
+          const { handle } = arrowCurve(tail, tip, selectedArrow.bend);
+          return (
+            <Circle
+              key={`${selectedArrow.id}-bend`}
+              name={`${ANNOTATION_NAME} ${EXPORT_HIDDEN}`}
+              x={handle.x}
+              y={handle.y}
+              radius={(END_HANDLE * 0.9) / zoom}
+              fill={SELECTION_COLOR}
+              stroke="#ffffff"
+              strokeWidth={1.5 / zoom}
+              hitFunc={(context, shape) => {
+                context.beginPath();
+                context.arc(0, 0, MIN_HIT / zoom, 0, Math.PI * 2, false);
+                context.closePath();
+                context.fillStrokeShape(shape);
+              }}
+              {...bendProps(selectedArrow)}
+            />
+          );
+        })()}
       {selected && selected.kind !== "arrow" && (
         <Transformer
           ref={transformerRef}

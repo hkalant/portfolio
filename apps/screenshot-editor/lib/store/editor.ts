@@ -14,6 +14,7 @@ import {
   type Box,
   type Point,
 } from "@/lib/design/annotations";
+import { MAX_ARROW_BEND } from "@/lib/design/arrowShape";
 import { isHexColor } from "@/lib/design/colors";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { isFrameKind } from "@/lib/design/frames";
@@ -36,15 +37,17 @@ import {
   SHOT_SCALE,
 } from "@/lib/design/limits";
 import { referencedImageIds } from "@/lib/design/refs";
-import type {
-  Annotation,
-  AnnotationColor,
-  Background,
-  Design,
-  FrameSpec,
-  ShadowSpec,
-  ShapeKind,
-  ShotLayer,
+import {
+  ARROW_STYLES,
+  type Annotation,
+  type AnnotationColor,
+  type ArrowStyle,
+  type Background,
+  type Design,
+  type FrameSpec,
+  type ShadowSpec,
+  type ShapeKind,
+  type ShotLayer,
 } from "@/lib/design/schema";
 import { isShadowPresetId, SHADOW_PRESETS } from "@/lib/design/shadows";
 import { CUSTOM_SIZE, getSizePreset } from "@/lib/design/sizes";
@@ -107,6 +110,8 @@ export type EditorState = {
   annotationColor: AnnotationColor;
   /** Whether new shapes are filled, or transparent with a border. */
   shapeFilled: boolean;
+  /** The look new arrows get. */
+  arrowStyle: ArrowStyle;
   selectedAnnotationId: string | null;
 
   undo: () => void;
@@ -165,6 +170,10 @@ export type EditorState = {
   addArrow: (start: Point, end: Point) => void;
   /** Moves an arrow's ends. */
   setArrowEnds: (id: string, start: Point, end: Point) => void;
+  /** Restyles an arrow; new arrows then take the style too. */
+  setArrowStyle: (id: string | null, style: ArrowStyle) => void;
+  /** Bends an arrow's middle to one side (see MAX_ARROW_BEND). */
+  setArrowBend: (id: string, bend: number) => void;
   moveAnnotation: (id: string, point: Point) => void;
   /** Moves an annotation by canvas pixels, keeping it on the screenshot. */
   nudgeAnnotation: (id: string, dx: number, dy: number) => void;
@@ -334,6 +343,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     annotationTool: "select",
     annotationColor: DEFAULT_ANNOTATION_COLOR,
     shapeFilled: false,
+    arrowStyle: ARROW_STYLES[0],
     selectedAnnotationId: null,
 
     undo: () =>
@@ -842,6 +852,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
               ...from,
               ...arrowDelta(from, to),
               color: get().annotationColor,
+              style: get().arrowStyle,
+              bend: 0,
             },
           ],
         }),
@@ -869,6 +881,36 @@ export const useEditorStore = create<EditorState>()((set, get) => {
               : { ...annotation, ...from, ...delta },
           ),
         `annotation-resize-${id}`,
+      );
+    },
+
+    setArrowStyle: (id, style) => {
+      if (!(ARROW_STYLES as readonly string[]).includes(style)) return;
+      set(() => ({ arrowStyle: style }));
+      if (!id) return;
+      commit((design) =>
+        updateAnnotation(design, id, (annotation) =>
+          annotation.kind !== "arrow" || annotation.style === style
+            ? null
+            : { ...annotation, style },
+        ),
+      );
+    },
+
+    setArrowBend: (id, bend) => {
+      if (!finite(bend)) return;
+      const to =
+        Math.round(
+          Math.max(-MAX_ARROW_BEND, Math.min(MAX_ARROW_BEND, bend)) * 1000,
+        ) / 1000;
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind !== "arrow" || annotation.bend === to
+              ? null
+              : { ...annotation, bend: to },
+          ),
+        `annotation-bend-${id}`,
       );
     },
 

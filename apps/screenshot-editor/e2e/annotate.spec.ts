@@ -551,3 +551,63 @@ test("an arrow is drawn by dragging, its ends move, and it can be deleted", asyn
   const [gone] = await pixelsOnImage(page, [[0.5, 0.25]]);
   expect(isRed(gone)).toBe(true);
 });
+
+test("an arrow's style is picked from the menu below it, and its middle bends it", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await tool(page, "Arrow").click();
+  await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
+  await drag(page, [0.2, 0.5], [0.8, 0.5]);
+  await nextFrame(page);
+
+  // Hovering the arrow shows its styles, tapered first.
+  const menu = page.getByRole("radiogroup", { name: "Arrow style" });
+  await expect(menu).toHaveCount(0);
+  const middle = await onImage(page, 0.5, 0.5);
+  await page.mouse.move(middle.x, middle.y);
+  await expect(menu).toBeVisible();
+  await expect(
+    menu.getByRole("radio", { name: "Tapered arrow" }),
+  ).toHaveAttribute("aria-checked", "true");
+  await menu.getByRole("radio", { name: "Outlined arrow" }).click();
+  await expect(
+    menu.getByRole("radio", { name: "Outlined arrow" }),
+  ).toHaveAttribute("aria-checked", "true");
+
+  // The outlined arrow has a white edge just off its line.
+  const [line, edge] = await pixelsOnImage(page, [
+    [0.5, 0.5],
+    [0.5, 0.5 - 1.8 / IMAGE.height],
+  ]);
+  expectColor(line, "#424a52", 20);
+  expectColor(edge, "#ffffff", 50);
+
+  // Select it, then pull the handle in its middle up: the arrow bends there.
+  const now = await onImage(page, 0.5, 0.5);
+  await page.mouse.click(now.x, now.y);
+  await expect(
+    page.getByRole("button", { name: "Delete arrow" }),
+  ).toBeVisible();
+  await nextFrame(page);
+  // Sideways moves along the arrow are ignored: only the bend changes.
+  await drag(page, [0.5, 0.5], [0.6, 0.3]);
+  const [bent, straight, ...tail] = await pixelsOnImage(page, [
+    [0.5, 0.3],
+    [0.5, 0.5],
+    // The thin tail, which now leaves at 45 degrees (the curve's middle is
+    // 60 px up, so its control point is 120 px up, 120 px along), give or
+    // take a pixel of screen rounding.
+    ...[-1, -0.5, 0, 0.5, 1].map(
+      (dy) =>
+        [0.2 + 4 / IMAGE.width, 0.5 + (dy - 4) / IMAGE.height] as [
+          number,
+          number,
+        ],
+    ),
+  ]);
+  expectColor(bent, "#424a52", 20);
+  expect(isRed(straight)).toBe(true);
+  // The ends stay where they were.
+  expect(tail.some((pixel) => !isRed(pixel))).toBe(true);
+});

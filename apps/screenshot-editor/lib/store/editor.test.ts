@@ -558,6 +558,22 @@ describe("editor store: annotations", () => {
     expect(annotations()[0]).toMatchObject({ x: 0.1, dx: 0.3, dy: 0.2 });
   });
 
+  it("styles and bends arrows, and new arrows take the last style", () => {
+    state().addArrow({ x: 0.1, y: 0.1 }, { x: 0.4, y: 0.3 });
+    const [arrow] = annotations();
+    expect(arrow).toMatchObject({ style: "tapered", bend: 0 });
+    state().setArrowStyle(arrow.id, "halo");
+    expect(annotations()[0]).toMatchObject({ style: "halo" });
+    state().addArrow({ x: 0.5, y: 0.1 }, { x: 0.6, y: 0.3 });
+    expect(annotations()[1]).toMatchObject({ style: "halo" });
+    later();
+    state().setArrowBend(arrow.id, 0.3);
+    state().setArrowBend(arrow.id, 0.9);
+    expect(annotations()[0]).toMatchObject({ bend: 0.5 });
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ bend: 0 });
+  });
+
   it("starts a new screenshot without the old one's annotations", () => {
     state().addStep({ x: 0.1, y: 0.1 });
     state().setImage(fakeImage("other"));
