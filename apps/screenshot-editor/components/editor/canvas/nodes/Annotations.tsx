@@ -23,6 +23,7 @@ import {
   fitBox,
   inArea,
   isDrag,
+  snapEnd,
   SHAPE_CORNER,
   SHAPE_STROKE,
   STEP_RADIUS,
@@ -376,15 +377,18 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
     };
     let start: Point | null = null;
     let end: Point | null = null;
+    // Arrows and lines keep to 45 degree steps while Shift is held.
+    const lineEnd = (from: Point, to: Point, shift: boolean) =>
+      shift ? snapEnd(from, to, area) : clampToArea(to, area);
 
-    const finish = () => {
+    const finish = (event: PointerEvent) => {
       window.removeEventListener("pointerup", finish);
       window.removeEventListener("pointercancel", cancel);
       if (!start || tool === "select" || tool === "step") return;
       if (tool === "arrow" || tool === "line") {
         const arrow =
           end && isDrag(start, end)
-            ? { start, end: clampToArea(end, area) }
+            ? { start, end: lineEnd(start, end, event.shiftKey) }
             : clickArrow(start, area);
         start = end = null;
         setArrowDraft(null);
@@ -434,12 +438,12 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
       window.addEventListener("pointerup", finish);
       window.addEventListener("pointercancel", cancel);
     };
-    const onMove = () => {
+    const onMove = (event: KonvaEventObject<PointerEvent>) => {
       if (!start || tool === "select" || tool === "step") return;
       end = pointer();
       if (!end || !isDrag(start, end)) return;
       if (tool === "arrow" || tool === "line")
-        setArrowDraft({ start, end: clampToArea(end, area) });
+        setArrowDraft({ start, end: lineEnd(start, end, event.evt.shiftKey) });
       else setDraft(dragBox(start, end, tool, area));
     };
 
@@ -648,14 +652,18 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
     onDragMove: (event: KonvaEventObject<DragEvent>) => {
       event.cancelBubble = true;
       const node = event.target;
-      const to = clampToArea({ x: node.x() / unit, y: node.y() / unit }, area);
-      node.position({ x: to.x * unit, y: to.y * unit });
       const current = useEditorStore
         .getState()
         .design.annotations.find((item) => item.id === arrow.id);
       if (current?.kind !== "arrow") return;
       const tail = { x: current.x, y: current.y };
       const tip = { x: current.x + current.dx, y: current.y + current.dy };
+      const pointer = { x: node.x() / unit, y: node.y() / unit };
+      // With Shift, the end keeps to 45 degree steps around the other end.
+      const to = event.evt.shiftKey
+        ? snapEnd(end === "start" ? tip : tail, pointer, area)
+        : clampToArea(pointer, area);
+      node.position({ x: to.x * unit, y: to.y * unit });
       const [from, onto] = end === "start" ? [to, tip] : [tail, to];
       useEditorStore.getState().setArrowEnds(arrow.id, from, onto);
     },

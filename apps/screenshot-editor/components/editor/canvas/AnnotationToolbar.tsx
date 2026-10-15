@@ -33,12 +33,15 @@ const buttonClass =
 
 function ToolButton({
   label,
+  hint,
   pressed,
   disabled,
   onClick,
   children,
 }: {
   label: string;
+  /** More in the tooltip than the name. */
+  hint?: string;
   pressed?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -48,7 +51,7 @@ function ToolButton({
     <button
       type="button"
       aria-label={label}
-      title={label}
+      title={hint ? `${label} (${hint})` : label}
       aria-pressed={pressed}
       disabled={disabled}
       onClick={onClick}
@@ -172,15 +175,23 @@ function StepNumberField({ step }: { step: StepAnnotation }) {
   );
 }
 
+const STRAIGHT_HINT = "hold Shift for 45° steps";
+
 const SHAPE_TOOLS: readonly {
   tool: AnnotationTool;
   label: string;
   icon: ReactNode;
+  hint?: string;
 }[] = [
   { tool: "rect", label: "Rectangle", icon: <SquareIcon /> },
   { tool: "rounded", label: "Rounded rectangle", icon: <RoundedIcon /> },
   { tool: "circle", label: "Circle", icon: <Circle aria-hidden /> },
-  { tool: "arrow", label: "Arrow", icon: <MoveUpRight aria-hidden /> },
+  {
+    tool: "arrow",
+    label: "Arrow",
+    icon: <MoveUpRight aria-hidden />,
+    hint: STRAIGHT_HINT,
+  },
 ];
 
 /**
@@ -209,7 +220,7 @@ function LineTool() {
           ref={button}
           type="button"
           aria-label="Line"
-          title="Line"
+          title={`Line (${STRAIGHT_HINT})`}
           aria-pressed={active}
           aria-haspopup="dialog"
           aria-expanded={open && active}
@@ -343,6 +354,7 @@ export function AnnotationToolbar() {
         <ToolButton
           key={shape.tool}
           label={shape.label}
+          hint={shape.hint}
           pressed={tool === shape.tool}
           onClick={() => toggleTool(shape.tool)}
         >

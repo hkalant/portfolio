@@ -94,6 +94,28 @@ export function clampToArea(point: Point, area: Box): Point {
   };
 }
 
+/**
+ * Where a line from `start` toward `end` ends when it is kept to a multiple
+ * of 45 degrees (Shift held): as far along that direction as `end` reaches,
+ * and stopping at the edge of the area. `start` is in the area.
+ */
+export function snapEnd(start: Point, end: Point, area: Box): Point {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const step = Math.PI / 4;
+  const angle = Math.round(Math.atan2(dy, dx) / step) * step;
+  const ux = Math.round(Math.cos(angle) * 1e9) / 1e9;
+  const uy = Math.round(Math.sin(angle) * 1e9) / 1e9;
+  let length = Math.max(0, dx * ux + dy * uy);
+  // Stop at the area's edges.
+  if (ux > 0) length = Math.min(length, (area.x + area.width - start.x) / ux);
+  if (ux < 0) length = Math.min(length, (area.x - start.x) / ux);
+  if (uy > 0) length = Math.min(length, (area.y + area.height - start.y) / uy);
+  if (uy < 0) length = Math.min(length, (area.y - start.y) / uy);
+  length = Math.max(0, length);
+  return { x: start.x + ux * length, y: start.y + uy * length };
+}
+
 /** Whether a point is inside an area. */
 export function inArea(point: Point, area: Box): boolean {
   return (

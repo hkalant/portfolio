@@ -661,3 +661,36 @@ test("the line tool picks an end from its menu, and a line's end can be changed"
   await page.mouse.click(at.x, at.y);
   await expect(page.getByRole("button", { name: "Delete line" })).toBeVisible();
 });
+
+test("holding Shift keeps an arrow or line to 45 degree steps", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
+  await tool(page, "Arrow").click();
+  // Dragged a little downhill with Shift: it comes out level.
+  await page.keyboard.down("Shift");
+  await drag(page, [0.2, 0.3], [0.8, 0.36]);
+  await page.keyboard.up("Shift");
+  await nextFrame(page);
+  const [level, slope] = await pixelsOnImage(page, [
+    [0.6, 0.3],
+    [0.6, 0.34],
+  ]);
+  expectColor(level, "#424a52", 20);
+  expect(isRed(slope)).toBe(true);
+
+  // A line dragged nearly straight down comes out vertical.
+  await tool(page, "Line").click();
+  await page.keyboard.press("Escape");
+  await page.keyboard.down("Shift");
+  await drag(page, [0.5, 0.45], [0.53, 0.9]);
+  await page.keyboard.up("Shift");
+  await nextFrame(page);
+  const [upright, leaning] = await pixelsOnImage(page, [
+    [0.5, 0.8],
+    [0.525, 0.8],
+  ]);
+  expectColor(upright, "#424a52", 20);
+  expect(isRed(leaning)).toBe(true);
+});

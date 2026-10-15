@@ -10,6 +10,7 @@ import {
   isAnnotationColor,
   parseStepNumber,
   stepTextColor,
+  snapEnd,
 } from "./annotations";
 import { migrateDesign } from "./migrate";
 import { createDefaultDesign } from "./defaults";
@@ -197,5 +198,27 @@ describe("saved designs", () => {
     const migrated = migrateDesign(old);
     expect(migrated?.annotations).toEqual([]);
     expect(migrated?.nextStep).toBe(1);
+  });
+});
+
+describe("snapEnd", () => {
+  const area = { x: 0, y: 0, width: 1, height: 0.75 };
+  it("keeps a line to 45 degree steps, as far as the pointer reaches", () => {
+    expect(snapEnd({ x: 0.2, y: 0.5 }, { x: 0.8, y: 0.53 }, area)).toEqual({
+      x: 0.8,
+      y: 0.5,
+    });
+    expect(snapEnd({ x: 0.5, y: 0.5 }, { x: 0.52, y: 0.2 }, area)).toEqual({
+      x: 0.5,
+      y: 0.2,
+    });
+    const diagonal = snapEnd({ x: 0.1, y: 0.1 }, { x: 0.32, y: 0.28 }, area);
+    expect(diagonal.x - 0.1).toBeCloseTo(diagonal.y - 0.1);
+    expect(diagonal.x).toBeCloseTo(0.3);
+  });
+  it("stops at the edge of the area, keeping the angle", () => {
+    const end = snapEnd({ x: 0.5, y: 0.5 }, { x: 1.4, y: 1.3 }, area);
+    expect(end.y).toBeCloseTo(0.75);
+    expect(end.x).toBeCloseTo(0.75);
   });
 });
