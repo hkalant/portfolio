@@ -764,4 +764,19 @@ test("a highlight has a solid border and a see-through fill in its colour", asyn
   ]);
   expectColor(yellowBorder, "#f9c909", 20);
   expect(yellowInside[1]).toBeGreaterThan(inside[1] + 10);
+
+  // Square corners by default; rounded ones cut the corner off.
+  const corner: [number, number] = [
+    0.3 + 0.2 / IMAGE.width,
+    0.3 + 0.2 / IMAGE.height,
+  ];
+  const [square] = await pixelsOnImage(page, [corner]);
+  expectColor(square, "#f9c909", 30);
+  await tool(page, "Rounded corners").click();
+  await expect(tool(page, "Rounded corners")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  const [rounded] = await pixelsOnImage(page, [corner]);
+  expect(isRed(rounded)).toBe(true);
 });

@@ -197,6 +197,8 @@ export const shapeAnnotationSchema = z.object({
   color: annotationColorSchema,
   /** Filled with the colour, or a transparent shape with a coloured border. */
   filled: z.boolean(),
+  /** Whether a highlight has rounded corners. Other shapes have none. */
+  rounded: z.boolean().optional(),
   /** How strongly a blur box blurs, 0 to 1. Other shapes have none. */
   intensity: z.number().min(0).max(1).optional(),
 });

@@ -296,6 +296,8 @@ export function AnnotationToolbar() {
   const setTool = useEditorStore((state) => state.setAnnotationTool);
   const setColor = useEditorStore((state) => state.setAnnotationColor);
   const setFilled = useEditorStore((state) => state.setShapeFilled);
+  const rounded = useEditorStore((state) => state.highlightRounded);
+  const setRounded = useEditorStore((state) => state.setHighlightRounded);
   const resetStepCount = useEditorStore((state) => state.resetStepCount);
   const removeAnnotation = useEditorStore((state) => state.removeAnnotation);
 
@@ -308,6 +310,9 @@ export function AnnotationToolbar() {
     tool === "blur" ||
     (selected?.kind === "shape" && selected.shape === "blur");
   // Highlights are always a border and a light fill.
+  const showCorners =
+    tool === "highlight" ||
+    (selected?.kind === "shape" && selected.shape === "highlight");
   const showFill =
     !blurMode &&
     (shapeTool ||
@@ -364,6 +369,25 @@ export function AnnotationToolbar() {
       >
         <BlurIcon />
       </ToolButton>
+      {showCorners && (
+        <>
+          <Divider />
+          <ToolButton
+            label="Square corners"
+            pressed={!rounded}
+            onClick={() => setRounded(false)}
+          >
+            <SquareIcon />
+          </ToolButton>
+          <ToolButton
+            label="Rounded corners"
+            pressed={rounded}
+            onClick={() => setRounded(true)}
+          >
+            <RoundedIcon />
+          </ToolButton>
+        </>
+      )}
       {showFill && (
         <>
           <Divider />

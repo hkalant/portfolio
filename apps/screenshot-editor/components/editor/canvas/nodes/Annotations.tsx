@@ -49,7 +49,6 @@ import type {
   ArrowStyle,
   LineEnd,
   ShapeAnnotation,
-  ShapeKind,
   StepAnnotation,
 } from "@/lib/design/schema";
 import { EXPORT_HIDDEN } from "@/lib/export/exportImage";
@@ -185,12 +184,12 @@ function StepNode({
 }
 
 const cornerRadius = (
-  shape: ShapeKind,
+  shape: Pick<ShapeAnnotation, "shape" | "rounded">,
   width: number,
   height: number,
   unit: number,
 ) =>
-  shape === "rounded"
+  shape.shape === "rounded" || (shape.shape === "highlight" && shape.rounded)
     ? Math.min(SHAPE_CORNER * unit, width / 2, height / 2)
     : 0;
 
@@ -203,7 +202,7 @@ function ShapeBody({
   zoom,
   borderOnly = false,
 }: {
-  shape: Pick<ShapeAnnotation, "shape" | "color" | "filled">;
+  shape: Pick<ShapeAnnotation, "shape" | "color" | "filled" | "rounded">;
   width: number;
   height: number;
   unit: number;
@@ -257,7 +256,7 @@ function ShapeBody({
     <Rect
       width={width}
       height={height}
-      cornerRadius={cornerRadius(shape.shape, width, height, unit)}
+      cornerRadius={cornerRadius(shape, width, height, unit)}
       {...paint}
     />
   );
@@ -420,7 +419,7 @@ function shapeSize(group: Konva.Group) {
 function placeShape(
   group: Konva.Group,
   box: Box,
-  shape: ShapeKind,
+  shape: Pick<ShapeAnnotation, "shape" | "rounded">,
   unit: number,
 ) {
   group.setAttrs({ x: box.x, y: box.y, scaleX: 1, scaleY: 1 });
@@ -454,6 +453,7 @@ export function AnnotationsNode({
   const selectedId = useEditorStore((state) => state.selectedAnnotationId);
   const color = useEditorStore((state) => state.annotationColor);
   const filled = useEditorStore((state) => state.shapeFilled);
+  const highlightRounded = useEditorStore((state) => state.highlightRounded);
   const arrowStyle = useEditorStore((state) => state.arrowStyle);
   const lineEnd = useEditorStore((state) => state.lineEnd);
   const fontReady = useFrameFont();
@@ -696,7 +696,7 @@ export function AnnotationsNode({
           width: size.width * node.scaleX(),
           height: size.height * node.scaleY(),
         },
-        shape.shape,
+        shape,
         unit,
       );
     },
@@ -722,7 +722,7 @@ export function AnnotationsNode({
           width: box.width * unit,
           height: box.height * unit,
         },
-        shape.shape,
+        shape,
         unit,
       );
       transformerRef.current?.forceUpdate();
@@ -942,6 +942,7 @@ export function AnnotationsNode({
                   : "rect",
               color,
               filled,
+              rounded: highlightRounded,
             }}
             width={draft.width * unit}
             height={draft.height * unit}

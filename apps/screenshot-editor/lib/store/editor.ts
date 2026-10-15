@@ -114,6 +114,8 @@ export type EditorState = {
   annotationColor: AnnotationColor;
   /** Whether new shapes are filled, or transparent with a border. */
   shapeFilled: boolean;
+  /** Whether new highlights have rounded corners. */
+  highlightRounded: boolean;
   /** The look new arrows get. */
   arrowStyle: ArrowStyle;
   /** The end new lines get. */
@@ -170,6 +172,8 @@ export type EditorState = {
   setAnnotationColor: (color: string) => void;
   /** Also changes the selected shape. */
   setShapeFilled: (filled: boolean) => void;
+  /** Also changes the selected highlight. */
+  setHighlightRounded: (rounded: boolean) => void;
   selectAnnotation: (id: string | null) => void;
   /** Adds a step numbered `nextStep` at a point on the screenshot. */
   addStep: (point: Point) => void;
@@ -356,6 +360,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     annotationTool: "select",
     annotationColor: DEFAULT_ANNOTATION_COLOR,
     shapeFilled: false,
+    highlightRounded: false,
     arrowStyle: ARROW_STYLES[0],
     lineEnd: LINE_ENDS[0],
     blurIntensity: DEFAULT_BLUR_INTENSITY,
@@ -767,6 +772,21 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         );
     },
 
+    setHighlightRounded: (rounded) => {
+      set(() => ({ highlightRounded: rounded }));
+      const id = get().selectedAnnotationId;
+      if (id)
+        commit((design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind !== "shape" ||
+            annotation.shape !== "highlight" ||
+            (annotation.rounded ?? false) === rounded
+              ? null
+              : { ...annotation, rounded },
+          ),
+        );
+    },
+
     setShapeFilled: (filled) => {
       set(() => ({ shapeFilled: filled }));
       const id = get().selectedAnnotationId;
@@ -795,6 +815,10 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             ...(annotation.kind === "shape" && {
               shapeFilled: annotation.filled,
             }),
+            ...(annotation.kind === "shape" &&
+              annotation.shape === "highlight" && {
+                highlightRounded: annotation.rounded ?? false,
+              }),
           }),
         };
       }),
@@ -844,6 +868,9 @@ export const useEditorStore = create<EditorState>()((set, get) => {
                 color: get().annotationColor,
                 filled: get().shapeFilled,
                 ...(shape === "blur" ? { intensity: get().blurIntensity } : {}),
+                ...(shape === "highlight"
+                  ? { rounded: get().highlightRounded }
+                  : {}),
               },
             ],
           };

@@ -608,6 +608,18 @@ describe("editor store: annotations", () => {
     expect(annotations()[2]).not.toHaveProperty("intensity");
   });
 
+  it("rounds a highlight's corners, and new highlights match", () => {
+    state().addShape("highlight", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    const [highlight] = annotations();
+    expect(highlight).toMatchObject({ shape: "highlight", rounded: false });
+    state().selectAnnotation(highlight.id);
+    state().setHighlightRounded(true);
+    expect(annotations()[0]).toMatchObject({ rounded: true });
+    state().selectAnnotation(null);
+    state().addShape("highlight", { x: 0.5, y: 0.1, width: 0.2, height: 0.1 });
+    expect(annotations()[1]).toMatchObject({ rounded: true });
+  });
+
   it("starts a new screenshot without the old one's annotations", () => {
     state().addStep({ x: 0.1, y: 0.1 });
     state().setImage(fakeImage("other"));
