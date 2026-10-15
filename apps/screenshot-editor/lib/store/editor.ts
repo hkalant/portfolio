@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import {
   canvasArea,
+  clampStepSize,
   clampToArea,
   DEFAULT_ANNOTATION_COLOR,
   fitBox,
@@ -163,6 +164,8 @@ export type EditorState = {
   /** Moves an annotation by canvas pixels, keeping it on the screenshot. */
   nudgeAnnotation: (id: string, dx: number, dy: number) => void;
   resizeShape: (id: string, box: Box) => void;
+  /** Resizes a step about its new centre. New steps then take its size. */
+  resizeStep: (id: string, centre: Point, size: number) => void;
   setStepNumber: (id: string, number: number) => void;
   removeAnnotation: (id: string) => void;
   /** The next step is numbered 1 again. */
@@ -775,6 +778,10 @@ export const useEditorStore = create<EditorState>()((set, get) => {
                 ...roundPoint(point),
                 number,
                 color: get().annotationColor,
+                // The size of the last step: resizing one sets it for the rest.
+                size:
+                  design.annotations.findLast((item) => item.kind === "step")
+                    ?.size ?? 1,
               },
             ],
             nextStep: Math.min(number + 1, MAX_STEP_NUMBER),
@@ -869,6 +876,27 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           ),
         `annotation-resize-${id}`,
       );
+    },
+
+    resizeStep: (id, centre, size) => {
+      if (!finite(centre.x) || !finite(centre.y) || !finite(size)) return;
+      const to = { ...roundPoint(centre), size: clampStepSize(size) };
+      commit((design) => {
+        const step = design.annotations.find((item) => item.id === id);
+        if (
+          step?.kind !== "step" ||
+          (step.x === to.x && step.y === to.y && step.size === to.size)
+        )
+          return null;
+        // Moved to the end of the list, so new steps take its size.
+        return {
+          ...design,
+          annotations: [
+            ...design.annotations.filter((item) => item.id !== id),
+            { ...step, ...to },
+          ],
+        };
+      }, `annotation-resize-${id}`);
     },
 
     setStepNumber: (id, number) => {

@@ -148,6 +148,9 @@ export const annotationColorSchema = z.enum(ANNOTATION_COLORS);
 
 export const SHAPE_KINDS = ["rect", "rounded", "circle"] as const;
 export const MAX_STEP_NUMBER = 999;
+/** How far a step can be resized, as a multiple of its standard size. */
+export const MIN_STEP_SIZE = 0.5;
+export const MAX_STEP_SIZE = 4;
 
 const imageUnit = z.number().min(0).max(100);
 /** Positions can be left of or above the screenshot, on the background. */
@@ -161,6 +164,8 @@ export const stepAnnotationSchema = z.object({
   y: imagePosition,
   number: z.number().int().min(1).max(MAX_STEP_NUMBER),
   color: annotationColorSchema,
+  /** Times the standard size. Designs saved before steps could be resized get 1. */
+  size: z.number().min(MIN_STEP_SIZE).max(MAX_STEP_SIZE).default(1),
 });
 
 export const shapeAnnotationSchema = z.object({

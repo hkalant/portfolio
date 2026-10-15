@@ -4,8 +4,11 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Circle, Ellipse, Group, Rect, Text, Transformer } from "react-konva";
 import { create } from "zustand";
 import {
+  clampStepSize,
   clampToArea,
   clickBox,
+  MAX_STEP_SIZE,
+  MIN_STEP_SIZE,
   dragBox,
   fitBox,
   inArea,
@@ -90,7 +93,7 @@ function StepNode({
   unit: number;
   zoom: number;
 }) {
-  const radius = STEP_RADIUS * unit;
+  const radius = STEP_RADIUS * step.size * unit;
   // Small steps (zoomed out, on a phone) are still easy to press.
   const hitRadius = Math.max(radius, MIN_HIT / zoom);
   const digits = String(step.number).length;
@@ -475,7 +478,34 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
     },
   });
 
+  // A step is resized from a corner and stays round; the stretch becomes its
+  // size when the resize ends.
+  const stepTransformProps = (step: StepAnnotation) => ({
+    onTransformStart: startMoving,
+    onTransformEnd: (event: KonvaEventObject<Event>) => {
+      const node = event.currentTarget as Konva.Group;
+      const size = clampStepSize(step.size * node.scaleX());
+      const centre = clampToArea(
+        { x: node.x() / unit, y: node.y() / unit },
+        area,
+      );
+      // Set here too: if nothing changes, nothing re-renders it.
+      node.setAttrs({
+        x: centre.x * unit,
+        y: centre.y * unit,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      transformerRef.current?.forceUpdate();
+      useEditorStore.getState().resizeStep(step.id, centre, size);
+      stopMoving(step.id);
+    },
+  });
+
   const selectedShape = selected?.kind === "shape" ? selected : null;
+  // Steps and circles keep their proportions, from the corners.
+  const roundSelection =
+    selected?.kind === "step" || selectedShape?.shape === "circle";
 
   return (
     <Group ref={rootRef} x={image.x} y={image.y}>
@@ -487,6 +517,7 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
             name={ANNOTATION_NAME}
             x={annotation.x * unit}
             y={annotation.y * unit}
+            {...stepTransformProps(annotation)}
             {...dragProps(annotation)}
           >
             <StepNode step={annotation} unit={unit} zoom={zoom} />
@@ -538,10 +569,9 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
           ref={transformerRef}
           name={EXPORT_HIDDEN}
           rotateEnabled={false}
-          resizeEnabled={!!selectedShape}
-          keepRatio={selectedShape?.shape === "circle"}
+          keepRatio={roundSelection}
           enabledAnchors={
-            selectedShape?.shape === "circle"
+            roundSelection
               ? ["top-left", "top-right", "bottom-left", "bottom-right"]
               : undefined
           }
@@ -553,11 +583,18 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
           anchorCornerRadius={5}
           padding={selected.kind === "step" ? 3 : 0}
           // Not smaller than a few screen pixels.
-          boundBoxFunc={(previous, next) =>
-            Math.abs(next.width) < 6 || Math.abs(next.height) < 6
+          boundBoxFunc={(previous, next) => {
+            if (Math.abs(next.width) < 6 || Math.abs(next.height) < 6)
+              return previous;
+            if (selected.kind !== "step") return next;
+            // A step stays between its smallest and largest size. The box is
+            // in screen px, with the selection's padding on each side.
+            const standard = 2 * STEP_RADIUS * unit * zoom;
+            const size = (Math.abs(next.width) - 6) / standard;
+            return size < MIN_STEP_SIZE || size > MAX_STEP_SIZE
               ? previous
-              : next
-          }
+              : next;
+          }}
         />
       )}
     </Group>

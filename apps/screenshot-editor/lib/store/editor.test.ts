@@ -452,6 +452,28 @@ describe("editor store: annotations", () => {
     expect(state().selectedAnnotationId).toBeNull();
   });
 
+  it("resizes steps within limits, and new steps take the last size", () => {
+    state().addStep({ x: 0.1, y: 0.1 });
+    state().addStep({ x: 0.3, y: 0.1 });
+    const [first] = annotations();
+    expect(first).toMatchObject({ kind: "step", size: 1 });
+    state().resizeStep(first.id, { x: 0.12, y: 0.1 }, 2);
+    expect(annotations().find((a) => a.id === first.id)).toMatchObject({
+      x: 0.12,
+      size: 2,
+    });
+    state().addStep({ x: 0.5, y: 0.1 });
+    expect(annotations().at(-1)).toMatchObject({ kind: "step", size: 2 });
+    state().resizeStep(first.id, { x: 0.12, y: 0.1 }, 100);
+    expect(annotations().find((a) => a.id === first.id)).toMatchObject({
+      size: 4,
+    });
+    state().undo();
+    expect(annotations().find((a) => a.id === first.id)).toMatchObject({
+      size: 2,
+    });
+  });
+
   it("uses the chosen colour, and only the three allowed ones", () => {
     state().setAnnotationColor("#f9c909");
     state().addStep({ x: 0.1, y: 0.1 });

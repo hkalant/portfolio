@@ -2,6 +2,8 @@ import { clamp } from "@/lib/utils";
 import {
   ANNOTATION_COLORS,
   MAX_STEP_NUMBER,
+  MAX_STEP_SIZE,
+  MIN_STEP_SIZE,
   type Annotation,
   type AnnotationColor,
   type ShapeAnnotation,
@@ -11,7 +13,7 @@ import {
 // Sizes and rules for the annotations drawn on the screenshot. Every length
 // is in image widths (1 = the screenshot's width), like the positions.
 
-export { ANNOTATION_COLORS, MAX_STEP_NUMBER };
+export { ANNOTATION_COLORS, MAX_STEP_NUMBER, MAX_STEP_SIZE, MIN_STEP_SIZE };
 
 export const ANNOTATION_COLOR_NAMES: Record<AnnotationColor, string> = {
   "#424a52": "Charcoal",
@@ -26,7 +28,7 @@ export function isAnnotationColor(value: string): value is AnnotationColor {
   return (ANNOTATION_COLORS as readonly string[]).includes(value);
 }
 
-/** Radius of a step circle. */
+/** Radius of a step circle at its standard size (1). */
 export const STEP_RADIUS = 0.019;
 /** Border of an outline shape. */
 export const SHAPE_STROKE = 0.004;
@@ -182,6 +184,11 @@ export function fitBox(box: Box, area: Box, square = false): Box {
     width,
     height,
   };
+}
+
+/** A step size kept within the limits, rounded to keep saved designs small. */
+export function clampStepSize(size: number): number {
+  return Math.round(clamp(size, MIN_STEP_SIZE, MAX_STEP_SIZE) * 1000) / 1000;
 }
 
 let counter = 0;

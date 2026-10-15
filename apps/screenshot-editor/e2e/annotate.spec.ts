@@ -454,3 +454,46 @@ test("the handle moves the screenshot whatever tool is on", async ({
   await page.getByRole("button", { name: "Undo", exact: true }).first().click();
   expect(isRed(await centre())).toBe(true);
 });
+
+test("a step can be resized from a corner, and the next step matches", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await tool(page, "Add step 1").click();
+  const point = await onImage(page, 0.3, 0.4);
+  await page.mouse.click(point.x, point.y);
+  await nextFrame(page);
+  await page.mouse.click(point.x, point.y);
+  await expect(
+    page.getByRole("button", { name: "Delete step 1" }),
+  ).toBeVisible();
+  await nextFrame(page);
+
+  // Pull the bottom-right handle out: the radius is 0.019 image widths, and
+  // the handle sits just outside the circle.
+  const corner = await onImage(
+    page,
+    0.3 + 0.019 + 3 / IMAGE.width,
+    0.4 + (0.019 * IMAGE.width + 3) / IMAGE.height,
+  );
+  const out = await onImage(
+    page,
+    0.3 + 0.06,
+    0.4 + (0.06 * IMAGE.width) / IMAGE.height,
+  );
+  await page.mouse.move(corner.x, corner.y);
+  await page.mouse.down();
+  await page.mouse.move(out.x, out.y, { steps: 8 });
+  await page.mouse.up();
+  await page.keyboard.press("Escape");
+
+  // Well beyond the old radius (7.6 px on this screenshot), still the step.
+  const second = await onImage(page, 0.7, 0.5);
+  await page.mouse.click(second.x, second.y);
+  const [grown, next] = await pixelsOnImage(page, [
+    [0.3, 0.4 + 14 / IMAGE.height],
+    [0.7, 0.5 + 14 / IMAGE.height],
+  ]);
+  expectColor(grown, "#d10373", 20);
+  expectColor(next, "#d10373", 20);
+});
