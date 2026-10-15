@@ -457,6 +457,7 @@ export function AnnotationsNode({
   const nodes = useRef(new Map<string, Konva.Group>());
   // While the selection is dragged or resized, its delete button hides.
   const moving = useRef(false);
+  const hovered = useRef<Konva.Node | null>(null);
   const [draft, setDraft] = useState<Box | null>(null);
   const [arrowDraft, setArrowDraft] = useState<{
     start: Point;
@@ -557,10 +558,15 @@ export function AnnotationsNode({
 
     stage.on("pointerdown.annotate", onDown);
     stage.on("pointermove.annotate", onMove);
+    // What the pointer is over, so the cursor can be put back if it goes.
+    stage.on("mouseover.annotate", (event) => {
+      hovered.current = event.target;
+    });
     setCursor(root, tool === "select" ? "" : "crosshair");
     return () => {
       stage.off("pointerdown.annotate");
       stage.off("pointermove.annotate");
+      stage.off("mouseover.annotate");
       cancel();
       setCursor(root, "");
     };
@@ -602,6 +608,14 @@ export function AnnotationsNode({
   // After every render: the selection, the layout or the zoom may have changed.
   useLayoutEffect(() => {
     if (!moving.current) showFrame(selected?.id);
+    // An annotation or handle removed from under the pointer (undo, Delete,
+    // deselecting) never hears the pointer leave, so its "grab" or "move"
+    // cursor would stay; put the tool's cursor back.
+    const node = hovered.current;
+    if (node && !node.getStage() && !moving.current) {
+      hovered.current = null;
+      setCursor(rootRef.current, restCursor);
+    }
   });
   useEffect(() => () => setFrame(null), []);
 

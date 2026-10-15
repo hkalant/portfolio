@@ -783,3 +783,28 @@ test("a highlight is a see-through fill in its colour, square or rounded", async
   const [rounded] = await pixelsOnImage(page, [corner]);
   expect(rounded[1]).toBeLessThan(10);
 });
+
+test("the drawing cursor comes back when the annotation under it is removed", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await tool(page, "Highlight").click();
+  await drag(page, [0.3, 0.3], [0.6, 0.6]);
+  await nextFrame(page);
+  const cursor = () =>
+    page.evaluate(
+      () =>
+        document.querySelector<HTMLElement>(".konvajs-content")?.parentElement
+          ?.style.cursor,
+    );
+  // Over the highlight: it can be picked up.
+  const over = await onImage(page, 0.45, 0.45);
+  await page.mouse.move(over.x - 40, over.y - 40);
+  await page.mouse.move(over.x, over.y, { steps: 3 });
+  await expect.poll(cursor).toBe("grab");
+  // Undone from under the pointer: back to drawing.
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect.poll(cursor).toBe("crosshair");
+  await page.mouse.move(over.x + 20, over.y + 20, { steps: 3 });
+  await expect.poll(cursor).toBe("crosshair");
+});
