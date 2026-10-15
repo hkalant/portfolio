@@ -4,13 +4,12 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Circle, Ellipse, Group, Rect, Text, Transformer } from "react-konva";
 import { create } from "zustand";
 import {
+  clampToArea,
   clickBox,
   dragBox,
-  fitBoxToImage,
-  imageAspect,
+  fitBox,
+  inArea,
   isDrag,
-  onImage,
-  clampToImage,
   SHAPE_CORNER,
   SHAPE_STROKE,
   STEP_RADIUS,
@@ -67,8 +66,10 @@ function setFrame(frame: SelectionFrame | null) {
 }
 
 type Props = {
-  /** The screenshot, relative to the shot. Annotations are drawn over it. */
+  /** The screenshot, relative to the shot. Annotations are placed from it. */
   image: LayoutRect;
+  /** Where annotations can go (the whole canvas), in image widths. */
+  area: Box;
   /** On-screen zoom of the stage, for sizes kept in screen pixels. */
   zoom: number;
   /** Whether the shot itself can be dragged (with the select tool). */
@@ -220,7 +221,7 @@ function placeShape(
 }
 
 /** Steps and shapes over the screenshot, and the tools that add and edit them. */
-export function AnnotationsNode({ image, zoom, shotDraggable }: Props) {
+export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
   const annotations = useEditorStore((state) => state.design.annotations);
   const tool = useEditorStore((state) => state.annotationTool);
   const selectedId = useEditorStore((state) => state.selectedAnnotationId);
@@ -236,7 +237,6 @@ export function AnnotationsNode({ image, zoom, shotDraggable }: Props) {
 
   // Lengths are in image widths; this turns them into canvas px.
   const unit = image.width;
-  const aspect = imageAspect(image);
   const selecting = tool === "select";
   // Any tool can pick up, move and delete an annotation.
   const selected =
@@ -264,8 +264,8 @@ export function AnnotationsNode({ image, zoom, shotDraggable }: Props) {
       if (!start || tool === "select" || tool === "step") return;
       const box =
         end && isDrag(start, end)
-          ? dragBox(start, end, tool, aspect)
-          : clickBox(start, tool, aspect);
+          ? dragBox(start, end, tool, area)
+          : clickBox(start, tool, area);
       start = end = null;
       setDraft(null);
       store().addShape(tool, box);
@@ -295,7 +295,7 @@ export function AnnotationsNode({ image, zoom, shotDraggable }: Props) {
       store().selectAnnotation(null);
       if (tool === "select") return;
       const point = pointer();
-      if (!point || !onImage(point, aspect)) return;
+      if (!point || !inArea(point, area)) return;
       if (tool === "step") {
         store().addStep(point);
         return;
@@ -307,8 +307,7 @@ export function AnnotationsNode({ image, zoom, shotDraggable }: Props) {
     const onMove = () => {
       if (!start || tool === "select" || tool === "step") return;
       end = pointer();
-      if (end && isDrag(start, end))
-        setDraft(dragBox(start, end, tool, aspect));
+      if (end && isDrag(start, end)) setDraft(dragBox(start, end, tool, area));
     };
 
     stage.on("pointerdown.annotate", onDown);
@@ -320,7 +319,7 @@ export function AnnotationsNode({ image, zoom, shotDraggable }: Props) {
       cancel();
       setCursor(root, "");
     };
-  }, [tool, unit, aspect]);
+  }, [tool, unit, area]);
 
   // The selection box follows the selected annotation's node (a step's
   // node is replaced when the font loads).
@@ -395,16 +394,16 @@ export function AnnotationsNode({ image, zoom, shotDraggable }: Props) {
       const node = event.target;
       let to: Point;
       if (annotation.kind === "step") {
-        to = clampToImage({ x: node.x() / unit, y: node.y() / unit }, aspect);
+        to = clampToArea({ x: node.x() / unit, y: node.y() / unit }, area);
       } else {
-        const box = fitBoxToImage(
+        const box = fitBox(
           {
             x: node.x() / unit,
             y: node.y() / unit,
             width: annotation.width,
             height: annotation.height,
           },
-          aspect,
+          area,
           annotation.shape === "circle",
         );
         to = { x: box.x, y: box.y };
@@ -448,14 +447,14 @@ export function AnnotationsNode({ image, zoom, shotDraggable }: Props) {
     onTransformEnd: (event: KonvaEventObject<Event>) => {
       const node = event.currentTarget as Konva.Group;
       const size = shapeSize(node);
-      const box = fitBoxToImage(
+      const box = fitBox(
         {
           x: node.x() / unit,
           y: node.y() / unit,
           width: (size.width * node.scaleX()) / unit,
           height: (size.height * node.scaleY()) / unit,
         },
-        aspect,
+        area,
         shape.shape === "circle",
       );
       // Set here too: if the box ends where it began, nothing re-renders it.

@@ -17,6 +17,7 @@ import { BackgroundNode } from "./nodes/Background";
 import { GuidesNode } from "./nodes/Guides";
 import { ShotNode } from "./nodes/Shot";
 import { SelectionActions } from "./SelectionActions";
+import { ShotHandle } from "./ShotHandle";
 
 type Props = {
   image: LoadedImage;
@@ -67,8 +68,8 @@ export function DesignStage({ image, layout, scale }: Props) {
   }, [pixelRatio, bitmapRatio]);
 
   return (
-    // The delete button sits beside the image role, which would hide it
-    // from screen readers.
+    // The move handle and delete button sit beside the image role, which
+    // would hide them from screen readers.
     <div className="relative" style={{ width, height }}>
       <div
         role="img"
@@ -102,6 +103,7 @@ export function DesignStage({ image, layout, scale }: Props) {
           </Layer>
         </Stage>
       </div>
+      <ShotHandle layout={layout} scale={scale} width={width} height={height} />
       <SelectionActions width={width} height={height} />
     </div>
   );

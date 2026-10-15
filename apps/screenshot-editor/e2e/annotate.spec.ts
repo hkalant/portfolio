@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import {
+  chooseCanvasSize,
   expectColor,
   expectEmptyState,
   exportImage,
@@ -387,4 +388,69 @@ test("an outline keeps its border width when zoomed out and resized", async ({
   const oldEdge = await samplePixels(page, exported, near(0.5, 0.4));
   expect(edge.some(isYellow)).toBe(true);
   expect(oldEdge.some(isYellow)).toBe(false);
+});
+
+test("steps and shapes can go on the background, off the screenshot", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await tool(page, "Add step 1").click();
+  // In the padding left of the screenshot.
+  const point = await onImage(page, -0.1, 0.5);
+  await page.mouse.click(point.x, point.y);
+  await expect(tool(page, "Add step 2")).toBeVisible();
+
+  await tool(page, "Rectangle").click();
+  await tool(page, "Filled shape").click();
+  // From the background below the screenshot onto it.
+  await drag(page, [0.3, 1.15], [0.6, 0.8]);
+
+  const [step, below, onShot] = await pixelsOnImage(page, [
+    [-0.1 - 5 / IMAGE.width, 0.5],
+    [0.45, 1.1],
+    [0.45, 0.9],
+  ]);
+  expectColor(step, "#d10373", 20);
+  expectColor(below, "#d10373", 6);
+  expectColor(onShot, "#d10373", 6);
+});
+
+test("the handle moves the screenshot whatever tool is on", async ({
+  page,
+}) => {
+  await chooseCanvasSize(page, /^Desktop/);
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await tool(page, "Add step 1").click();
+  const canvas = { height: 1080 };
+  // Right of the canvas centre, on the screenshot until it moves left.
+  const centre = async () => {
+    const [pixel] = await samplePixels(page, (await exportImage(page)).data, [
+      [1400 * 2, canvas.height],
+    ]);
+    return pixel;
+  };
+  expect(isRed(await centre())).toBe(true);
+
+  const handle = page.getByRole("button", { name: "Move screenshot" });
+  const from = await handle.boundingBox();
+  const box = await stage(page).boundingBox();
+  if (!from || !box) throw new Error("No handle");
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    from.x + from.width / 2 - box.width * 0.3,
+    from.y + from.height / 2,
+    { steps: 8 },
+  );
+  await page.mouse.up();
+
+  // Moved left, and no step added along the way.
+  expect(isRed(await centre())).toBe(false);
+  await expect(tool(page, "Add step 1")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  // One undo puts it back.
+  await page.getByRole("button", { name: "Undo", exact: true }).first().click();
+  expect(isRed(await centre())).toBe(true);
 });

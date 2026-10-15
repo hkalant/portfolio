@@ -58,34 +58,66 @@ export const imageAspect = (size: { width: number; height: number }) =>
 export type Point = { x: number; y: number };
 export type Box = Point & { width: number; height: number };
 
-/** A point kept inside the screenshot. */
-export function clampToImage(point: Point, aspect: number): Point {
-  return { x: clamp(point.x, 0, 1), y: clamp(point.y, 0, aspect) };
+/** The screenshot itself, as an area: 1 wide and `aspect` tall. */
+export const imageArea = (aspect: number): Box => ({
+  x: 0,
+  y: 0,
+  width: 1,
+  height: aspect,
+});
+
+/**
+ * The whole canvas in image widths, measured from the screenshot's top-left
+ * corner: annotations can go anywhere on it, on the background too.
+ */
+export function canvasArea(
+  canvas: { width: number; height: number },
+  image: Box,
+): Box {
+  return {
+    x: -image.x / image.width,
+    y: -image.y / image.width,
+    width: canvas.width / image.width,
+    height: canvas.height / image.width,
+  };
 }
 
-/** Whether a point is on the screenshot. */
-export function onImage(point: Point, aspect: number): boolean {
-  return point.x >= 0 && point.x <= 1 && point.y >= 0 && point.y <= aspect;
+/** A point kept inside an area. */
+export function clampToArea(point: Point, area: Box): Point {
+  return {
+    x: clamp(point.x, area.x, area.x + area.width),
+    y: clamp(point.y, area.y, area.y + area.height),
+  };
+}
+
+/** Whether a point is inside an area. */
+export function inArea(point: Point, area: Box): boolean {
+  return (
+    point.x >= area.x &&
+    point.x <= area.x + area.width &&
+    point.y >= area.y &&
+    point.y <= area.y + area.height
+  );
 }
 
 /**
- * The box dragged out from `start` to `end`, kept on the screenshot. A circle's
+ * The box dragged out from `start` to `end`, kept in the area. A circle's
  * box is square: its side is the longer of the two drags.
  */
 export function dragBox(
   start: Point,
   end: Point,
   shape: ShapeKind,
-  aspect: number,
+  area: Box,
 ): Box {
-  const to = clampToImage(end, aspect);
+  const to = clampToArea(end, area);
   let dx = to.x - start.x;
   let dy = to.y - start.y;
   if (shape === "circle") {
     // Square, but no bigger than the room in the drag's direction.
     const room = Math.min(
-      dx < 0 ? start.x : 1 - start.x,
-      dy < 0 ? start.y : aspect - start.y,
+      dx < 0 ? start.x - area.x : area.x + area.width - start.x,
+      dy < 0 ? start.y - area.y : area.y + area.height - start.y,
     );
     const side = Math.min(Math.max(Math.abs(dx), Math.abs(dy)), room);
     dx = Math.sign(dx || 1) * side;
@@ -99,16 +131,16 @@ export function dragBox(
   };
 }
 
-/** The default-size shape for a click at `point`, kept on the screenshot. */
-export function clickBox(point: Point, shape: ShapeKind, aspect: number): Box {
+/** The default-size shape for a click at `point`, kept in the area. */
+export function clickBox(point: Point, shape: ShapeKind, area: Box): Box {
   let { width, height } = DEFAULT_SHAPE_SIZE;
   if (shape === "circle") width = height;
-  width = Math.min(width, 1);
-  height = Math.min(height, aspect);
+  width = Math.min(width, area.width);
+  height = Math.min(height, area.height);
   if (shape === "circle") width = height = Math.min(width, height);
   return {
-    x: clamp(point.x - width / 2, 0, 1 - width),
-    y: clamp(point.y - height / 2, 0, aspect - height),
+    x: clamp(point.x - width / 2, area.x, area.x + area.width - width),
+    y: clamp(point.y - height / 2, area.y, area.y + area.height - height),
     width,
     height,
   };
@@ -137,16 +169,16 @@ export const roundPoint = (point: Point): Point => ({
 });
 
 /**
- * A box moved or resized, kept on the screenshot (as far as its size allows).
+ * A box moved or resized, kept in the area (as far as its size allows).
  * A `square` box (a circle's) stays square.
  */
-export function fitBoxToImage(box: Box, aspect: number, square = false): Box {
-  let width = Math.min(Math.max(box.width, MIN_SHAPE_SIDE), 1);
-  let height = Math.min(Math.max(box.height, MIN_SHAPE_SIDE), aspect);
+export function fitBox(box: Box, area: Box, square = false): Box {
+  let width = Math.min(Math.max(box.width, MIN_SHAPE_SIDE), area.width);
+  let height = Math.min(Math.max(box.height, MIN_SHAPE_SIDE), area.height);
   if (square) width = height = Math.min(width, height);
   return {
-    x: clamp(box.x, 0, 1 - width),
-    y: clamp(box.y, 0, aspect - height),
+    x: clamp(box.x, area.x, area.x + area.width - width),
+    y: clamp(box.y, area.y, area.y + area.height - height),
     width,
     height,
   };

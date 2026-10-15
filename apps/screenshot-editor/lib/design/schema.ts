@@ -150,13 +150,15 @@ export const SHAPE_KINDS = ["rect", "rounded", "circle"] as const;
 export const MAX_STEP_NUMBER = 999;
 
 const imageUnit = z.number().min(0).max(100);
+/** Positions can be left of or above the screenshot, on the background. */
+const imagePosition = z.number().min(-100).max(100);
 
 export const stepAnnotationSchema = z.object({
   id: z.string().min(1),
   kind: z.literal("step"),
   /** The circle's centre. */
-  x: imageUnit,
-  y: imageUnit,
+  x: imagePosition,
+  y: imagePosition,
   number: z.number().int().min(1).max(MAX_STEP_NUMBER),
   color: annotationColorSchema,
 });
@@ -166,8 +168,8 @@ export const shapeAnnotationSchema = z.object({
   kind: z.literal("shape"),
   shape: z.enum(SHAPE_KINDS),
   /** Top-left corner of the shape's box. A circle's box is square. */
-  x: imageUnit,
-  y: imageUnit,
+  x: imagePosition,
+  y: imagePosition,
   width: imageUnit.positive(),
   height: imageUnit.positive(),
   color: annotationColorSchema,

@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import {
-  clampToImage,
+  canvasArea,
+  clampToArea,
   DEFAULT_ANNOTATION_COLOR,
-  fitBoxToImage,
+  fitBox,
   isAnnotationColor,
   MAX_STEP_NUMBER,
   newAnnotationId,
@@ -826,9 +827,13 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       const state = get();
       const image = selectActiveImage(state);
       if (!image) return;
-      const { shot } = computeLayout(image, state.design);
+      const { canvas, shot } = computeLayout(image, state.design);
       const unit = shot.image.width;
-      const aspect = shot.image.height / unit;
+      const area = canvasArea(canvas, {
+        ...shot.image,
+        x: shot.x + shot.image.x,
+        y: shot.y + shot.image.y,
+      });
       commit(
         (design) =>
           updateAnnotation(design, id, (annotation) => {
@@ -838,10 +843,10 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             };
             const to =
               annotation.kind === "step"
-                ? clampToImage(moved, aspect)
-                : fitBoxToImage(
+                ? clampToArea(moved, area)
+                : fitBox(
                     { ...annotation, ...moved },
-                    aspect,
+                    area,
                     annotation.shape === "circle",
                   );
             const rounded = roundPoint(to);

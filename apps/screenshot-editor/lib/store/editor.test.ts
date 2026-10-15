@@ -494,8 +494,10 @@ describe("editor store: annotations", () => {
     expect(annotations()[0]).toMatchObject({ x: 0.5, y: 0.25 });
     later();
     // The screenshot is 1000 x 500 design px, drawn 1 : 1 on the canvas here.
+    // Past the screenshot onto the background, but not off the canvas.
     state().nudgeAnnotation(step.id, 2000, 0);
-    expect(annotations()[0].x).toBe(1);
+    expect(annotations()[0].x).toBeGreaterThan(1);
+    expect(annotations()[0].x).toBeLessThan(1.1);
     state().selectAnnotation(step.id);
     state().removeAnnotation(step.id);
     expect(annotations()).toEqual([]);

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   clickBox,
   dragBox,
-  fitBoxToImage,
+  fitBox,
+  imageArea,
+  canvasArea,
   isAnnotationColor,
   parseStepNumber,
   stepTextColor,
@@ -77,7 +79,7 @@ describe("parseStepNumber", () => {
 
 describe("shape boxes", () => {
   // A screenshot half as tall as it is wide.
-  const aspect = 0.5;
+  const aspect = imageArea(0.5);
 
   it("drags out a box in any direction, kept on the screenshot", () => {
     expect(
@@ -85,7 +87,7 @@ describe("shape boxes", () => {
     ).toEqual({ x: 0.2, y: 0.1, width: 0.3, height: 0.1 });
     const box = dragBox({ x: 0.5, y: 0.2 }, { x: 2, y: 2 }, "rounded", aspect);
     expect(box.x + box.width).toBe(1);
-    expect(box.y + box.height).toBe(aspect);
+    expect(box.y + box.height).toBe(0.5);
   });
 
   it("keeps a circle's box square and on the screenshot", () => {
@@ -96,7 +98,7 @@ describe("shape boxes", () => {
       aspect,
     );
     expect(box.width).toBeCloseTo(box.height);
-    expect(box.y + box.height).toBeLessThanOrEqual(aspect + 1e-9);
+    expect(box.y + box.height).toBeLessThanOrEqual(0.5 + 1e-9);
   });
 
   it("makes a default-size shape for a click, inside the screenshot", () => {
@@ -109,14 +111,33 @@ describe("shape boxes", () => {
 
   it("keeps a moved or resized box on the screenshot", () => {
     expect(
-      fitBoxToImage({ x: 0.9, y: -0.1, width: 0.3, height: 0.2 }, aspect),
+      fitBox({ x: 0.9, y: -0.1, width: 0.3, height: 0.2 }, aspect),
     ).toEqual({ x: 0.7, y: 0, width: 0.3, height: 0.2 });
-    const circle = fitBoxToImage(
+    const circle = fitBox(
       { x: 0, y: 0, width: 0.8, height: 0.3 },
       aspect,
       true,
     );
     expect(circle.width).toBe(circle.height);
+  });
+});
+
+describe("annotation area", () => {
+  it("covers the whole canvas, measured from the screenshot", () => {
+    // A 400-wide screenshot at (72, 50) on a 544 x 400 canvas.
+    const area = canvasArea(
+      { width: 544, height: 400 },
+      { x: 72, y: 50, width: 400, height: 300 },
+    );
+    expect(area).toEqual({ x: -0.18, y: -0.125, width: 1.36, height: 1 });
+    // A shape on the background, left of the screenshot, stays there.
+    expect(fitBox({ x: -0.15, y: 0.1, width: 0.1, height: 0.1 }, area)).toEqual(
+      { x: -0.15, y: 0.1, width: 0.1, height: 0.1 },
+    );
+    expect(clickBox({ x: -0.2, y: -0.2 }, "rect", area)).toMatchObject({
+      x: -0.18,
+      y: -0.125,
+    });
   });
 });
 

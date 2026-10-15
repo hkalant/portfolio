@@ -1,7 +1,8 @@
 import type Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Group, Image as KonvaImage, Rect } from "react-konva";
+import { canvasArea } from "@/lib/design/annotations";
 import { hexToRgba } from "@/lib/design/colors";
 import type { DesignLayout } from "@/lib/design/layout";
 import type { ShadowSpec, ShotLayer } from "@/lib/design/schema";
@@ -61,6 +62,20 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
   const beginGesture = useEditorStore((state) => state.beginGesture);
   const groupRef = useRef<Konva.Group>(null);
   const dragging = useRef(false);
+  // Annotations can go anywhere on the canvas, the background included.
+  const canvasWidth = layout.canvas.width;
+  const canvasHeight = layout.canvas.height;
+  const imageX = box.x + box.image.x;
+  const imageY = box.y + box.image.y;
+  const imageWidth = box.image.width;
+  const area = useMemo(
+    () =>
+      canvasArea(
+        { width: canvasWidth, height: canvasHeight },
+        { x: imageX, y: imageY, width: imageWidth, height: 0 },
+      ),
+    [canvasWidth, canvasHeight, imageX, imageY, imageWidth],
+  );
 
   // Leave no guide or grab cursor behind when the shot stops being draggable.
   useEffect(() => {
@@ -227,6 +242,7 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
       {borderNode}
       <AnnotationsNode
         image={box.image}
+        area={area}
         zoom={zoom}
         shotDraggable={draggable}
       />
