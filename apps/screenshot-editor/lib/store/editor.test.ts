@@ -408,8 +408,8 @@ describe("editor store: interface state", () => {
   });
 
   it("sanitises export options", () => {
-    state().setExportOptions({ format: "webp", scale: 3 });
-    expect(state().exportOptions).toMatchObject({ format: "webp", scale: 3 });
+    state().setExportOptions({ format: "webp", scale: 1 });
+    expect(state().exportOptions).toMatchObject({ format: "webp", scale: 1 });
     state().setExportOptions({ scale: 7 as never, quality: 0.1 });
     expect(state().exportOptions).toMatchObject({ scale: 2, quality: 0.5 });
   });

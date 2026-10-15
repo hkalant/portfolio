@@ -13,7 +13,10 @@ describe("export options", () => {
     ).toEqual(DEFAULT_EXPORT_OPTIONS);
   });
 
-  it("turns a remembered 4x, which was removed, into the default scale", () => {
+  it("turns a remembered 3x or 4x, which were removed, into the default scale", () => {
+    expect(sanitizeExportOptions({ format: "png", scale: 3 }).scale).toBe(
+      DEFAULT_EXPORT_OPTIONS.scale,
+    );
     expect(sanitizeExportOptions({ format: "png", scale: 4 }).scale).toBe(
       DEFAULT_EXPORT_OPTIONS.scale,
     );
@@ -21,10 +24,10 @@ describe("export options", () => {
 
   it("keeps valid values and clamps quality", () => {
     expect(
-      sanitizeExportOptions({ format: "webp", scale: 3, quality: 2 }),
+      sanitizeExportOptions({ format: "webp", scale: 1, quality: 2 }),
     ).toEqual({
       format: "webp",
-      scale: 3,
+      scale: 1,
       quality: 1,
     });
     expect(
