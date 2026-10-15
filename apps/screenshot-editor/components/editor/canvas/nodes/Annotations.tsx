@@ -322,14 +322,27 @@ export function AnnotationsNode({ image, zoom, shotDraggable }: Props) {
     };
   }, [tool, unit, aspect]);
 
-  // The selection box follows the selected annotation's node.
+  // The selection box follows the selected annotation's node (a step's
+  // node is replaced when the font loads).
   useEffect(() => {
     const transformer = transformerRef.current;
     if (!transformer) return;
     const node = selected ? nodes.current.get(selected.id) : undefined;
     transformer.nodes(node ? [node] : []);
     transformer.getLayer()?.batchDraw();
-  }, [selected]);
+  }, [selected, fontReady]);
+
+  // Deselected mid-resize (Escape, Delete, undo): the shape never hears the
+  // resize end, so finish the gesture here.
+  const selectedKey = selected?.id;
+  useEffect(
+    () => () => {
+      if (!moving.current) return;
+      moving.current = false;
+      useEditorStore.getState().sealHistory();
+    },
+    [selectedKey],
+  );
 
   /** Tells the delete button where the selection is now. */
   const showFrame = (id: string | undefined) => {
