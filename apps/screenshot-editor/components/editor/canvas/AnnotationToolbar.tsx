@@ -7,26 +7,20 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react";
-import { useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ANNOTATION_COLOR_NAMES,
   ANNOTATION_COLORS,
   MAX_STEP_NUMBER,
   parseStepNumber,
 } from "@/lib/design/annotations";
-import { isLineEnd, LINE_ENDS, type StepAnnotation } from "@/lib/design/schema";
+import { LINE_ENDS, type StepAnnotation } from "@/lib/design/schema";
 import {
   selectSelectedAnnotation,
   useEditorStore,
   type AnnotationTool,
 } from "@/lib/store/editor";
 import { cn } from "@/lib/utils";
-import {
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-} from "@/components/ui/popover";
-import { StylePreview, styleLabel } from "./ArrowStyleMenu";
 
 const buttonClass =
   "flex size-8 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-selected aria-pressed:text-selected-foreground [&_svg]:size-4";
@@ -194,81 +188,20 @@ const SHAPE_TOOLS: readonly {
   },
 ];
 
-/**
- * The line tool. Choosing it opens a little menu of line ends; pressing it
- * again while it's chosen opens the menu again.
- */
+/** The line tool; its button shows the end new lines get. */
 function LineTool() {
   const tool = useEditorStore((state) => state.annotationTool);
   const lineEnd = useEditorStore((state) => state.lineEnd);
-  const color = useEditorStore((state) => state.annotationColor);
-  const selected = useEditorStore(selectSelectedAnnotation);
   const setTool = useEditorStore((state) => state.setAnnotationTool);
-  const setArrowStyle = useEditorStore((state) => state.setArrowStyle);
-  const [open, setOpen] = useState(false);
-  const active = tool === "line";
-  // A selected line shows its own end, and picking one changes it.
-  const selectedLine =
-    selected?.kind === "arrow" && isLineEnd(selected.style) ? selected : null;
-  const current = selectedLine?.style ?? lineEnd;
-  const button = useRef<HTMLButtonElement>(null);
-
   return (
-    <Popover open={open && active} onOpenChange={setOpen}>
-      <PopoverAnchor asChild>
-        <button
-          ref={button}
-          type="button"
-          aria-label="Line"
-          title={`Line (${STRAIGHT_HINT})`}
-          aria-pressed={active}
-          aria-haspopup="dialog"
-          aria-expanded={open && active}
-          onClick={() => {
-            if (!active) setTool("line");
-            setOpen(!(open && active));
-          }}
-          className={buttonClass}
-        >
-          <LineIcon end={lineEnd} />
-        </button>
-      </PopoverAnchor>
-      <PopoverContent
-        side="bottom"
-        sideOffset={8}
-        aria-label="Line end"
-        className="w-auto p-1"
-        // The tool button toggles the menu itself.
-        onInteractOutside={(event) => {
-          if (button.current?.contains(event.target as Node))
-            event.preventDefault();
-        }}
-      >
-        <div
-          role="radiogroup"
-          aria-label="Line end"
-          className="flex flex-col gap-0.5"
-        >
-          {LINE_ENDS.map((end) => (
-            <button
-              key={end}
-              type="button"
-              role="radio"
-              aria-checked={current === end}
-              aria-label={styleLabel(end)}
-              title={styleLabel(end)}
-              onClick={() => {
-                setArrowStyle(selectedLine?.id ?? null, end);
-                setOpen(false);
-              }}
-              className="flex h-9 w-12 items-center justify-center rounded-lg transition-colors outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-ring aria-checked:bg-accent aria-checked:ring-2 aria-checked:ring-foreground/25 aria-checked:ring-inset"
-            >
-              <StylePreview style={end} color={color} size={28} flat />
-            </button>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <ToolButton
+      label="Line"
+      hint={STRAIGHT_HINT}
+      pressed={tool === "line"}
+      onClick={() => setTool(tool === "line" ? "select" : "line")}
+    >
+      <LineIcon end={lineEnd} />
+    </ToolButton>
   );
 }
 

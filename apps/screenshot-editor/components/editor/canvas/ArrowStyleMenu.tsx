@@ -34,7 +34,7 @@ export const LINE_END_NAMES: Record<LineEnd, string> = {
 };
 
 /** What a style is called, as the buttons that pick it say. */
-export const styleLabel = (style: ArrowStyle | LineEnd) =>
+const styleLabel = (style: ArrowStyle | LineEnd) =>
   isLineEnd(style)
     ? `${LINE_END_NAMES[style]} end`
     : `${ARROW_STYLE_NAMES[style]} arrow`;
@@ -47,20 +47,13 @@ const WIDTH = ARROW_STYLES.length * BUTTON + 2 * PADDING;
 const HEIGHT = BUTTON + 2 * PADDING;
 const PREVIEW = 22;
 
-/**
- * A small picture of an arrow style or line end, in the arrow's colour:
- * pointing up and right, or `flat` across.
- */
-export function StylePreview({
+/** A small picture of an arrow style or line end, in the arrow's colour. */
+function StylePreview({
   style,
   color,
-  size = PREVIEW,
-  flat = false,
 }: {
   style: ArrowStyle | LineEnd;
   color: string;
-  size?: number;
-  flat?: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -68,33 +61,26 @@ export function StylePreview({
     const context = canvas?.getContext("2d");
     if (!canvas || !context) return;
     const ratio = window.devicePixelRatio || 1;
-    canvas.width = size * ratio;
-    canvas.height = size * ratio;
+    canvas.width = PREVIEW * ratio;
+    canvas.height = PREVIEW * ratio;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    context.clearRect(0, 0, size, size);
+    context.clearRect(0, 0, PREVIEW, PREVIEW);
     // Sized as on a screenshot about 300 px wide, so the head shows; lines
     // as on a narrower one, so their ends tell apart, with room for a dot.
     const line = isLineEnd(style);
-    const unit = line ? 480 : 300;
     const inset = line ? 6 : 3;
-    const shape = flat
-      ? arrowShape(
-          style,
-          { x: 3, y: size / 2 },
-          { x: size - inset - 3, y: size / 2 },
-          0,
-          unit,
-        )
-      : arrowShape(
-          style,
-          { x: 3, y: size - 4 },
-          { x: size - inset, y: inset + 1 },
-          0,
-          unit,
-        );
+    const shape = arrowShape(
+      style,
+      { x: 3, y: PREVIEW - 4 },
+      { x: PREVIEW - inset, y: inset + 1 },
+      0,
+      line ? 480 : 300,
+    );
     if (shape) paintArrow(context, shape, color);
-  }, [style, color, size, flat]);
-  return <canvas ref={ref} aria-hidden style={{ width: size, height: size }} />;
+  }, [style, color]);
+  return (
+    <canvas ref={ref} aria-hidden style={{ width: PREVIEW, height: PREVIEW }} />
+  );
 }
 
 type Props = {
