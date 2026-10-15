@@ -6,7 +6,7 @@ import {
   MAX_ARROW_BEND,
   tracePath,
 } from "./arrowShape";
-import { ARROW_STYLES } from "./schema";
+import { ARROW_STYLES, LINE_ENDS } from "./schema";
 
 const tail = { x: 100, y: 300 };
 const tip = { x: 500, y: 300 };
@@ -34,6 +34,25 @@ describe("arrow shapes", () => {
             expect(p.x, style).toBeLessThan(tip.x + 3);
         expect(shape!.spine[0]).toEqual(tail);
       }
+  });
+
+  it("draw lines with each end, the start left plain", () => {
+    for (const end of LINE_ENDS) {
+      const shape = arrowShape(end, tail, tip, 0.2, 1200)!;
+      expect(shape.stroke?.cap, end).toBe("butt");
+      expect(shape.spine[0]).toEqual(tail);
+      expect(shape.spine[shape.spine.length - 1].x).toBeCloseTo(tip.x);
+      // Only the dot and round ends are filled; the bar is part of the stroke.
+      expect(shape.fill !== null, end).toBe(end === "dot" || end === "round");
+    }
+    // The dot is wider than the line; the bar reaches across it.
+    const width = 0.006 * 1200;
+    expect(
+      arrowShape("dot", tail, tip, 0, 1200)!.bounds.height,
+    ).toBeGreaterThan(3 * width);
+    const bar = arrowShape("bar", tail, tip, 0, 1200)!;
+    expect(bar.head.map((p) => p.x)).toEqual([tip.x, tip.x]);
+    expect(Math.abs(bar.head[0].y - bar.head[1].y)).toBeGreaterThan(4 * width);
   });
 
   it("are nothing for a zero-length arrow", () => {

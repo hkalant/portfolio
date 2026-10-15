@@ -39,9 +39,12 @@ import {
 import { referencedImageIds } from "@/lib/design/refs";
 import {
   ARROW_STYLES,
+  isLineEnd,
+  LINE_ENDS,
   type Annotation,
   type AnnotationColor,
   type ArrowStyle,
+  type LineEnd,
   type Background,
   type Design,
   type FrameSpec,
@@ -62,7 +65,7 @@ import { clamp } from "@/lib/utils";
 
 export type PanelId = "background" | "style";
 /** What a press on the canvas does: select and move, add a step, or draw a shape or an arrow. */
-export type AnnotationTool = "select" | "step" | ShapeKind | "arrow";
+export type AnnotationTool = "select" | "step" | ShapeKind | "arrow" | "line";
 /** The mobile layout also has a Size tab; null means its panel is closed. */
 export type MobilePanelId = PanelId | "size";
 
@@ -112,6 +115,8 @@ export type EditorState = {
   shapeFilled: boolean;
   /** The look new arrows get. */
   arrowStyle: ArrowStyle;
+  /** The end new lines get. */
+  lineEnd: LineEnd;
   selectedAnnotationId: string | null;
 
   undo: () => void;
@@ -166,12 +171,15 @@ export type EditorState = {
   /** Adds a step numbered `nextStep` at a point on the screenshot. */
   addStep: (point: Point) => void;
   addShape: (shape: ShapeKind, box: Box) => void;
-  /** Adds an arrow from its tail to the tip of its head. */
-  addArrow: (start: Point, end: Point) => void;
+  /** Adds an arrow from its tail to the tip of its head, or a line from its plain end to its styled end. */
+  addArrow: (start: Point, end: Point, line?: boolean) => void;
   /** Moves an arrow's ends. */
   setArrowEnds: (id: string, start: Point, end: Point) => void;
-  /** Restyles an arrow; new arrows then take the style too. */
-  setArrowStyle: (id: string | null, style: ArrowStyle) => void;
+  /**
+   * Restyles an arrow (or a line's end); new arrows (or lines) then take the
+   * style too. An arrow never becomes a line, or a line an arrow.
+   */
+  setArrowStyle: (id: string | null, style: ArrowStyle | LineEnd) => void;
   /** Bends an arrow's middle to one side (see MAX_ARROW_BEND). */
   setArrowBend: (id: string, bend: number) => void;
   moveAnnotation: (id: string, point: Point) => void;
@@ -344,6 +352,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     annotationColor: DEFAULT_ANNOTATION_COLOR,
     shapeFilled: false,
     arrowStyle: ARROW_STYLES[0],
+    lineEnd: LINE_ENDS[0],
     selectedAnnotationId: null,
 
     undo: () =>
@@ -836,7 +845,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         NO_SELECTION,
       ),
 
-    addArrow: (start, end) => {
+    addArrow: (start, end, line = false) => {
       if (![start.x, start.y, end.x, end.y].every(finite)) return;
       const from = roundPoint(start);
       const to = roundPoint(end);
@@ -852,7 +861,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
               ...from,
               ...arrowDelta(from, to),
               color: get().annotationColor,
-              style: get().arrowStyle,
+              style: line ? get().lineEnd : get().arrowStyle,
               bend: 0,
             },
           ],
@@ -885,12 +894,17 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     },
 
     setArrowStyle: (id, style) => {
-      if (!(ARROW_STYLES as readonly string[]).includes(style)) return;
-      set(() => ({ arrowStyle: style }));
+      const line = isLineEnd(style);
+      if (line) set(() => ({ lineEnd: style }));
+      else if ((ARROW_STYLES as readonly string[]).includes(style))
+        set(() => ({ arrowStyle: style as ArrowStyle }));
+      else return;
       if (!id) return;
       commit((design) =>
         updateAnnotation(design, id, (annotation) =>
-          annotation.kind !== "arrow" || annotation.style === style
+          annotation.kind !== "arrow" ||
+          annotation.style === style ||
+          isLineEnd(annotation.style) !== line
             ? null
             : { ...annotation, style },
         ),

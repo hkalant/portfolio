@@ -1,7 +1,7 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import type { ShapeKind } from "@/lib/design/schema";
+import { isLineEnd, type ShapeKind } from "@/lib/design/schema";
 import { CANVAS_FOCUS_ATTRIBUTE } from "@/lib/hooks/useShortcuts";
 import { selectSelectedAnnotation, useEditorStore } from "@/lib/store/editor";
 import { clamp } from "@/lib/utils";
@@ -43,7 +43,9 @@ export function SelectionActions({ width, height }: Props) {
     selected.kind === "step"
       ? `Delete step ${selected.number}`
       : selected.kind === "arrow"
-        ? "Delete arrow"
+        ? isLineEnd(selected.style)
+          ? "Delete line"
+          : "Delete arrow"
         : `Delete ${SHAPE_NAMES[selected.shape]}`;
 
   return (

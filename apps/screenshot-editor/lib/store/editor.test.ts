@@ -574,6 +574,23 @@ describe("editor store: annotations", () => {
     expect(annotations()[0]).toMatchObject({ bend: 0 });
   });
 
+  it("draws lines with the last end picked, never turning them into arrows", () => {
+    state().addArrow({ x: 0.1, y: 0.1 }, { x: 0.4, y: 0.3 }, true);
+    const [line] = annotations();
+    expect(line).toMatchObject({ kind: "arrow", style: "flat", bend: 0 });
+    state().setArrowStyle(line.id, "bar");
+    expect(annotations()[0]).toMatchObject({ style: "bar" });
+    state().addArrow({ x: 0.5, y: 0.1 }, { x: 0.6, y: 0.3 }, true);
+    state().addArrow({ x: 0.5, y: 0.4 }, { x: 0.6, y: 0.5 });
+    expect(annotations()[1]).toMatchObject({ style: "bar" });
+    // Arrows keep their own default.
+    expect(annotations()[2]).toMatchObject({ style: "tapered" });
+    state().setArrowStyle(line.id, "halo");
+    state().setArrowStyle(annotations()[2].id, "dot");
+    expect(annotations()[0]).toMatchObject({ style: "bar" });
+    expect(annotations()[2]).toMatchObject({ style: "tapered" });
+  });
+
   it("starts a new screenshot without the old one's annotations", () => {
     state().addStep({ x: 0.1, y: 0.1 });
     state().setImage(fakeImage("other"));

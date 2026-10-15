@@ -1,6 +1,6 @@
-import type { ArrowStyle } from "./schema";
+import { isLineEnd, type ArrowStyle, type LineEnd } from "./schema";
 
-// The outlines of the four arrow styles, straight or bent. Everything here is
+// The outlines of the four arrow styles and the four line ends, straight or bent. Everything here is
 // in canvas px: `unit` is the screenshot's width, and every size is a
 // fraction of it, so an arrow looks the same at every zoom and in the export.
 
@@ -22,10 +22,10 @@ export type PathCommand =
   | { op: "Z" };
 
 export type ArrowShape = {
-  /** A filled outline (tapered, halo, refined), or null. */
+  /** A filled outline (tapered, halo, refined; a line's dot or round end), or null. */
   fill: PathCommand[] | null;
-  /** A stroked path (the open chevron), or null. */
-  stroke: { path: PathCommand[]; width: number } | null;
+  /** A stroked path (the open chevron, lines), or null. Painted under the fill. */
+  stroke: { path: PathCommand[]; width: number; cap: CanvasLineCap } | null;
   /** The halo style's white outline width on each side; 0 for the others. */
   halo: number;
   /** The soft shadow under the arrow, in px. */
@@ -278,9 +278,74 @@ function filledArrow(
   };
 }
 
-/** The outline of an arrow from `tail` to `tip` in a style, bent by `bend`. */
+/**
+ * A line of one weight from a plain end at `tail` to a styled end at `tip`:
+ * cut square, a dot, rounded, or a bar across it.
+ */
+function lineShape(end: LineEnd, samples: Sample[], unit: number): ArrowShape {
+  const width = 0.006 * unit;
+  const spine = samples.map((sample) => sample.p);
+  const tip = spine[spine.length - 1];
+  const d = unitVector(
+    pointAt(samples, samples[samples.length - 1].s - width),
+    tip,
+  );
+  const n = leftOf(d);
+  const path: PathCommand[] = [
+    { op: "M", x: spine[0].x, y: spine[0].y },
+    ...spine.slice(1).map((p) => ({ op: "L" as const, x: p.x, y: p.y })),
+  ];
+  let fill: PathCommand[] | null = null;
+  let head: Point[] = [tip];
+  let extent = width / 2;
+  const circle = (r: number): PathCommand[] => [
+    { op: "M", x: tip.x + r, y: tip.y },
+    {
+      op: "arc",
+      x: tip.x,
+      y: tip.y,
+      r,
+      start: 0,
+      end: Math.PI * 2,
+      ccw: false,
+    },
+    { op: "Z" },
+  ];
+  const ring = (r: number) =>
+    Array.from({ length: 12 }, (_, i) => ({
+      x: tip.x + r * Math.cos((i * Math.PI) / 6),
+      y: tip.y + r * Math.sin((i * Math.PI) / 6),
+    }));
+  if (end === "dot") {
+    const r = width * 1.9;
+    fill = circle(r);
+    head = ring(r);
+    extent = r;
+  } else if (end === "round") {
+    fill = circle(width / 2);
+    head = ring(width / 2);
+  } else if (end === "bar") {
+    const half = width * 2.6;
+    const a = { x: tip.x + n.x * half, y: tip.y + n.y * half };
+    const b = { x: tip.x - n.x * half, y: tip.y - n.y * half };
+    path.push({ op: "M", x: a.x, y: a.y }, { op: "L", x: b.x, y: b.y });
+    head = [a, b];
+    extent = half;
+  }
+  return {
+    fill,
+    stroke: { path, width, cap: "butt" },
+    halo: 0,
+    shadow: { blur: 0.005 * unit, offsetY: 0.0016 * unit, opacity: 0.28 },
+    spine,
+    head,
+    bounds: boundsOf([...spine, ...head, ...ring(extent)], width / 2),
+  };
+}
+
+/** The outline of an arrow (or line) from `tail` to `tip` in a style, bent by `bend`. */
 export function arrowShape(
-  style: ArrowStyle,
+  style: ArrowStyle | LineEnd,
   tail: Point,
   tip: Point,
   bend: number,
@@ -291,6 +356,8 @@ export function arrowShape(
   const { control } = arrowCurve(tail, tip, Number.isFinite(bend) ? bend : 0);
   const samples = sampleCurve(tail, tip, control);
   const length = samples[samples.length - 1].s;
+
+  if (isLineEnd(style)) return lineShape(style, samples, unit);
 
   if (style === "chevron") {
     // An open V on a round-capped line, one stroke weight. Short arrows get
@@ -326,7 +393,7 @@ export function arrowShape(
     ];
     return {
       fill: null,
-      stroke: { path, width },
+      stroke: { path, width, cap: "round" },
       halo: 0,
       shadow: { blur: 0.005 * unit, offsetY: 0.0016 * unit, opacity: 0.28 },
       spine: [...spine, tip],
@@ -490,10 +557,12 @@ export function paintArrow(
   if (shape.stroke) {
     tracePath(ctx, shape.stroke.path);
     shadow();
+    ctx.lineCap = shape.stroke.cap;
     ctx.lineWidth = shape.stroke.width;
     ctx.strokeStyle = color;
     ctx.stroke();
-  } else if (shape.fill) {
+  }
+  if (shape.fill) {
     tracePath(ctx, shape.fill);
     if (shape.halo > 0) {
       // A white outline casting the shadow, a faint grey keyline around it,

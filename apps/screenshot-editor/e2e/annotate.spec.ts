@@ -611,3 +611,53 @@ test("an arrow's style is picked from the menu below it, and its middle bends it
   // The ends stay where they were.
   expect(tail.some((pixel) => !isRed(pixel))).toBe(true);
 });
+
+test("the line tool picks an end from its menu, and a line's end can be changed", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
+  await tool(page, "Line").click();
+
+  // Choosing the tool opens its ends, flat first.
+  const ends = page.getByRole("radiogroup", { name: "Line end" });
+  await expect(ends).toBeVisible();
+  await expect(ends.getByRole("radio", { name: "Flat end" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await ends.getByRole("radio", { name: "Bar end" }).click();
+  await expect(ends).toHaveCount(0);
+  await expect(tool(page, "Line")).toHaveAttribute("aria-pressed", "true");
+
+  await drag(page, [0.2, 0.5], [0.8, 0.5]);
+  await nextFrame(page);
+  // A bar across the end, none at the start.
+  const [middle, bar, start] = await pixelsOnImage(page, [
+    [0.5, 0.5],
+    [0.8, 0.5 - 4 / IMAGE.height],
+    [0.2, 0.5 - 4 / IMAGE.height],
+  ]);
+  expectColor(middle, "#424a52", 20);
+  expectColor(bar, "#424a52", 30);
+  expect(isRed(start)).toBe(true);
+
+  // Hovering the line offers its ends; a dot replaces the bar.
+  const at = await onImage(page, 0.5, 0.5);
+  await page.mouse.move(at.x, at.y);
+  await expect(ends).toBeVisible();
+  await expect(ends.getByRole("radio", { name: "Bar end" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await ends.getByRole("radio", { name: "Dot end" }).click();
+  const [dot, barGone] = await pixelsOnImage(page, [
+    [0.8, 0.5 - 3 / IMAGE.height],
+    [0.8, 0.5 - 6 / IMAGE.height],
+  ]);
+  expectColor(dot, "#424a52", 30);
+  expect(isRed(barGone)).toBe(true);
+
+  await page.mouse.click(at.x, at.y);
+  await expect(page.getByRole("button", { name: "Delete line" })).toBeVisible();
+});

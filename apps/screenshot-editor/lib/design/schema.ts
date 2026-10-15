@@ -149,6 +149,11 @@ export const annotationColorSchema = z.enum(ANNOTATION_COLORS);
 export const SHAPE_KINDS = ["rect", "rounded", "circle"] as const;
 /** Arrow looks; the first is the default. */
 export const ARROW_STYLES = ["tapered", "chevron", "halo", "refined"] as const;
+/**
+ * Line ends; the first is the default. A line is stored as an arrow whose
+ * style is one of these, so it moves, stretches and bends the same way.
+ */
+export const LINE_ENDS = ["flat", "dot", "round", "bar"] as const;
 export const MAX_STEP_NUMBER = 999;
 /** How far a step can be resized, as a multiple of its standard size. */
 export const MIN_STEP_SIZE = 0.5;
@@ -194,8 +199,8 @@ export const arrowAnnotationSchema = z.object({
   dx: z.number().min(-200).max(200),
   dy: z.number().min(-200).max(200),
   color: annotationColorSchema,
-  /** Arrows saved before there were styles get the default. */
-  style: z.enum(ARROW_STYLES).default("tapered"),
+  /** A head, or a line end for lines. Arrows saved before there were styles get the default. */
+  style: z.enum([...ARROW_STYLES, ...LINE_ENDS]).default("tapered"),
   /** How far the middle is pulled to the left of straight, as a share of the length. */
   bend: z.number().min(-0.5).max(0.5).default(0),
 });
@@ -254,6 +259,9 @@ export type ShapeKind = (typeof SHAPE_KINDS)[number];
 export type StepAnnotation = z.infer<typeof stepAnnotationSchema>;
 export type ShapeAnnotation = z.infer<typeof shapeAnnotationSchema>;
 export type ArrowStyle = (typeof ARROW_STYLES)[number];
+export type LineEnd = (typeof LINE_ENDS)[number];
+export const isLineEnd = (style: string): style is LineEnd =>
+  (LINE_ENDS as readonly string[]).includes(style);
 export type ArrowAnnotation = z.infer<typeof arrowAnnotationSchema>;
 export type Annotation = z.infer<typeof annotationSchema>;
 export type Design = z.infer<typeof designSchema>;

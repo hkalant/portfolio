@@ -42,6 +42,7 @@ import type {
   AnnotationColor,
   ArrowAnnotation,
   ArrowStyle,
+  LineEnd,
   ShapeAnnotation,
   ShapeKind,
   StepAnnotation,
@@ -242,7 +243,7 @@ function ArrowBody({
   zoom,
 }: {
   delta: Point;
-  style: ArrowStyle;
+  style: ArrowStyle | LineEnd;
   bend: number;
   color: AnnotationColor;
   unit: number;
@@ -340,6 +341,7 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
   const color = useEditorStore((state) => state.annotationColor);
   const filled = useEditorStore((state) => state.shapeFilled);
   const arrowStyle = useEditorStore((state) => state.arrowStyle);
+  const lineEnd = useEditorStore((state) => state.lineEnd);
   const fontReady = useFrameFont();
   const rootRef = useRef<Konva.Group>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -379,14 +381,14 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
       window.removeEventListener("pointerup", finish);
       window.removeEventListener("pointercancel", cancel);
       if (!start || tool === "select" || tool === "step") return;
-      if (tool === "arrow") {
+      if (tool === "arrow" || tool === "line") {
         const arrow =
           end && isDrag(start, end)
             ? { start, end: clampToArea(end, area) }
             : clickArrow(start, area);
         start = end = null;
         setArrowDraft(null);
-        store().addArrow(arrow.start, arrow.end);
+        store().addArrow(arrow.start, arrow.end, tool === "line");
         return;
       }
       const box =
@@ -436,7 +438,7 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
       if (!start || tool === "select" || tool === "step") return;
       end = pointer();
       if (!end || !isDrag(start, end)) return;
-      if (tool === "arrow")
+      if (tool === "arrow" || tool === "line")
         setArrowDraft({ start, end: clampToArea(end, area) });
       else setDraft(dragBox(start, end, tool, area));
     };
@@ -800,9 +802,9 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
           <ShapeBody
             shape={{
               shape:
-                tool === "select" || tool === "step" || tool === "arrow"
-                  ? "rect"
-                  : tool,
+                tool === "rect" || tool === "rounded" || tool === "circle"
+                  ? tool
+                  : "rect",
               color,
               filled,
             }}
@@ -826,7 +828,7 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
               x: (arrowDraft.end.x - arrowDraft.start.x) * unit,
               y: (arrowDraft.end.y - arrowDraft.start.y) * unit,
             }}
-            style={arrowStyle}
+            style={tool === "line" ? lineEnd : arrowStyle}
             bend={0}
             color={color}
             unit={unit}

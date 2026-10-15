@@ -2,7 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import { arrowShape, paintArrow } from "@/lib/design/arrowShape";
-import { ARROW_STYLES, type ArrowStyle } from "@/lib/design/schema";
+import {
+  ARROW_STYLES,
+  isLineEnd,
+  LINE_ENDS,
+  type ArrowStyle,
+  type LineEnd,
+} from "@/lib/design/schema";
 import { CANVAS_FOCUS_ATTRIBUTE } from "@/lib/hooks/useShortcuts";
 import { useEditorStore } from "@/lib/store/editor";
 import { clamp } from "@/lib/utils";
@@ -20,6 +26,19 @@ export const ARROW_STYLE_NAMES: Record<ArrowStyle, string> = {
   refined: "Classic",
 };
 
+export const LINE_END_NAMES: Record<LineEnd, string> = {
+  flat: "Flat",
+  dot: "Dot",
+  round: "Round",
+  bar: "Bar",
+};
+
+/** What a style is called, as the buttons that pick it say. */
+export const styleLabel = (style: ArrowStyle | LineEnd) =>
+  isLineEnd(style)
+    ? `${LINE_END_NAMES[style]} end`
+    : `${ARROW_STYLE_NAMES[style]} arrow`;
+
 // The menu's size, and its distance below the arrow.
 const BUTTON = 32;
 const PADDING = 4;
@@ -28,31 +47,54 @@ const WIDTH = ARROW_STYLES.length * BUTTON + 2 * PADDING;
 const HEIGHT = BUTTON + 2 * PADDING;
 const PREVIEW = 22;
 
-/** A small picture of an arrow style, in the arrow's colour. */
-function StylePreview({ style, color }: { style: ArrowStyle; color: string }) {
+/**
+ * A small picture of an arrow style or line end, in the arrow's colour:
+ * pointing up and right, or `flat` across.
+ */
+export function StylePreview({
+  style,
+  color,
+  size = PREVIEW,
+  flat = false,
+}: {
+  style: ArrowStyle | LineEnd;
+  color: string;
+  size?: number;
+  flat?: boolean;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) return;
     const ratio = window.devicePixelRatio || 1;
-    canvas.width = PREVIEW * ratio;
-    canvas.height = PREVIEW * ratio;
+    canvas.width = size * ratio;
+    canvas.height = size * ratio;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    context.clearRect(0, 0, PREVIEW, PREVIEW);
-    // Sized as on a screenshot about 300 px wide, so the head shows.
-    const shape = arrowShape(
-      style,
-      { x: 3, y: PREVIEW - 4 },
-      { x: PREVIEW - 3, y: 4 },
-      0,
-      300,
-    );
+    context.clearRect(0, 0, size, size);
+    // Sized as on a screenshot about 300 px wide, so the head shows; lines
+    // as on a narrower one, so their ends tell apart, with room for a dot.
+    const line = isLineEnd(style);
+    const unit = line ? 480 : 300;
+    const inset = line ? 6 : 3;
+    const shape = flat
+      ? arrowShape(
+          style,
+          { x: 3, y: size / 2 },
+          { x: size - inset - 3, y: size / 2 },
+          0,
+          unit,
+        )
+      : arrowShape(
+          style,
+          { x: 3, y: size - 4 },
+          { x: size - inset, y: inset + 1 },
+          0,
+          unit,
+        );
     if (shape) paintArrow(context, shape, color);
-  }, [style, color]);
-  return (
-    <canvas ref={ref} aria-hidden style={{ width: PREVIEW, height: PREVIEW }} />
-  );
+  }, [style, color, size, flat]);
+  return <canvas ref={ref} aria-hidden style={{ width: size, height: size }} />;
 }
 
 type Props = {
@@ -62,8 +104,8 @@ type Props = {
 };
 
 /**
- * Arrow styles, just below the arrow under the mouse (or the selected arrow,
- * for touch screens).
+ * Arrow styles (or line ends), just below the arrow or line under the mouse
+ * (or the selected one, for touch screens).
  */
 export function ArrowStyleMenu({ width, height }: Props) {
   const hover = useArrowHover((state) => state.frame);
@@ -78,6 +120,10 @@ export function ArrowStyleMenu({ width, height }: Props) {
     ? annotations.find((item) => item.id === frame.id)
     : undefined;
   if (!frame || arrow?.kind !== "arrow") return null;
+  const line = isLineEnd(arrow.style);
+  const styles: readonly (ArrowStyle | LineEnd)[] = line
+    ? LINE_ENDS
+    : ARROW_STYLES;
 
   const below = frame.y + frame.height + GAP;
   const top =
@@ -93,20 +139,20 @@ export function ArrowStyleMenu({ width, height }: Props) {
   return (
     <div
       role="radiogroup"
-      aria-label="Arrow style"
+      aria-label={line ? "Line end" : "Arrow style"}
       onPointerEnter={keepArrowHover}
       onPointerLeave={() => endArrowHover()}
       className="absolute flex items-center rounded-full glass p-1"
       style={{ left, top }}
     >
-      {ARROW_STYLES.map((style) => (
+      {styles.map((style) => (
         <button
           key={style}
           type="button"
           role="radio"
           aria-checked={arrow.style === style}
-          aria-label={`${ARROW_STYLE_NAMES[style]} arrow`}
-          title={`${ARROW_STYLE_NAMES[style]} arrow`}
+          aria-label={styleLabel(style)}
+          title={styleLabel(style)}
           onClick={(event) => {
             // Keep the keys on the canvas.
             event.currentTarget
