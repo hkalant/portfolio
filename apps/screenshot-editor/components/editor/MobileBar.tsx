@@ -41,7 +41,7 @@ export function MobileBar({ onReplace }: Props) {
           <ImageUp aria-hidden />
         </Button>
       )}
-      <CopyButton />
+      <CopyButton compact />
       <ExportMenu compact />
       <HelpMenu />
     </header>
