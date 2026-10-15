@@ -49,13 +49,14 @@ export function BackgroundKindPicker({ value, onChange }: Props) {
         const choice = CHOICES.find((option) => option.value === next);
         if (choice) onChange(choice.value);
       }}
-      className="grid grid-cols-2 gap-1 rounded-lg p-1"
+      // A Liquid Glass capsule, like the toolbar over the canvas.
+      className="grid grid-cols-2 gap-1 rounded-full glass bg-(--glass) p-1 contrast-more:bg-background"
     >
       {CHOICES.map(({ value: option, label, icon: Icon }) => (
         <ToggleGroupItem
           key={option}
           value={option}
-          className="h-auto flex-col gap-1 rounded-md px-1 py-2"
+          className="h-9 gap-1.5 rounded-full px-3 text-sm"
         >
           <Icon className="size-4" aria-hidden />
           {label}
