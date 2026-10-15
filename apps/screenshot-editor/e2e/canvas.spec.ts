@@ -408,7 +408,7 @@ test("copies the design to the clipboard as a PNG", async ({
   await copyButton.click();
   // Shown as a tooltip under the button, not as a notice.
   const tooltip = page.getByTestId("copied-tooltip");
-  await expect(tooltip).toHaveText("Copied to clipboard");
+  await expect(tooltip).toHaveText("Copied!");
   await expect(page.getByTestId("notice")).toHaveCount(0);
   const [button, tip] = [
     (await copyButton.boundingBox())!,
@@ -431,7 +431,7 @@ test("copies the design to the clipboard as a PNG", async ({
 
   // The keyboard shortcut does the same when no text is selected.
   await page.keyboard.press("ControlOrMeta+c");
-  await expect(tooltip).toHaveText("Copied to clipboard");
+  await expect(tooltip).toHaveText("Copied!");
 });
 
 test("leaving the editor and coming back keeps the design and its history", async ({
