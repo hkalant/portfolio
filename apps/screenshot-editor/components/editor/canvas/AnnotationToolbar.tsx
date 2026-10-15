@@ -21,6 +21,7 @@ import {
   type AnnotationTool,
 } from "@/lib/store/editor";
 import { cn } from "@/lib/utils";
+import { Slider } from "@/components/ui/slider";
 
 const buttonClass =
   "flex size-8 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-selected aria-pressed:text-selected-foreground [&_svg]:size-4";
@@ -188,6 +189,53 @@ const SHAPE_TOOLS: readonly {
   },
 ];
 
+/** Soft dots fading out: a blur. */
+function BlurIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      {[4, 9.33, 14.67, 20].flatMap((cx, i) =>
+        [4, 9.33, 14.67, 20].map((cy, j) => (
+          <circle
+            key={`${i}-${j}`}
+            cx={cx}
+            cy={cy}
+            r={2 - Math.abs(i + j - 3) * 0.45}
+            opacity={1 - Math.abs(i + j - 3) * 0.22}
+          />
+        )),
+      )}
+    </svg>
+  );
+}
+
+/** How strongly the selected blur box blurs, and new ones after it. */
+function BlurStrength() {
+  const selected = useEditorStore(selectSelectedAnnotation);
+  const intensity = useEditorStore((state) => state.blurIntensity);
+  const setBlurIntensity = useEditorStore((state) => state.setBlurIntensity);
+  const sealHistory = useEditorStore((state) => state.sealHistory);
+  const blur =
+    selected?.kind === "shape" && selected.shape === "blur" ? selected : null;
+  const value = blur?.intensity ?? intensity;
+  return (
+    <div className="flex shrink-0 items-center gap-2 px-2 text-xs text-muted-foreground">
+      <span aria-hidden>Blur</span>
+      <Slider
+        className="w-28"
+        thumbLabel="Blur strength"
+        min={0}
+        max={100}
+        step={1}
+        value={[Math.round(value * 100)]}
+        onValueChange={([next]) =>
+          setBlurIntensity(blur?.id ?? null, next / 100)
+        }
+        onValueCommit={() => sealHistory()}
+      />
+    </div>
+  );
+}
+
 /** The line tool; its button shows the end new lines get. */
 function LineTool() {
   const tool = useEditorStore((state) => state.annotationTool);
@@ -249,7 +297,11 @@ export function AnnotationToolbar() {
   const toggleTool = (next: AnnotationTool) =>
     setTool(tool === next ? "select" : next);
   const shapeTool = tool === "rect" || tool === "rounded" || tool === "circle";
-  const showFill = shapeTool || selected?.kind === "shape";
+  // Blur boxes have a strength instead of a colour or a fill.
+  const blurMode =
+    tool === "blur" ||
+    (selected?.kind === "shape" && selected.shape === "blur");
+  const showFill = !blurMode && (shapeTool || selected?.kind === "shape");
 
   return (
     <div
@@ -295,6 +347,13 @@ export function AnnotationToolbar() {
         </ToolButton>
       ))}
       <LineTool />
+      <ToolButton
+        label="Blur"
+        pressed={tool === "blur"}
+        onClick={() => toggleTool("blur")}
+      >
+        <BlurIcon />
+      </ToolButton>
       {showFill && (
         <>
           <Divider />
@@ -314,34 +373,43 @@ export function AnnotationToolbar() {
           </ToolButton>
         </>
       )}
-      <Divider />
-      <div
-        role="radiogroup"
-        aria-label="Annotation colour"
-        className="flex items-center gap-1 px-1"
-      >
-        {ANNOTATION_COLORS.map((swatch) => (
-          <button
-            key={swatch}
-            type="button"
-            role="radio"
-            aria-checked={color === swatch}
-            aria-label={ANNOTATION_COLOR_NAMES[swatch]}
-            title={ANNOTATION_COLOR_NAMES[swatch]}
-            onClick={() => setColor(swatch)}
-            className="flex size-7 shrink-0 items-center justify-center rounded-full outline-none focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-ring"
+      {blurMode ? (
+        <>
+          <Divider />
+          <BlurStrength />
+        </>
+      ) : (
+        <>
+          <Divider />
+          <div
+            role="radiogroup"
+            aria-label="Annotation colour"
+            className="flex items-center gap-1 px-1"
           >
-            <span
-              className={cn(
-                "size-5 rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] transition-shadow dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.4)]",
-                color === swatch &&
-                  "ring-2 ring-foreground ring-offset-2 ring-offset-background",
-              )}
-              style={{ backgroundColor: swatch }}
-            />
-          </button>
-        ))}
-      </div>
+            {ANNOTATION_COLORS.map((swatch) => (
+              <button
+                key={swatch}
+                type="button"
+                role="radio"
+                aria-checked={color === swatch}
+                aria-label={ANNOTATION_COLOR_NAMES[swatch]}
+                title={ANNOTATION_COLOR_NAMES[swatch]}
+                onClick={() => setColor(swatch)}
+                className="flex size-7 shrink-0 items-center justify-center rounded-full outline-none focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-ring"
+              >
+                <span
+                  className={cn(
+                    "size-5 rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] transition-shadow dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.4)]",
+                    color === swatch &&
+                      "ring-2 ring-foreground ring-offset-2 ring-offset-background",
+                  )}
+                  style={{ backgroundColor: swatch }}
+                />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
       {selected && (
         <>
           <Divider />

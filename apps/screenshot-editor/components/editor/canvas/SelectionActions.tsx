@@ -16,6 +16,7 @@ const SHAPE_NAMES: Record<ShapeKind, string> = {
   rect: "rectangle",
   rounded: "rounded rectangle",
   circle: "circle",
+  blur: "blur",
 };
 
 type Props = {

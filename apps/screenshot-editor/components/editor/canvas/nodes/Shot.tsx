@@ -242,6 +242,7 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
       {borderNode}
       <AnnotationsNode
         image={box.image}
+        source={image}
         area={area}
         zoom={zoom}
         shotDraggable={draggable}

@@ -15,6 +15,7 @@ import {
   type Point,
 } from "@/lib/design/annotations";
 import { MAX_ARROW_BEND } from "@/lib/design/arrowShape";
+import { DEFAULT_BLUR_INTENSITY } from "@/lib/design/blur";
 import { isHexColor } from "@/lib/design/colors";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { isFrameKind } from "@/lib/design/frames";
@@ -117,6 +118,8 @@ export type EditorState = {
   arrowStyle: ArrowStyle;
   /** The end new lines get. */
   lineEnd: LineEnd;
+  /** How strongly new blur boxes blur, 0 to 1. */
+  blurIntensity: number;
   selectedAnnotationId: string | null;
 
   undo: () => void;
@@ -186,6 +189,8 @@ export type EditorState = {
   /** Moves an annotation by canvas pixels, keeping it on the screenshot. */
   nudgeAnnotation: (id: string, dx: number, dy: number) => void;
   resizeShape: (id: string, box: Box) => void;
+  /** Changes a blur box's strength (0 to 1); new blur boxes then match it. */
+  setBlurIntensity: (id: string | null, intensity: number) => void;
   /** Resizes a step about its new centre. New steps then take its size. */
   resizeStep: (id: string, centre: Point, size: number) => void;
   setStepNumber: (id: string, number: number) => void;
@@ -353,6 +358,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     shapeFilled: false,
     arrowStyle: ARROW_STYLES[0],
     lineEnd: LINE_ENDS[0],
+    blurIntensity: DEFAULT_BLUR_INTENSITY,
     selectedAnnotationId: null,
 
     undo: () =>
@@ -837,6 +843,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
                 ...roundBox(box),
                 color: get().annotationColor,
                 filled: get().shapeFilled,
+                ...(shape === "blur" ? { intensity: get().blurIntensity } : {}),
               },
             ],
           };
@@ -981,6 +988,24 @@ export const useEditorStore = create<EditorState>()((set, get) => {
               : { ...annotation, x: rounded.x, y: rounded.y };
           }),
         `annotation-move-${id}`,
+      );
+    },
+
+    setBlurIntensity: (id, intensity) => {
+      if (!finite(intensity)) return;
+      const to = Math.round(Math.min(1, Math.max(0, intensity)) * 100) / 100;
+      set(() => ({ blurIntensity: to }));
+      if (!id) return;
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind !== "shape" ||
+            annotation.shape !== "blur" ||
+            annotation.intensity === to
+              ? null
+              : { ...annotation, intensity: to },
+          ),
+        `annotation-blur-${id}`,
       );
     },
 

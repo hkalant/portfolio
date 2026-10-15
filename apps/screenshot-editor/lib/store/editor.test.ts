@@ -591,6 +591,23 @@ describe("editor store: annotations", () => {
     expect(annotations()[2]).toMatchObject({ style: "tapered" });
   });
 
+  it("draws blur boxes with the last strength, and changes a box's strength", () => {
+    state().addShape("blur", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    const [blur] = annotations();
+    expect(blur).toMatchObject({ shape: "blur", intensity: 0.5 });
+    later();
+    state().setBlurIntensity(blur.id, 0.8);
+    state().setBlurIntensity(blur.id, 1.7);
+    expect(annotations()[0]).toMatchObject({ intensity: 1 });
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ intensity: 0.5 });
+    state().addShape("blur", { x: 0.5, y: 0.1, width: 0.2, height: 0.1 });
+    expect(annotations()[1]).toMatchObject({ intensity: 1 });
+    // Other shapes have no strength.
+    state().addShape("rect", { x: 0.5, y: 0.4, width: 0.2, height: 0.1 });
+    expect(annotations()[2]).not.toHaveProperty("intensity");
+  });
+
   it("starts a new screenshot without the old one's annotations", () => {
     state().addStep({ x: 0.1, y: 0.1 });
     state().setImage(fakeImage("other"));

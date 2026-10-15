@@ -10,7 +10,12 @@ import {
   useAutoSize,
 } from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
-import { isRed, makeSolidPng, samplePixels } from "./helpers/png";
+import {
+  isRed,
+  makeSolidPng,
+  makeStripedPng,
+  samplePixels,
+} from "./helpers/png";
 
 // A 400 x 300 screenshot on an auto canvas with 72 px padding: the canvas is
 // 544 x 444 and the screenshot starts at (72, 72).
@@ -687,4 +692,42 @@ test("holding Shift keeps an arrow or line to 45 degree steps", async ({
   ]);
   expectColor(upright, "#424a52", 20);
   expect(isRed(leaning)).toBe(true);
+});
+
+test("a blur box blurs the screenshot under it, and its slider sets how much", async ({
+  page,
+}) => {
+  const BLUE = [0, 0, 255, 255] as const;
+  await upload(
+    page,
+    makeStripedPng(IMAGE.width, IMAGE.height, 8, RED, [...BLUE]),
+  );
+  await tool(page, "Blur").click();
+  const strength = page.getByRole("slider", { name: "Blur strength" });
+  await expect(strength).toBeVisible();
+  // Colours are for drawing; a blur has none.
+  await expect(
+    toolbar(page).getByRole("radiogroup", { name: "Annotation colour" }),
+  ).toHaveCount(0);
+  await drag(page, [0.3, 0.3], [0.7, 0.7]);
+  await nextFrame(page);
+
+  // Inside, the stripes run together; outside they are untouched.
+  const mixed = (pixel: number[]) => pixel[0] > 60 && pixel[2] > 60;
+  const [inside, outside] = await pixelsOnImage(page, [
+    [0.51, 0.5],
+    [0.51, 0.15],
+  ]);
+  expect(mixed(inside)).toBe(true);
+  expectColor(outside, "#0000ff", 20);
+
+  // Selected, the slider at its lowest leaves the stripes nearly sharp.
+  const at = await onImage(page, 0.5, 0.5);
+  await page.mouse.click(at.x, at.y);
+  await expect(page.getByRole("button", { name: "Delete blur" })).toBeVisible();
+  await strength.focus();
+  await page.keyboard.press("Home");
+  const [light] = await pixelsOnImage(page, [[0.51, 0.5]]);
+  expect(light[2]).toBeGreaterThan(inside[2]);
+  expect(light[0]).toBeLessThan(inside[0]);
 });

@@ -5,6 +5,7 @@ import {
   Circle,
   Ellipse,
   Group,
+  Image as KonvaImage,
   Rect,
   Shape,
   Text,
@@ -37,6 +38,7 @@ import {
   bendToward,
   paintArrow,
 } from "@/lib/design/arrowShape";
+import { blurArea, DEFAULT_BLUR_INTENSITY } from "@/lib/design/blur";
 import type { Rect as LayoutRect } from "@/lib/design/layout";
 import type {
   Annotation,
@@ -50,6 +52,8 @@ import type {
 } from "@/lib/design/schema";
 import { EXPORT_HIDDEN } from "@/lib/export/exportImage";
 import { CANVAS_FOCUS_ATTRIBUTE } from "@/lib/hooks/useShortcuts";
+import type { LoadedImage } from "@/lib/image/load";
+import { blurredPatch } from "@/lib/render/blurPatch";
 import { FRAME_FONT_FAMILY } from "@/lib/render/frame";
 import { useEditorStore } from "@/lib/store/editor";
 import { useFrameFont } from "./Chrome";
@@ -115,6 +119,8 @@ function setFrame(frame: SelectionFrame | null) {
 type Props = {
   /** The screenshot, relative to the shot. Annotations are placed from it. */
   image: LayoutRect;
+  /** The screenshot's pixels, which blur boxes blur. */
+  source: LoadedImage;
   /** Where annotations can go (the whole canvas), in image widths. */
   area: Box;
   /** On-screen zoom of the stage, for sizes kept in screen pixels. */
@@ -203,6 +209,18 @@ function ShapeBody({
   /** An outline is pressed only by its border, so steps and shapes can go inside. */
   borderOnly?: boolean;
 }) {
+  if (shape.shape === "blur")
+    // While being drawn: just where the blur will go.
+    return (
+      <Rect
+        width={width}
+        height={height}
+        fill="rgba(10, 132, 255, 0.08)"
+        stroke={SELECTION_COLOR}
+        strokeWidth={1.5 / zoom}
+        dash={[4 / zoom, 3 / zoom]}
+      />
+    );
   const strokeWidth = SHAPE_STROKE * unit;
   const paint = shape.filled
     ? { fill: shape.color }
@@ -231,6 +249,84 @@ function ShapeBody({
       cornerRadius={cornerRadius(shape.shape, width, height, unit)}
       {...paint}
     />
+  );
+}
+
+/**
+ * A blur box: the screenshot under it, blurred. Its first child is the box
+ * itself (pressable all over), which a resize stretches.
+ */
+function BlurBody({
+  shape,
+  source,
+  aspect,
+  unit,
+  zoom,
+}: {
+  shape: ShapeAnnotation;
+  source: LoadedImage;
+  /** The screenshot's height over its width. */
+  aspect: number;
+  unit: number;
+  zoom: number;
+}) {
+  const { x, y, width, height } = shape;
+  const intensity = shape.intensity ?? DEFAULT_BLUR_INTENSITY;
+  const area = useMemo(
+    () => blurArea({ x, y, width, height }, aspect),
+    [x, y, width, height, aspect],
+  );
+  const patch = useMemo(
+    () =>
+      area &&
+      blurredPatch(
+        source.source,
+        source.source instanceof HTMLImageElement
+          ? source.source.naturalWidth
+          : source.source.width,
+        source.source instanceof HTMLImageElement
+          ? source.source.naturalHeight
+          : source.source.height,
+        area,
+        intensity,
+      ),
+    [source, area, intensity],
+  );
+  useEffect(
+    () => () => {
+      if (patch) Konva.Util.releaseCanvas(patch);
+    },
+    [patch],
+  );
+  return (
+    <>
+      <Rect
+        width={width * unit}
+        height={height * unit}
+        fill="rgba(0, 0, 0, 0)"
+      />
+      {area && patch ? (
+        <KonvaImage
+          image={patch}
+          x={(area.x - x) * unit}
+          y={(area.y - y) * unit}
+          width={area.width * unit}
+          height={area.height * unit}
+          listening={false}
+        />
+      ) : (
+        // Off the screenshot there is nothing to blur: show where it is.
+        <Rect
+          name={EXPORT_HIDDEN}
+          width={width * unit}
+          height={height * unit}
+          stroke={SELECTION_COLOR}
+          strokeWidth={1 / zoom}
+          dash={[4 / zoom, 3 / zoom]}
+          listening={false}
+        />
+      )}
+    </>
   );
 }
 
@@ -335,7 +431,13 @@ function placeShape(
 }
 
 /** Steps, shapes and arrows over the screenshot, and the tools that add and edit them. */
-export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
+export function AnnotationsNode({
+  image,
+  source,
+  area,
+  zoom,
+  shotDraggable,
+}: Props) {
   const annotations = useEditorStore((state) => state.design.annotations);
   const tool = useEditorStore((state) => state.annotationTool);
   const selectedId = useEditorStore((state) => state.selectedAnnotationId);
@@ -788,14 +890,24 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
             {...transformProps(annotation)}
             {...dragProps(annotation)}
           >
-            <ShapeBody
-              shape={annotation}
-              width={annotation.width * unit}
-              height={annotation.height * unit}
-              unit={unit}
-              zoom={zoom}
-              borderOnly={!selecting}
-            />
+            {annotation.shape === "blur" ? (
+              <BlurBody
+                shape={annotation}
+                source={source}
+                aspect={image.height / image.width}
+                unit={unit}
+                zoom={zoom}
+              />
+            ) : (
+              <ShapeBody
+                shape={annotation}
+                width={annotation.width * unit}
+                height={annotation.height * unit}
+                unit={unit}
+                zoom={zoom}
+                borderOnly={!selecting}
+              />
+            )}
           </Group>
         ),
       )}
@@ -810,7 +922,10 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
           <ShapeBody
             shape={{
               shape:
-                tool === "rect" || tool === "rounded" || tool === "circle"
+                tool === "rect" ||
+                tool === "rounded" ||
+                tool === "circle" ||
+                tool === "blur"
                   ? tool
                   : "rect",
               color,
