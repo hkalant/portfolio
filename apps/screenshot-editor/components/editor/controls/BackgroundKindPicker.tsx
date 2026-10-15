@@ -42,6 +42,7 @@ export function BackgroundKindPicker({ value, onChange }: Props) {
   return (
     <ToggleGroup
       type="single"
+      glide
       aria-label="Background type"
       value={value ?? ""}
       // Radix reports "" when the active option is clicked again; keep the current one.

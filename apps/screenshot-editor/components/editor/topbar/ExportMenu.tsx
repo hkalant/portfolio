@@ -82,6 +82,7 @@ function ExportOptionsForm() {
     <div className="space-y-4">
       <Segmented
         label="Format"
+        glide
         value={options.format}
         options={formatOptions()}
         onChange={(format: ExportFormat) => setExportOptions({ format })}
@@ -99,6 +100,7 @@ function ExportOptionsForm() {
       )}
       <Segmented
         label="Scale"
+        glide
         value={String(options.scale)}
         options={SCALE_OPTIONS}
         onChange={(scale) =>
