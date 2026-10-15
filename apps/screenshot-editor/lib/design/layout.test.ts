@@ -67,18 +67,18 @@ describe("computeLayout on an auto canvas", () => {
       { width: 1200, height: 750 },
       design(),
     );
-    expect(canvas).toEqual({ width: 1328, height: 878 });
-    expect(shot).toMatchObject({ x: 64, y: 64, width: 1200, height: 750 });
+    expect(canvas).toEqual({ width: 1344, height: 894 });
+    expect(shot).toMatchObject({ x: 72, y: 72, width: 1200, height: 750 });
     expect(shot.image).toEqual({ x: 0, y: 0, width: 1200, height: 750 });
-    expect(shot.radius).toBe(12);
-    expect(shot.imageRadii).toEqual([12, 12, 12, 12]);
+    expect(shot.radius).toBe(15);
+    expect(shot.imageRadii).toEqual([15, 15, 15, 15]);
     expect(shot.chrome).toBeNull();
     expect(draggable).toBe(false);
   });
 
   it("fits large screenshots before padding", () => {
     const layout = computeLayout({ width: 4000, height: 2500 }, design());
-    expect(layout.canvas).toEqual({ width: 1728, height: 1128 });
+    expect(layout.canvas).toEqual({ width: 1744, height: 1144 });
   });
 
   it("caps the radius at half the shorter side", () => {
@@ -95,23 +95,11 @@ describe("computeLayout on an auto canvas", () => {
       design({ scale: 0.5, position: { x: 0, y: 1 } }),
     );
     expect(layout.shot).toMatchObject({
-      x: 64,
-      y: 64,
+      x: 72,
+      y: 72,
       width: 400,
       height: 300,
     });
-  });
-
-  it("puts an inset around the image", () => {
-    const { canvas, shot } = computeLayout(
-      { width: 400, height: 300 },
-      design({ inset: { size: 20, color: "auto" }, radius: 30 }),
-    );
-    expect(canvas).toEqual({ width: 568, height: 468 });
-    expect(shot.content).toEqual({ x: 0, y: 0, width: 440, height: 340 });
-    expect(shot.image).toEqual({ x: 20, y: 20, width: 400, height: 300 });
-    // The inner corners follow the outer ones, inset by 20.
-    expect(shot.imageRadii).toEqual([10, 10, 10, 10]);
   });
 
   it("adds a title bar above the content, with square top corners below it", () => {
@@ -122,7 +110,7 @@ describe("computeLayout on an auto canvas", () => {
     expect(shot.chrome).toEqual({ x: 0, y: 0, width: 1000, height: 34 });
     expect(shot.image).toEqual({ x: 0, y: 34, width: 1000, height: 600 });
     expect(shot.height).toBe(634);
-    expect(shot.imageRadii).toEqual([0, 0, 12, 12]);
+    expect(shot.imageRadii).toEqual([0, 0, 15, 15]);
   });
 
   it("puts the glass ring around everything", () => {
@@ -179,11 +167,11 @@ describe("computeLayout on a fixed canvas", () => {
     expect(shot.y).toBeCloseTo(450 - 175);
   });
 
-  it("scales chrome and inset with the shot, but not the radius", () => {
+  it("scales the frame with the shot, but not the radius", () => {
     const { shot } = computeLayout(
       { width: 1000, height: 500 },
       design(
-        { padding: 0, radius: 12, inset: { size: 10, color: "auto" } },
+        { padding: 0, radius: 12, frame: frame("glass") },
         { preset: "custom", width: 510, height: 260 },
       ),
     );

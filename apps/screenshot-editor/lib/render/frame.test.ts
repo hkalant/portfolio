@@ -1,29 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { createDefaultDesign } from "@/lib/design/defaults";
-import { computeLayout } from "@/lib/design/layout";
-import type { Design, FrameKind, ShotLayer } from "@/lib/design/schema";
+import type { FrameKind } from "@/lib/design/schema";
 import { SHADOW_PRESETS } from "@/lib/design/shadows";
 import {
   addressContents,
   addressPill,
   chromeLayout,
-  contentRadii,
   cornerClearance,
   framePalette,
   hasShadow,
   insideStroke,
+  outsideStroke,
   isPlainShot,
-  resolveInsetColor,
   roundedRectPath,
   TRAFFIC_LIGHT_COLORS,
   trafficLights,
   trafficLightsEnd,
 } from "./frame";
-
-function designWith(patch: Partial<ShotLayer>): Design {
-  const design = createDefaultDesign();
-  return { ...design, layers: [{ ...design.layers[0], ...patch }] };
-}
 
 const frame = (kind: FrameKind) => ({
   kind,
@@ -47,25 +39,10 @@ describe("framePalette", () => {
   });
 });
 
-describe("resolveInsetColor", () => {
-  it("uses the edge colour for auto, white without one, or the custom colour", () => {
-    expect(resolveInsetColor("auto", "#123456")).toBe("#123456");
-    expect(resolveInsetColor("auto", null)).toBe("#ffffff");
-    expect(resolveInsetColor("#abcdef", "#123456")).toBe("#abcdef");
-  });
-});
-
 describe("isPlainShot and hasShadow", () => {
-  it("draws one image only without a frame or inset", () => {
-    expect(
-      isPlainShot({ frame: frame("none"), inset: { size: 0, color: "auto" } }),
-    ).toBe(true);
-    expect(
-      isPlainShot({ frame: frame("none"), inset: { size: 4, color: "auto" } }),
-    ).toBe(false);
-    expect(
-      isPlainShot({ frame: frame("glass"), inset: { size: 0, color: "auto" } }),
-    ).toBe(false);
+  it("draws one image only without a frame", () => {
+    expect(isPlainShot({ frame: frame("none") })).toBe(true);
+    expect(isPlainShot({ frame: frame("glass") })).toBe(false);
   });
 
   it("has no shadow for None or opacity 0", () => {
@@ -74,43 +51,6 @@ describe("isPlainShot and hasShadow", () => {
     expect(
       hasShadow({ ...SHADOW_PRESETS.medium, preset: "custom", opacity: 0 }),
     ).toBe(false);
-  });
-});
-
-describe("contentRadii", () => {
-  const source = { width: 1000, height: 600 };
-
-  it("rounds the inset like the outer shape, square under a title bar", () => {
-    const plain = computeLayout(
-      source,
-      designWith({ radius: 20, inset: { size: 10, color: "auto" } }),
-    ).shot;
-    expect(contentRadii(plain)).toEqual([20, 20, 20, 20]);
-
-    const mac = computeLayout(
-      source,
-      designWith({
-        radius: 20,
-        inset: { size: 10, color: "auto" },
-        frame: frame("macos"),
-      }),
-    ).shot;
-    expect(contentRadii(mac)).toEqual([0, 0, 20, 20]);
-  });
-
-  it("takes the glass ring off the radius", () => {
-    const glass = computeLayout(
-      source,
-      designWith({
-        radius: 40,
-        inset: { size: 10, color: "auto" },
-        frame: frame("glass"),
-      }),
-    ).shot;
-    // Ring 10 at unit 1.
-    expect(contentRadii(glass)).toEqual([30, 30, 30, 30]);
-    const small = { ...glass, radius: 8 };
-    expect(contentRadii(small)).toEqual([0, 0, 0, 0]);
   });
 });
 
@@ -205,6 +145,21 @@ describe("chromeLayout", () => {
     expect(captions.maximise).toEqual({ x: 926, y: 12, width: 10, height: 10 });
     expect(captions.minimise).toEqual([880, 17, 890, 17]);
     expect(win!.title!.x + win!.title!.width).toBeLessThan(880 - 23);
+  });
+
+  it("gives the Windows browser an address bar on the left and the three glyphs", () => {
+    const tall = { width: 1000, height: 48 };
+    const win = chromeLayout("windows-browser", tall, 1, "light");
+    expect(win?.dots).toEqual([]);
+    expect(win?.title).toBeNull();
+    expect(win?.captions?.close[0]).toEqual([972, 19, 982, 29]);
+    expect(win?.address).toEqual({
+      x: 12,
+      y: 9,
+      width: 1000 - 3 * 46 - 24,
+      height: 30,
+      cornerRadius: 15,
+    });
   });
 
   it("gives the minimal frame three grey dots in the theme colour", () => {
@@ -303,6 +258,14 @@ describe("address bar", () => {
     expect(lock.shackle.y + lock.shackle.height).toBeGreaterThan(lock.body.y);
   });
 
+  it("starts the lock at the left padding when aligned left", () => {
+    const pill = { x: 200, y: 10, width: 600, height: 28 };
+    const { lock, text } = addressContents(pill, 100, 1, "left");
+    expect(lock.body.x).toBe(212);
+    expect(text.x).toBe(227);
+    expect(text.align).toBe("left");
+  });
+
   it("keeps long text inside the pill's padding", () => {
     const pill = { x: 0, y: 0, width: 200, height: 28 };
     const { lock, text } = addressContents(pill, 5000, 1);
@@ -315,5 +278,25 @@ describe("address bar", () => {
     const { text, lock } = addressContents(pill, 0, 2);
     expect(text.fontSize).toBe(26);
     expect(lock.body.width).toBe(18);
+  });
+});
+
+describe("outsideStroke", () => {
+  it("grows the path by half the width so the stroke stays outside", () => {
+    expect(outsideStroke({ width: 200, height: 100 }, 12, 4)).toEqual({
+      x: -2,
+      y: -2,
+      width: 204,
+      height: 104,
+      cornerRadius: 14,
+      strokeWidth: 4,
+    });
+    expect(outsideStroke({ width: 200, height: 100 }, 0, 4)?.cornerRadius).toBe(
+      0,
+    );
+  });
+
+  it("draws nothing for width 0", () => {
+    expect(outsideStroke({ width: 200, height: 100 }, 12, 0)).toBeNull();
   });
 });

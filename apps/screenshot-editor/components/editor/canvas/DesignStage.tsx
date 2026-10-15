@@ -1,9 +1,10 @@
 "use client";
 
 import type Konva from "konva";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Layer, Stage } from "react-konva";
 import type { DesignLayout } from "@/lib/design/layout";
+import { previewPixelRatio } from "@/lib/design/zoom";
 import { registerExportStage } from "@/lib/export/controller";
 import { useDevicePixelRatio } from "@/lib/hooks/useDevicePixelRatio";
 import type { LoadedImage } from "@/lib/image/load";
@@ -34,6 +35,8 @@ export function DesignStage({ image, layout, scale }: Props) {
   // Whole pixels: Konva rounds bitmap sizes down, which would blur fractional sizes.
   const width = Math.max(1, Math.floor(layout.canvas.width * scale));
   const height = Math.max(1, Math.floor(layout.canvas.height * scale));
+  // Zoomed in, a full-sharpness bitmap could pass the browser's canvas limit.
+  const bitmapRatio = previewPixelRatio(pixelRatio, { width, height });
 
   // The Stage remounts when the pixel ratio changes (key below), so register
   // and set up the layer again each time.
@@ -53,6 +56,14 @@ export function DesignStage({ image, layout, scale }: Props) {
       unregister();
     };
   }, [pixelRatio]);
+
+  // Before paint, so a resized stage never shows at the wrong sharpness.
+  useLayoutEffect(() => {
+    const layer = layerRef.current;
+    if (!layer || layer.getCanvas().getPixelRatio() === bitmapRatio) return;
+    layer.getCanvas().setPixelRatio(bitmapRatio);
+    layer.batchDraw();
+  }, [pixelRatio, bitmapRatio]);
 
   return (
     <div

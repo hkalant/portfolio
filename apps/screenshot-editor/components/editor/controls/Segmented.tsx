@@ -10,6 +10,8 @@ type Props<T extends string> = {
     title?: string;
   }[];
   onChange: (value: T) => void;
+  /** Hide the visible label when a section heading already names the group. */
+  hideLabel?: boolean;
 };
 
 export function Segmented<T extends string>({
@@ -17,10 +19,11 @@ export function Segmented<T extends string>({
   value,
   options,
   onChange,
+  hideLabel = false,
 }: Props<T>) {
   return (
     <div className="space-y-2.5">
-      <div className="text-sm font-medium">{label}</div>
+      {!hideLabel && <div className="text-sm font-medium">{label}</div>}
       <ToggleGroup
         type="single"
         aria-label={label}

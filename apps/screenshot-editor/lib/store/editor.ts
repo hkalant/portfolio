@@ -12,7 +12,6 @@ import type { Alignment } from "@/lib/design/layout";
 import {
   BLUR,
   BORDER_WIDTH,
-  INSET,
   MAX_FRAME_TEXT,
   PADDING,
   RADIUS,
@@ -21,7 +20,6 @@ import {
   SHADOW_OFFSET,
   SHOT_SCALE,
 } from "@/lib/design/limits";
-import { getMeshPreset } from "@/lib/design/meshes";
 import { referencedImageIds } from "@/lib/design/refs";
 import type {
   Background,
@@ -41,7 +39,7 @@ import {
 import type { LoadedImage } from "@/lib/image/load";
 import { clamp } from "@/lib/utils";
 
-export type PanelId = "background" | "frame" | "style";
+export type PanelId = "background" | "style";
 /** The mobile layout also has a Size tab; null means its panel is closed. */
 export type MobilePanelId = PanelId | "size";
 
@@ -57,7 +55,6 @@ export const HISTORY_IMAGE_LIMIT = 5;
 
 type ShadowPatch = Partial<Omit<ShadowSpec, "preset">>;
 type BorderPatch = Partial<ShotLayer["border"]>;
-type InsetPatch = Partial<ShotLayer["inset"]>;
 type FramePatch = Partial<FrameSpec>;
 
 export type EditorState = {
@@ -102,8 +99,9 @@ export type EditorState = {
   applyGradientPreset: (id: string) => void;
   setGradientAngle: (degrees: number) => void;
   setGradientStop: (index: number, color: string) => void;
+  /** Reverses the gradient's colours, keeping the stop positions. */
+  swapGradientStops: () => void;
   setSolidColor: (color: string) => void;
-  applyMeshPreset: (id: string) => void;
   setWallpaper: (id: string) => void;
   setFromImage: () => void;
   setFromImageAngle: (degrees: number) => void;
@@ -124,7 +122,6 @@ export type EditorState = {
   setShadowPreset: (id: string) => void;
   setShadow: (patch: ShadowPatch) => void;
   setBorder: (patch: BorderPatch) => void;
-  setInset: (patch: InsetPatch) => void;
   setFrame: (patch: FramePatch) => void;
   resetStyle: () => void;
 
@@ -356,6 +353,22 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         };
       }, "gradient-angle"),
 
+    swapGradientStops: () =>
+      commit((design) => {
+        const background = design.background;
+        if (background.kind !== "linear" && background.kind !== "radial")
+          return null;
+        const colors = background.stops.map((stop) => stop.color).reverse();
+        const stops = background.stops.map((stop, i) => ({
+          ...stop,
+          color: colors[i],
+        }));
+        return {
+          ...design,
+          background: { ...background, presetId: null, stops },
+        };
+      }),
+
     setGradientStop: (index, color) =>
       commit((design) => {
         const background = design.background;
@@ -374,11 +387,6 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     setSolidColor: (color) => {
       if (!isHexColor(color)) return;
       setBackgroundTo({ kind: "solid", color: color.toLowerCase() }, "solid");
-    },
-
-    applyMeshPreset: (id) => {
-      if (!getMeshPreset(id)) return;
-      setBackgroundTo({ kind: "mesh", presetId: id });
     },
 
     setWallpaper: (id) => {
@@ -589,25 +597,6 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           return { border: next };
         },
         `border-${Object.keys(patch).sort().join()}`,
-      ),
-
-    setInset: (patch) =>
-      commitShot(
-        (shot) => {
-          const next = { ...shot.inset };
-          if (finite(patch.size))
-            next.size = Math.round(clamp(patch.size, INSET.min, INSET.max));
-          if (patch.color !== undefined) {
-            if (patch.color !== "auto" && !isHexColor(patch.color)) return null;
-            next.color =
-              patch.color === "auto" ? "auto" : patch.color.toLowerCase();
-          }
-          return { inset: next };
-        },
-        // Auto/Custom is a choice; sizes and picked colours are continuous.
-        patch.color === "auto"
-          ? undefined
-          : `inset-${Object.keys(patch).sort().join()}`,
       ),
 
     setFrame: (patch) =>

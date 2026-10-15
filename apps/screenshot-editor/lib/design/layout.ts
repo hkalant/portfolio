@@ -27,8 +27,6 @@ export type ShotLayout = Rect & {
   /** The screenshot itself. */
   image: Rect;
   imageRadii: CornerRadii;
-  /** The inset area around the screenshot; the same as `image` without an inset. */
-  content: Rect;
   /** The title or address bar, if the frame has one. */
   chrome: Rect | null;
   /** Size multiplier for chrome details (buttons, text), in canvas px. */
@@ -53,10 +51,9 @@ export function computeLayout(source: Size, design: Design): DesignLayout {
   const shot = design.layers[0];
   const image = fitWithin(source, MAX_DESIGN_SIDE);
   const { chromeTop, ring, unit } = frameMetrics(shot.frame.kind, image.width);
-  const inset = shot.inset.size;
   const natural = {
-    width: image.width + 2 * inset + 2 * ring,
-    height: image.height + 2 * inset + 2 * ring + chromeTop,
+    width: image.width + 2 * ring,
+    height: image.height + 2 * ring + chromeTop,
   };
   const { padding } = shot;
 
@@ -91,18 +88,14 @@ export function computeLayout(source: Size, design: Design): DesignLayout {
   const height = natural.height * scale;
   const radius = Math.max(0, Math.min(shot.radius, width / 2, height / 2));
   const imageRect: Rect = {
-    x: (ring + inset) * scale,
-    y: (ring + chromeTop + inset) * scale,
+    x: ring * scale,
+    y: (ring + chromeTop) * scale,
     width: image.width * scale,
     height: image.height * scale,
   };
   const inner = Math.max(
     0,
-    Math.min(
-      radius - (inset + ring) * scale,
-      imageRect.width / 2,
-      imageRect.height / 2,
-    ),
+    Math.min(radius - ring * scale, imageRect.width / 2, imageRect.height / 2),
   );
   const top = chromeTop > 0 ? 0 : inner;
 
@@ -119,12 +112,6 @@ export function computeLayout(source: Size, design: Design): DesignLayout {
       radius,
       image: imageRect,
       imageRadii: [top, top, inner, inner],
-      content: {
-        x: ring * scale,
-        y: (ring + chromeTop) * scale,
-        width: (image.width + 2 * inset) * scale,
-        height: (image.height + 2 * inset) * scale,
-      },
       chrome:
         chromeTop > 0
           ? {

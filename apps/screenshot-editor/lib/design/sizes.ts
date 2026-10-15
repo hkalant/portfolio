@@ -8,6 +8,7 @@ export type SizePreset = {
 };
 
 export const SIZE_PRESETS = [
+  { id: "desktop", label: "Desktop", width: 1920, height: 1080 },
   { id: "x-post", label: "X post", width: 1600, height: 900 },
   { id: "linkedin", label: "LinkedIn post", width: 1200, height: 627 },
   { id: "og", label: "Open Graph image", width: 1200, height: 630 },
@@ -28,6 +29,9 @@ export const SIZE_PRESETS = [
 ] as const satisfies readonly SizePreset[];
 
 export type SizePresetId = (typeof SIZE_PRESETS)[number]["id"];
+
+/** The canvas size a new design starts with. */
+export const DEFAULT_SIZE_PRESET = SIZE_PRESETS[0];
 
 export const SIZE_PRESET_IDS = SIZE_PRESETS.map((preset) => preset.id) as [
   SizePresetId,

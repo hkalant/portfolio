@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./helpers/fixtures";
-import { expectEmptyState } from "./helpers/editor";
+import { expectEmptyState, useAutoSize } from "./helpers/editor";
 import { makeSolidPng } from "./helpers/png";
 
 // Synthetic clipboard and drag events are only dependable in Chromium.
@@ -12,6 +12,7 @@ test.skip(
 test.beforeEach(async ({ page }) => {
   await page.goto("./editor/");
   await expectEmptyState(page);
+  await useAutoSize(page);
 });
 
 async function paste(page: Page, png: Buffer, name: string) {
@@ -37,8 +38,8 @@ async function paste(page: Page, png: Buffer, name: string) {
 test("pasting a screenshot adds it", async ({ page }) => {
   await paste(page, makeSolidPng(4000, 2500, [0, 128, 255, 255]), "image.png");
   const stage = page.getByTestId("design-stage");
-  await expect(stage).toHaveAttribute("data-width", "1728");
-  await expect(stage).toHaveAttribute("data-height", "1128");
+  await expect(stage).toHaveAttribute("data-width", "1744");
+  await expect(stage).toHaveAttribute("data-height", "1144");
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -87,7 +88,7 @@ test("dropping a file adds it", async ({ page }) => {
   expect(cancelled).toEqual({ dragenter: true, dragover: true, drop: true });
   await expect(page.getByTestId("design-stage")).toHaveAttribute(
     "data-width",
-    "768",
+    "784",
   );
 });
 

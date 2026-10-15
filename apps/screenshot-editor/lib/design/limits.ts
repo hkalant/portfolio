@@ -3,8 +3,8 @@
 /** Screenshots are shrunk (never enlarged) so their longest side fits this. */
 export const MAX_DESIGN_SIDE = 1600;
 
-export const PADDING = { min: 0, max: 200, step: 4, default: 64 } as const;
-export const RADIUS = { min: 0, max: 64, step: 1, default: 12 } as const;
+export const PADDING = { min: 0, max: 200, step: 4, default: 72 } as const;
+export const RADIUS = { min: 0, max: 64, step: 1, default: 15 } as const;
 export const ANGLE = { min: 0, max: 359, step: 1 } as const;
 
 /** Size of the shot on a fixed canvas, relative to "fits inside the padding". */
@@ -17,7 +17,6 @@ export const SHOT_SCALE = {
 export const ROTATION = { min: -45, max: 45, step: 1, default: 0 } as const;
 
 export const BORDER_WIDTH = { min: 0, max: 24, step: 1 } as const;
-export const INSET = { min: 0, max: 64, step: 1 } as const;
 export const OPACITY = { min: 0, max: 1, step: 0.01 } as const;
 
 /** Ranges for hand-tuned shadows. */

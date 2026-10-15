@@ -14,9 +14,11 @@ import type { CanvasSpec } from "@/lib/design/schema";
 import {
   aspectLabel,
   CUSTOM_SIZE,
+  DEFAULT_SIZE_PRESET,
   getSizePreset,
   lockedSize,
   SIZE_PRESETS,
+  type SizePreset,
 } from "@/lib/design/sizes";
 import { useEditorStore } from "@/lib/store/editor";
 import { useDesignLayout } from "@/lib/store/hooks";
@@ -65,6 +67,17 @@ function lockedEdit(size: Size, side: "width" | "height", value: number) {
   return next;
 }
 
+function PresetItem({ preset }: { preset: SizePreset }) {
+  return (
+    <ToggleGroupPrimitive.Item value={preset.id} className={itemClass}>
+      <span className="flex-1 truncate">{preset.label}</span>
+      <span className="text-xs text-muted-foreground tabular-nums">
+        {dimensions(preset)} · {aspectLabel(preset.width, preset.height)}
+      </span>
+    </ToggleGroupPrimitive.Item>
+  );
+}
+
 /** The canvas size choices, as a panel (the mobile Size tab shows this). */
 export function SizeOptions({ onPick }: { onPick?: () => void }) {
   const canvas = useEditorStore((state) => state.design.canvas);
@@ -95,6 +108,8 @@ export function SizeOptions({ onPick }: { onPick?: () => void }) {
         onValueChange={onValueChange}
         className="flex flex-col gap-0.5"
       >
+        {/* The default size first, then Auto, then the rest. */}
+        <PresetItem preset={DEFAULT_SIZE_PRESET} />
         <ToggleGroupPrimitive.Item value="auto" className={itemClass}>
           <span className="flex-1">
             Auto
@@ -108,17 +123,10 @@ export function SizeOptions({ onPick }: { onPick?: () => void }) {
             </span>
           )}
         </ToggleGroupPrimitive.Item>
-        {SIZE_PRESETS.map((preset) => (
-          <ToggleGroupPrimitive.Item
-            key={preset.id}
-            value={preset.id}
-            className={itemClass}
-          >
-            <span className="flex-1 truncate">{preset.label}</span>
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {dimensions(preset)} · {aspectLabel(preset.width, preset.height)}
-            </span>
-          </ToggleGroupPrimitive.Item>
+        {SIZE_PRESETS.filter(
+          (preset) => preset.id !== DEFAULT_SIZE_PRESET.id,
+        ).map((preset) => (
+          <PresetItem key={preset.id} preset={preset} />
         ))}
         <ToggleGroupPrimitive.Item value="custom" className={itemClass}>
           <span className="flex-1">Custom</span>

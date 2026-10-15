@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   BLUR,
   BORDER_WIDTH,
-  INSET,
   MAX_FRAME_TEXT,
   PADDING,
   RADIUS,
@@ -44,7 +43,6 @@ export const backgroundSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("solid"), color: hexColorSchema }),
   linearBackgroundSchema,
   radialBackgroundSchema,
-  z.object({ kind: z.literal("mesh"), presetId: z.string().min(1) }),
   z.object({
     kind: z.literal("image"),
     source: z.discriminatedUnion("type", [
@@ -84,13 +82,17 @@ export const SHADOW_PRESET_IDS = [
   "soft",
   "medium",
   "floating",
-  "hard",
 ] as const;
 export const shadowPresetIdSchema = z.enum(SHADOW_PRESET_IDS);
 
 export const shadowSpecSchema = z.object({
   /** "custom" once any value was changed by hand. */
-  preset: z.union([shadowPresetIdSchema, z.literal("custom")]),
+  // "hard" was a preset once; designs saved with it keep its values as custom.
+  preset: z.union([
+    shadowPresetIdSchema,
+    z.literal("custom"),
+    z.literal("hard").transform(() => "custom" as const),
+  ]),
   offsetX: z.number(),
   offsetY: z.number(),
   blur: z.number().min(0),
@@ -103,6 +105,7 @@ export const FRAME_KINDS = [
   "macos",
   "browser",
   "windows",
+  "windows-browser",
   "minimal",
   "glass",
 ] as const;
@@ -131,10 +134,6 @@ export const shotLayerSchema = z.object({
     width: z.number().min(BORDER_WIDTH.min).max(BORDER_WIDTH.max),
     color: hexColorSchema,
     opacity: z.number().min(0).max(1),
-  }),
-  inset: z.object({
-    size: z.number().min(INSET.min).max(INSET.max),
-    color: z.union([hexColorSchema, z.literal("auto")]),
   }),
   frame: frameSpecSchema,
 });

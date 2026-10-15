@@ -32,11 +32,21 @@ afterEach(() => {
 /** Moves the clock past the merge window, so the next change is its own step. */
 const later = () => vi.advanceTimersByTime(MERGE_WINDOW_MS + 1);
 
+describe("editor store: canvas size", () => {
+  it("starts on the Desktop size", () => {
+    expect(state().design.canvas).toEqual({
+      preset: "desktop",
+      width: 1920,
+      height: 1080,
+    });
+  });
+});
+
 describe("editor store: style", () => {
   it("sets an image and keeps the style settings", () => {
     state().setPadding(100);
     state().setRadius(20);
-    state().setShadowPreset("hard");
+    state().setShadowPreset("soft");
     state().showError("old error");
     const image = fakeImage("a");
     state().setImage(image);
@@ -44,7 +54,7 @@ describe("editor store: style", () => {
       imageId: "a",
       padding: 100,
       radius: 20,
-      shadow: { preset: "hard" },
+      shadow: { preset: "soft" },
     });
     expect(state().notice).toBeNull();
     expect(selectActiveImage(state())).toBe(image);
@@ -65,8 +75,6 @@ describe("editor store: style", () => {
     expect(shot().position).toEqual({ x: 0, y: 1 });
     state().setBorder({ width: 30, opacity: 2 });
     expect(shot().border).toMatchObject({ width: 24, opacity: 1 });
-    state().setInset({ size: -3 });
-    expect(shot().inset.size).toBe(0);
     state().setBlur(-1);
     expect(state().design.backgroundFx).toEqual({ blur: 0 });
     state().setCustomSize(50, 9000);
@@ -83,7 +91,6 @@ describe("editor store: style", () => {
     state().setSolidColor("red");
     state().setBorder({ color: "#12" });
     state().setFrame({ kind: "tv" as never });
-    state().applyMeshPreset("nope");
     state().setWallpaper("nope");
     state().setCanvasPreset("nope");
     expect(state().design).toBe(before);
@@ -91,11 +98,11 @@ describe("editor store: style", () => {
   });
 
   it("applies gradient presets as linear copies", () => {
-    state().applyGradientPreset("mist");
-    const mist = getGradientPreset("mist");
+    state().applyGradientPreset("stone");
+    const mist = getGradientPreset("stone");
     expect(state().design.background).toEqual({
       kind: "linear",
-      presetId: "mist",
+      presetId: "stone",
       angle: mist?.angle,
       stops: mist?.stops,
     });
@@ -109,6 +116,22 @@ describe("editor store: style", () => {
     });
     state().setGradientStop(5, "#000000");
     expect(state().design.background).toMatchObject({ presetId: null });
+  });
+
+  it("swaps the gradient colours and can undo it", () => {
+    state().setGradientStop(0, "#111111");
+    state().setGradientStop(1, "#222222");
+    state().swapGradientStops();
+    expect(state().design.background).toMatchObject({
+      stops: [
+        { offset: 0, color: "#222222" },
+        { offset: 1, color: "#111111" },
+      ],
+    });
+    state().undo();
+    expect(state().design.background).toMatchObject({
+      stops: [{ color: "#111111" }, { color: "#222222" }],
+    });
   });
 
   it("normalises angles", () => {
@@ -128,11 +151,6 @@ describe("editor store: style", () => {
     expect(state().design.background).toEqual({
       kind: "solid",
       color: "#ff0000",
-    });
-    state().applyMeshPreset("lagoon");
-    expect(state().design.background).toEqual({
-      kind: "mesh",
-      presetId: "lagoon",
     });
     state().setWallpaper("waves");
     expect(state().design.background).toEqual({
@@ -163,14 +181,14 @@ describe("editor store: style", () => {
   });
 
   it("copies shadow presets, ignores the empty toggle value, and marks edits custom", () => {
-    state().setShadowPreset("hard");
-    expect(shot().shadow).toEqual(SHADOW_PRESETS.hard);
-    expect(shot().shadow).not.toBe(SHADOW_PRESETS.hard);
+    state().setShadowPreset("soft");
+    expect(shot().shadow).toEqual(SHADOW_PRESETS.soft);
+    expect(shot().shadow).not.toBe(SHADOW_PRESETS.soft);
     state().setShadowPreset("");
-    expect(shot().shadow.preset).toBe("hard");
+    expect(shot().shadow.preset).toBe("soft");
     state().setShadow({ blur: 30.4, color: "#FF00FF" });
     expect(shot().shadow).toEqual({
-      ...SHADOW_PRESETS.hard,
+      ...SHADOW_PRESETS.soft,
       preset: "custom",
       blur: 30,
       color: "#ff00ff",
@@ -190,6 +208,7 @@ describe("editor store: style", () => {
 
   it("nudges and aligns only on fixed canvases", () => {
     state().setImage(fakeImage("a", 800, 400));
+    state().setCanvasPreset("auto");
     state().nudge(10, 0);
     expect(shot().position).toEqual({ x: 0.5, y: 0.5 });
     state().setCustomSize(1000, 1000);
@@ -208,14 +227,14 @@ describe("editor store: style", () => {
     expect(shot().frame.url).toHaveLength(120);
     state().setImage(fakeImage("a"));
     state().setCanvasPreset("og");
-    state().applyMeshPreset("dusk");
+    state().setSolidColor("#123456");
     state().setRotation(10);
     state().resetStyle();
     expect(shot()).toMatchObject({ ...defaultShotStyle(), imageId: "a" });
     expect(state().design.canvas.preset).toBe("og");
     expect(state().design.background).toEqual({
-      kind: "mesh",
-      presetId: "dusk",
+      kind: "solid",
+      color: "#123456",
     });
   });
 });
@@ -227,12 +246,12 @@ describe("editor store: history", () => {
     state().setRadius(30);
     expect(selectCanUndo(state())).toBe(true);
     state().undo();
-    expect(shot()).toMatchObject({ padding: 100, radius: 12 });
+    expect(shot()).toMatchObject({ padding: 100, radius: 15 });
     state().undo();
-    expect(shot().padding).toBe(64);
+    expect(shot().padding).toBe(72);
     expect(selectCanUndo(state())).toBe(false);
     state().undo(); // nothing left: no change
-    expect(shot().padding).toBe(64);
+    expect(shot().padding).toBe(72);
     state().redo();
     state().redo();
     expect(shot()).toMatchObject({ padding: 100, radius: 30 });
@@ -247,7 +266,7 @@ describe("editor store: history", () => {
     state().setPadding(90);
     expect(state().past).toHaveLength(1);
     state().undo();
-    expect(shot().padding).toBe(64);
+    expect(shot().padding).toBe(72);
   });
 
   it("starts a new step for another setting, after a pause, or after sealHistory", () => {
@@ -270,19 +289,17 @@ describe("editor store: history", () => {
     state().setFrame({ url: "a" });
     state().setFrame({ url: "ab" });
     expect(state().past).toHaveLength(4);
-    state().setInset({ color: "#123456" });
-    state().setInset({ color: "auto" });
-    expect(state().past).toHaveLength(6);
+    expect(state().past).toHaveLength(4);
   });
 
   it("drops a merged run that ends where it began, and keeps that state", () => {
     state().setPadding(80);
-    state().setPadding(64);
+    state().setPadding(72);
     expect(state().past).toEqual([]);
     state().setPadding(70);
     expect(state().past).toHaveLength(1);
     state().undo();
-    expect(shot().padding).toBe(64);
+    expect(shot().padding).toBe(72);
   });
 
   it("merges a whole gesture however slow it is", () => {
@@ -302,7 +319,7 @@ describe("editor store: history", () => {
   });
 
   it("ignores changes that change nothing", () => {
-    state().setPadding(64);
+    state().setPadding(72);
     state().setShadowPreset("medium");
     expect(state().past).toEqual([]);
     expect(state().revision).toBe(0);

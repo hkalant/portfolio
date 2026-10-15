@@ -14,7 +14,3 @@ export function currentPlatform(): string {
     navigator.userAgent
   );
 }
-
-export function pasteShortcutLabel(platform: string): string {
-  return isApplePlatform(platform) ? "⌘V" : "Ctrl+V";
-}

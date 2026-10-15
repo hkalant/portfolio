@@ -8,8 +8,10 @@ import {
   openTab,
   RED,
   setSlider,
+  shadowOption,
   stage,
   upload,
+  useAutoSize,
 } from "./helpers/editor";
 import {
   brightness,
@@ -22,6 +24,7 @@ import {
 test.beforeEach(async ({ page }) => {
   await page.goto("./editor/");
   await expectEmptyState(page);
+  await useAutoSize(page);
 });
 
 test("uploads a screenshot and exports it at 2x with rounded corners", async ({
@@ -29,47 +32,30 @@ test("uploads a screenshot and exports it at 2x with rounded corners", async ({
 }) => {
   await chooseFile(
     page,
-    /click to add a screenshot/,
+    /Drag and drop your screenshot here/,
     makeSolidPng(1200, 750, RED),
   );
-  // 1200 x 750 plus 64px default padding on each side.
-  await expectDesignSize(page, 1328, 878);
+  // 1200 x 750 plus 72px default padding on each side.
+  await expectDesignSize(page, 1344, 894);
 
   const first = await exportPng(page);
   expect(first.name).toBe("fixture-2x.png");
-  expect(readPngSize(first.png)).toEqual({ width: 2656, height: 1756 });
-  // The image starts at (128, 128) in export pixels; with a 12px (24 export px)
+  expect(readPngSize(first.png)).toEqual({ width: 2688, height: 1788 });
+  // The image starts at (144, 144) in export pixels; with a 15px (30 export px)
   // radius, the pixel just inside its corner is cut away.
   const [center, background, roundedCorner] = await samplePixels(
     page,
     first.png,
     [
-      [1328, 878],
+      [1344, 894],
       [4, 4],
-      [129, 129],
+      [145, 145],
     ],
   );
   expect(isRed(center)).toBe(true);
   expect(background[3]).toBe(255);
   expect(isRed(background)).toBe(false);
   expect(isRed(roundedCorner)).toBe(false);
-
-  await openTab(page, "Style");
-  const radius = await setSlider(page, "Corner radius", "Home");
-  await expect(radius).toHaveAttribute("aria-valuenow", "0");
-  const square = await exportPng(page);
-  const [squareCorner] = await samplePixels(page, square.png, [[129, 129]]);
-  expect(isRed(squareCorner)).toBe(true);
-});
-
-test("padding changes the canvas size", async ({ page }) => {
-  await upload(page, makeSolidPng(1200, 750, RED));
-  await openTab(page, "Style");
-  const padding = await setSlider(page, "Padding", "End");
-  await expect(padding).toHaveAttribute("aria-valuenow", "200");
-  await expectDesignSize(page, 1600, 1150);
-  await setSlider(page, "Padding", "Home");
-  await expectDesignSize(page, 1200, 750);
 });
 
 test("the chosen gradient and angle are what gets drawn", async ({ page }) => {
@@ -98,31 +84,43 @@ test("the chosen gradient and angle are what gets drawn", async ({ page }) => {
   expectColor(bottom, "#424a52");
 
   // A preset brings its own colours and angle.
-  const mist = page.getByRole("button", { name: "Mist" });
-  await mist.click();
-  await expect(mist).toHaveAttribute("aria-pressed", "true");
+  const stone = page.getByRole("button", { name: "Stone" });
+  await stone.click();
+  await expect(stone).toHaveAttribute("aria-pressed", "true");
   await expect(brookes).toHaveAttribute("aria-pressed", "false");
-  const [mistCorner] = await samplePixels(page, (await exportPng(page)).png, [
+  const [stoneCorner] = await samplePixels(page, (await exportPng(page)).png, [
     [4, 4],
   ]);
-  expectColor(mistCorner, "#e0eafc");
+  expectColor(stoneCorner, "#eceded");
+});
+
+test("swapping the gradient colours flips the drawn background", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(400, 300, RED));
+  const [before] = await samplePixels(page, (await exportPng(page)).png, [
+    [4, 4],
+  ]);
+  expectColor(before, "#424a52");
+  await page.getByRole("button", { name: "Swap colours" }).click();
+  const [after] = await samplePixels(page, (await exportPng(page)).png, [
+    [4, 4],
+  ]);
+  expectColor(after, "#d10373");
 });
 
 test("the shadow is drawn below a screenshot with rounded corners", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
-  await page.getByRole("button", { name: "Mist" }).click(); // light background, so the shadow shows
+  await page.getByRole("button", { name: "Stone" }).click(); // light background, so the shadow shows
   await openTab(page, "Style");
 
   // 20 export px below the bottom edge of the image, horizontally centred.
-  const probe: [number, number] = [1328, (64 + 750) * 2 + 20];
+  const probe: [number, number] = [1344, (72 + 750) * 2 + 20];
 
-  await page.getByRole("radio", { name: "None" }).click();
-  await expect(page.getByRole("radio", { name: "None" })).toHaveAttribute(
-    "data-state",
-    "on",
-  );
+  await shadowOption(page, "None").click();
+  await expect(shadowOption(page, "None")).toHaveAttribute("data-state", "on");
   const [withoutShadow] = await samplePixels(
     page,
     (await exportPng(page)).png,
@@ -157,25 +155,28 @@ test("clicking the active shadow option again keeps it selected", async ({
 
 test("the sample image loads", async ({ page }) => {
   await page.getByRole("button", { name: "Try a sample image" }).click();
-  // The 2880 x 1800 sample is shown at 1600 x 1000, plus padding.
-  await expectDesignSize(page, 1728, 1128);
+  // The 2000 x 1354 sample is shown at 1600 x 1083, plus padding.
+  await expectDesignSize(page, 1744, 1227);
   const { name, png } = await exportPng(page);
   expect(name).toBe("sample-screenshot-2x.png");
-  expect(readPngSize(png)).toEqual({ width: 3456, height: 2256 });
+  expect(readPngSize(png)).toEqual({ width: 3488, height: 2454 });
 });
 
 test("replacing the image keeps the style", async ({ page }) => {
   await upload(page, makeSolidPng(400, 300, RED));
   await openTab(page, "Style");
-  await setSlider(page, "Padding", "Home");
-  await expectDesignSize(page, 400, 300);
+  await setSlider(page, "Border width", "End");
+  await expectDesignSize(page, 544, 444);
   await chooseFile(
     page,
     "Replace image",
     makeSolidPng(800, 600, [0, 0, 255, 255]),
     "second.png",
   );
-  await expectDesignSize(page, 800, 600);
+  await expectDesignSize(page, 944, 744);
+  await expect(
+    page.getByRole("slider", { name: "Border width" }),
+  ).toHaveAttribute("aria-valuenow", "24");
 });
 
 test("a large screenshot is downscaled and still exports sharp", async ({
@@ -183,11 +184,11 @@ test("a large screenshot is downscaled and still exports sharp", async ({
 }) => {
   // Longer than 3200px, so it is downscaled when loaded.
   await upload(page, makeSolidPng(4000, 2500, [0, 128, 255, 255]), "wide.png");
-  await expectDesignSize(page, 1728, 1128);
+  await expectDesignSize(page, 1744, 1144);
   const { name, png } = await exportPng(page);
   expect(name).toBe("wide-2x.png");
-  expect(readPngSize(png)).toEqual({ width: 3456, height: 2256 });
-  const [center] = await samplePixels(page, png, [[1728, 1128]]);
+  expect(readPngSize(png)).toEqual({ width: 3488, height: 2288 });
+  const [center] = await samplePixels(page, png, [[1744, 1144]]);
   expectColor(center, "#0080ff", 4);
   expect(center[3]).toBe(255);
 });
@@ -211,4 +212,15 @@ test.describe("broken images", () => {
     );
     await expectEmptyState(page);
   });
+});
+
+test("the info button lists the tutorials", async ({ page }) => {
+  await page.getByRole("button", { name: "Help" }).click();
+  const tutorials = page.getByRole("navigation", { name: "Tutorials" });
+  await expect(
+    tutorials.getByRole("link", { name: "Watch the video tutorial" }),
+  ).toBeVisible();
+  await tutorials.getByRole("link", { name: "Read the text tutorial" }).click();
+  await expect(tutorials).toHaveCount(0);
+  await expect(page).toHaveURL(/\/editor\/$/);
 });

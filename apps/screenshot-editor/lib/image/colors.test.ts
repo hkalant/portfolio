@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dominantColors, edgeColor, type PixelData } from "./colors";
+import { dominantColors, type PixelData } from "./colors";
 
 function pixels(
   width: number,
@@ -12,26 +12,6 @@ function pixels(
       data.set(colorAt(x, y), (y * width + x) * 4);
   return { width, height, data };
 }
-
-describe("edgeColor", () => {
-  it("averages the outer ring of pixels", () => {
-    // A white frame around a red centre.
-    const image = pixels(8, 8, (x, y) =>
-      x === 0 || y === 0 || x === 7 || y === 7
-        ? [255, 255, 255, 255]
-        : [255, 0, 0, 255],
-    );
-    expect(edgeColor(image)).toBe("#ffffff");
-  });
-
-  it("skips transparent pixels and gives null when nothing is opaque", () => {
-    const halfClear = pixels(4, 4, (x) =>
-      x < 2 ? [0, 0, 0, 0] : [0, 0, 255, 255],
-    );
-    expect(edgeColor(halfClear)).toBe("#0000ff");
-    expect(edgeColor(pixels(3, 3, () => [10, 10, 10, 0]))).toBeNull();
-  });
-});
 
 describe("dominantColors", () => {
   it("returns distinct colours, most common first", () => {

@@ -1,4 +1,4 @@
-import type { CornerRadii, ShotLayout, Size } from "@/lib/design/layout";
+import type { Size } from "@/lib/design/layout";
 import type {
   FrameKind,
   FrameSpec,
@@ -73,38 +73,14 @@ export function framePalette(theme: FrameTheme): FramePalette {
 
 export const TRAFFIC_LIGHT_COLORS = ["#ff5f57", "#febc2e", "#28c840"] as const;
 
-/** The inset colour to paint: "auto" uses the screenshot's edge colour, or white. */
-export function resolveInsetColor(
-  color: ShotLayer["inset"]["color"],
-  edge: string | null,
-): string {
-  return color === "auto" ? (edge ?? "#ffffff") : color;
-}
-
 /** The shot is drawn as one image when there is nothing around it. */
-export function isPlainShot(shot: Pick<ShotLayer, "frame" | "inset">) {
-  return shot.frame.kind === "none" && shot.inset.size === 0;
+export function isPlainShot(shot: Pick<ShotLayer, "frame">) {
+  return shot.frame.kind === "none";
 }
 
 /** "None" or opacity 0 means no shadow. */
 export function hasShadow(shadow: ShadowSpec): boolean {
   return shadow.preset !== "none" && shadow.opacity > 0;
-}
-
-/**
- * Corners of the inset area: the outer radius less the ring, and square at the
- * top under a title bar.
- */
-export function contentRadii(
-  shot: Pick<ShotLayout, "radius" | "content" | "chrome">,
-): CornerRadii {
-  const { content } = shot;
-  const radius = Math.max(
-    0,
-    Math.min(shot.radius - content.x, content.width / 2, content.height / 2),
-  );
-  const top = shot.chrome ? 0 : radius;
-  return [top, top, radius, radius];
 }
 
 export type Box = { x: number; y: number; width: number; height: number };
@@ -128,6 +104,28 @@ export function insideStroke(
     width: Math.max(0, size.width - strokeWidth),
     height: Math.max(0, size.height - strokeWidth),
     cornerRadius: Math.max(0, radius - half),
+    strokeWidth,
+  };
+}
+
+/**
+ * A stroke of `strokeWidth` that sits just outside a rounded `size` box, so it
+ * adds to the box instead of covering its edge.
+ */
+export function outsideStroke(
+  size: Size,
+  radius: number,
+  strokeWidth: number,
+): StrokeBox | null {
+  if (!(strokeWidth > 0)) return null;
+  const half = strokeWidth / 2;
+  return {
+    x: -half,
+    y: -half,
+    width: size.width + strokeWidth,
+    height: size.height + strokeWidth,
+    // Square corners stay square; rounded ones keep the same centre.
+    cornerRadius: radius > 0 ? radius + half : 0,
     strokeWidth,
   };
 }
@@ -255,6 +253,51 @@ export function addressPill(
   };
 }
 
+/** Windows minimise, maximise and close, right-aligned in the bar. */
+function captionGlyphs(bar: Size, unit: number, edge: number): CaptionGlyphs {
+  const half = 5 * unit;
+  const centreY = bar.height / 2;
+  const centreX = (index: number) =>
+    bar.width - edge - (index + 0.5) * CAPTION * unit;
+  const close = centreX(0);
+  const maximise = centreX(1);
+  const minimise = centreX(2);
+  return {
+    minimise: [minimise - half, centreY, minimise + half, centreY],
+    maximise: {
+      x: maximise - half,
+      y: centreY - half,
+      width: 2 * half,
+      height: 2 * half,
+    },
+    close: [
+      [close - half, centreY - half, close + half, centreY + half],
+      [close - half, centreY + half, close + half, centreY - half],
+    ],
+    strokeWidth: unit,
+  };
+}
+
+/** The Windows browser's address bar: from the left, up to the caption buttons. */
+export function windowsAddressBar(
+  bar: Size,
+  unit: number,
+  edge = 0,
+): (Box & { cornerRadius: number }) | null {
+  const left = edge + 12 * unit;
+  const right = bar.width - edge - 3 * CAPTION * unit - 12 * unit;
+  const width = right - left;
+  if (width < 48 * unit) return null;
+  const height = Math.max(0, Math.min(30 * unit, bar.height - 14 * unit));
+  return {
+    x: left,
+    y: (bar.height - height) / 2,
+    width,
+    height,
+    cornerRadius: height / 2,
+  };
+}
+
 /**
  * The title-bar parts of a frame, or null for frames without one.
  * `cornerRadius` is the window's outer radius: the controls keep clear of it.
@@ -307,13 +350,6 @@ export function chromeLayout(
         separator,
       };
     case "windows": {
-      const half = 5 * unit;
-      const centreY = bar.height / 2;
-      const centreX = (index: number) =>
-        bar.width - edge - (index + 0.5) * CAPTION * unit;
-      const close = centreX(0);
-      const maximise = centreX(1);
-      const minimise = centreX(2);
       const left = edge + 14 * unit;
       return {
         ...empty,
@@ -325,23 +361,17 @@ export function chromeLayout(
           align: "left",
           fontSize: 12 * unit,
         }),
-        captions: {
-          minimise: [minimise - half, centreY, minimise + half, centreY],
-          maximise: {
-            x: maximise - half,
-            y: centreY - half,
-            width: 2 * half,
-            height: 2 * half,
-          },
-          close: [
-            [close - half, centreY - half, close + half, centreY + half],
-            [close - half, centreY + half, close + half, centreY - half],
-          ],
-          strokeWidth: unit,
-        },
+        captions: captionGlyphs(bar, unit, edge),
         separator,
       };
     }
+    case "windows-browser":
+      return {
+        ...empty,
+        address: windowsAddressBar(bar, unit, edge),
+        captions: captionGlyphs(bar, unit, edge),
+        separator,
+      };
     case "minimal":
       return {
         ...empty,
@@ -396,20 +426,23 @@ export const ADDRESS_FONT_SIZE = 13;
 
 /**
  * The lock and the address inside the pill: centred together for the
- * measured `textWidth`. Text too long for the pill is cut off by the text box
- * (which ends at the pill's padding), not moved.
+ * measured `textWidth`, or from the left with `align` "left". Text too long
+ * for the pill is cut off by the text box (which ends at the pill's padding),
+ * not moved.
  */
 export function addressContents(
   pill: Box,
   textWidth: number,
   unit: number,
+  align: "center" | "left" = "center",
 ): { lock: LockGlyph; text: TextBox } {
   const lockWidth = 9 * unit;
   const gap = 6 * unit;
   const padding = 12 * unit;
   const room = Math.max(0, pill.width - 2 * padding - lockWidth - gap);
   const total = lockWidth + gap + Math.min(Math.max(0, textWidth), room);
-  const start = pill.x + (pill.width - total) / 2;
+  const start =
+    align === "left" ? pill.x + padding : pill.x + (pill.width - total) / 2;
   const textX = start + lockWidth + gap;
   return {
     lock: lockGlyph(start, pill.y + pill.height / 2, unit),

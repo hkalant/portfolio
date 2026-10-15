@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, type ChangeEvent } from "react";
-import sample from "@/assets/samples/sample-screenshot.png";
+import sample from "@/assets/samples/sample-screenshot.jpg";
 import { useAutosave } from "@/lib/hooks/useAutosave";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useShortcuts } from "@/lib/hooks/useShortcuts";

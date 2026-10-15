@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { CopyButton } from "./topbar/CopyButton";
 import { ExportMenu } from "./topbar/ExportMenu";
+import { HelpMenu } from "./topbar/HelpMenu";
 import { HistoryButtons } from "./topbar/HistoryButtons";
 
 type Props = { onReplace: () => void };
@@ -41,6 +42,7 @@ export function MobileBar({ onReplace }: Props) {
       )}
       <CopyButton />
       <ExportMenu compact />
+      <HelpMenu />
     </header>
   );
 }

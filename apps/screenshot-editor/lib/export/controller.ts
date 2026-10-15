@@ -30,6 +30,18 @@ export const EXPORT_FAILED = "Export failed. Try a smaller size or scale.";
 export const COPY_FAILED = "Couldn't copy the image. Use Export instead.";
 export const COPIED = "Copied to clipboard";
 
+// Copy buttons show their own "Copied" tooltip; the notice is the fallback
+// when none is mounted.
+const copiedListeners = new Set<() => void>();
+
+/** Calls `listener` after each successful copy. Returns the unsubscribe function. */
+export function onCopied(listener: () => void): () => void {
+  copiedListeners.add(listener);
+  return () => {
+    copiedListeners.delete(listener);
+  };
+}
+
 /** The stage and design size as they are right now, or null if there's nothing to render. */
 function currentTarget(): (RenderTarget & { sourceName: string }) | null {
   const state = useEditorStore.getState();
@@ -99,7 +111,10 @@ export function runCopy(): void {
     });
     return blob;
   }).then(
-    () => showInfo(COPIED),
+    () => {
+      if (copiedListeners.size === 0) showInfo(COPIED);
+      else copiedListeners.forEach((listener) => listener());
+    },
     () => showError(COPY_FAILED),
   );
 }

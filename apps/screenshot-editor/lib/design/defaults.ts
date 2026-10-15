@@ -2,6 +2,7 @@ import { DEFAULT_GRADIENT } from "./gradients";
 import { PADDING, RADIUS, ROTATION, SHOT_SCALE } from "./limits";
 import type { Background, Design, ShotStyle } from "./schema";
 import { DEFAULT_SHADOW, SHADOW_PRESETS } from "./shadows";
+import { DEFAULT_SIZE_PRESET } from "./sizes";
 
 export const SHOT_LAYER_ID = "shot-1";
 
@@ -23,8 +24,7 @@ export function defaultShotStyle(): ShotStyle {
     rotation: ROTATION.default,
     radius: RADIUS.default,
     shadow: { ...SHADOW_PRESETS[DEFAULT_SHADOW] },
-    border: { width: 0, color: "#ffffff", opacity: 0.6 },
-    inset: { size: 0, color: "auto" },
+    border: { width: 10, color: "#ffffff", opacity: 0.3 },
     frame: { kind: "none", theme: "light", title: "", url: "" },
   };
 }
@@ -32,7 +32,11 @@ export function defaultShotStyle(): ShotStyle {
 export function createDefaultDesign(): Design {
   return {
     version: 2,
-    canvas: { preset: "auto" },
+    canvas: {
+      preset: DEFAULT_SIZE_PRESET.id,
+      width: DEFAULT_SIZE_PRESET.width,
+      height: DEFAULT_SIZE_PRESET.height,
+    },
     background: defaultBackground(),
     backgroundFx: { blur: 0 },
     layers: [

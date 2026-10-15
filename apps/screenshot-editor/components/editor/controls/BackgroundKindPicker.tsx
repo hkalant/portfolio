@@ -1,46 +1,40 @@
-import {
-  Ban,
-  Blend,
-  Droplets,
-  ImageIcon,
-  PaintBucket,
-  Pipette,
-  type LucideIcon,
-} from "lucide-react";
+import { Ban, ImageIcon, PaintBucket, type LucideIcon } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { BackgroundKind } from "@/lib/design/schema";
 
-/** What the picker offers. Linear and radial are both "gradient". */
-export type BackgroundChoice =
-  "gradient" | "solid" | "mesh" | "image" | "fromImage" | "none";
+/** What the picker offers. Gradients and uploaded images are both "image". */
+export type BackgroundChoice = "image" | "solid" | "none";
 
 const CHOICES: readonly {
   value: BackgroundChoice;
   label: string;
   icon: LucideIcon;
 }[] = [
-  { value: "gradient", label: "Gradient", icon: Blend },
-  { value: "solid", label: "Solid", icon: PaintBucket },
-  { value: "mesh", label: "Mesh", icon: Droplets },
   { value: "image", label: "Image", icon: ImageIcon },
-  { value: "fromImage", label: "From image", icon: Pipette },
+  { value: "solid", label: "Solid", icon: PaintBucket },
   { value: "none", label: "None", icon: Ban },
 ];
 
-export function backgroundChoice(kind: BackgroundKind): BackgroundChoice {
+/** Null for kinds the picker no longer offers, such as "fromImage" in older designs. */
+export function backgroundChoice(
+  kind: BackgroundKind,
+): BackgroundChoice | null {
   switch (kind) {
     case "linear":
     case "radial":
-      return "gradient";
+    case "image":
+      return "image";
     case "transparent":
       return "none";
+    case "solid":
+      return "solid";
     default:
-      return kind;
+      return null;
   }
 }
 
 type Props = {
-  value: BackgroundChoice;
+  value: BackgroundChoice | null;
   onChange: (choice: BackgroundChoice) => void;
 };
 
@@ -49,7 +43,7 @@ export function BackgroundKindPicker({ value, onChange }: Props) {
     <ToggleGroup
       type="single"
       aria-label="Background type"
-      value={value}
+      value={value ?? ""}
       // Radix reports "" when the active option is clicked again; keep the current one.
       onValueChange={(next) => {
         const choice = CHOICES.find((option) => option.value === next);

@@ -7,7 +7,32 @@ export type GradientPreset = {
   stops: readonly GradientStop[];
 };
 
-const twoStop = (
+/** The Oxford Brookes design system's colours (app/globals.css, --obu-*). */
+export const BROOKES_COLORS = {
+  charcoal: "#424a52",
+  charcoal60: "#8e9297",
+  charcoal20: "#d9dbdc",
+  charcoal10: "#eceded",
+  pink: "#d10373",
+  yellow: "#f9c909",
+  red: "#c70540",
+  red20: "#f2ced9",
+  green: "#006338",
+  green20: "#cedfd8",
+  pinkTint: "#fae5f1",
+  yellowTint: "#fef9e6",
+  mauveTint: "#f0e9ee",
+  peachTint: "#fdf3e7",
+  pink20: "#f6cde3",
+  yellow20: "#fef4ce",
+  mauve20: "#e1d3dc",
+  peach20: "#fae7ce",
+  blue20: "#cfdeec",
+} as const;
+
+const c = BROOKES_COLORS;
+
+const brookes = (
   id: string,
   name: string,
   from: string,
@@ -22,37 +47,31 @@ const twoStop = (
   ],
 });
 
-/** The first preset is the default background. */
+/** Gradients made only from the Oxford Brookes design system's colours. */
 export const GRADIENT_PRESETS: readonly GradientPreset[] = [
-  twoStop("brookes", "Brookes", "#424a52", "#d10373"),
-  twoStop("lavender", "Lavender", "#c471f5", "#fa71cd"),
-  twoStop("sunset", "Sunset", "#ff7e5f", "#feb47b"),
-  twoStop("ocean", "Ocean", "#2193b0", "#6dd5ed"),
-  twoStop("aurora", "Aurora", "#43cea2", "#185a9d"),
-  twoStop("flamingo", "Flamingo", "#f857a6", "#ff5858"),
-  twoStop("grape", "Grape", "#8e2de2", "#4a00e0"),
-  {
-    id: "midnight",
-    name: "Midnight",
-    angle: 135,
-    stops: [
-      { offset: 0, color: "#0f2027" },
-      { offset: 0.5, color: "#203a43" },
-      { offset: 1, color: "#2c5364" },
-    ],
-  },
-  twoStop("slate", "Slate", "#475569", "#0f172a"),
-  twoStop("peach", "Peach", "#ffecd2", "#fcb69f"),
-  twoStop("mist", "Mist", "#e0eafc", "#cfdef3"),
-  twoStop("sky", "Sky", "#a1c4fd", "#c2e9fb"),
-  twoStop("lime", "Lime", "#d4fc79", "#96e6a1"),
+  // Tints first.
+  brookes("sky", "Sky", c.blue20, c.mauve20),
+  brookes("petal", "Petal", c.pinkTint, c.yellowTint),
+  brookes("heather", "Heather", c.mauveTint, c.pinkTint),
+  brookes("apricot", "Apricot", c.peachTint, c.pinkTint),
+  brookes("pebble", "Pebble", c.charcoal20, c.blue20),
+  brookes("rose", "Rose", c.pink20, c.yellow20),
+  brookes("lemon", "Lemon", c.yellow20, c.peach20),
+  brookes("orchid", "Orchid", c.mauve20, c.pink20),
+  brookes("coral", "Coral", c.red20, c.peach20),
+  brookes("sorbet", "Sorbet", c.peach20, c.pink20),
+  brookes("brookes", "Brookes", c.charcoal, c.pink),
+  brookes("sunrise", "Sunrise", c.yellow, c.pink),
+  brookes("blush", "Blush", c.red20, c.pink),
+  brookes("crimson", "Crimson", c.red, c.charcoal),
+  brookes("stone", "Stone", c.charcoal10, c.charcoal60),
 ];
-
-export const DEFAULT_GRADIENT = GRADIENT_PRESETS[0];
 
 export function getGradientPreset(id: string): GradientPreset | undefined {
   return GRADIENT_PRESETS.find((preset) => preset.id === id);
 }
+
+export const DEFAULT_GRADIENT = getGradientPreset("brookes")!;
 
 /** Whole degrees in [0, 360). */
 export function normalizeAngle(degrees: number): number {

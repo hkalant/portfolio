@@ -1,8 +1,8 @@
 import { ToggleGroup } from "radix-ui";
 import { useId } from "react";
 import {
-  FRAME_KINDS,
   FRAME_LABELS,
+  FRAME_OPTIONS,
   FRAMES_WITH_TITLE,
   FRAMES_WITH_URL,
   isFrameKind,
@@ -57,13 +57,14 @@ function TextField({
   );
 }
 
-export function FramePanel() {
+/** The frame choice and its options, shown at the top of the Style panel. */
+export function FrameOptions() {
   const frame = useEditorStore((state) => selectShot(state).frame);
   const setFrame = useEditorStore((state) => state.setFrame);
 
   return (
     <div className="space-y-6">
-      {/* The panel heading already says "Frame", so the group isn't labelled twice on screen. */}
+      {/* The section heading already says "Frame", so the group isn't labelled twice on screen. */}
       <ToggleGroup.Root
         type="single"
         aria-label="Frame"
@@ -74,7 +75,7 @@ export function FramePanel() {
         }}
         className="grid grid-cols-3 gap-2"
       >
-        {FRAME_KINDS.map((kind) => (
+        {FRAME_OPTIONS.map((kind) => (
           <ToggleGroup.Item
             key={kind}
             value={kind}

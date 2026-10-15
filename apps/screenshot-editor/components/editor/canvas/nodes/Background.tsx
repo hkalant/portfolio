@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Group, Image as KonvaImage, Rect, Shape } from "react-konva";
+import { Group, Image as KonvaImage, Rect } from "react-konva";
 import {
   DEFAULT_GRADIENT,
   linearGradientPoints,
@@ -7,11 +7,6 @@ import {
   toKonvaColorStops,
 } from "@/lib/design/gradients";
 import type { Size } from "@/lib/design/layout";
-import {
-  DEFAULT_MESH,
-  getMeshPreset,
-  type MeshPreset,
-} from "@/lib/design/meshes";
 import type {
   Background,
   BackgroundFx,
@@ -23,7 +18,6 @@ import type { LoadedImage } from "@/lib/image/load";
 import { getBlurredImage, roundBlurSigma } from "@/lib/render/blur";
 import { coverCrop, coverScale, sourceSize } from "@/lib/render/cover";
 import { fromImageStops } from "@/lib/render/fromImage";
-import { drawMesh } from "@/lib/render/mesh";
 import { getWallpaperCanvas } from "@/lib/render/wallpaper";
 
 type Props = {
@@ -91,13 +85,6 @@ function Fill({
       );
     case "radial":
       return <RadialFill canvas={canvas} stops={background.stops} />;
-    case "mesh":
-      return (
-        <MeshFill
-          canvas={canvas}
-          preset={getMeshPreset(background.presetId) ?? DEFAULT_MESH}
-        />
-      );
     case "image":
       if (background.source.type === "wallpaper")
         return (
@@ -187,20 +174,6 @@ function RadialFill({
       fillRadialGradientEndRadius={radius}
       fillRadialGradientColorStops={toKonvaColorStops(stops)}
       listening={false}
-    />
-  );
-}
-
-function MeshFill({ canvas, preset }: { canvas: Size; preset: MeshPreset }) {
-  const { width, height } = canvas;
-  return (
-    <Shape
-      width={width}
-      height={height}
-      listening={false}
-      // Konva has already applied the stage scale and pixel ratio, so drawing
-      // in design px on the native context stays sharp at any export scale.
-      sceneFunc={(context) => drawMesh(context._context, preset, width, height)}
     />
   );
 }

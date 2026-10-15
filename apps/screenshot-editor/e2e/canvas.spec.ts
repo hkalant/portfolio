@@ -1,15 +1,16 @@
 import type { Page } from "@playwright/test";
 import {
   chooseCanvasSize,
+  chooseFrame,
   expectDesignSize,
   expectEmptyState,
   exportButton,
   exportImage,
   openTab,
   RED,
-  setSlider,
   stage,
   upload,
+  useAutoSize,
 } from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
 import {
@@ -24,6 +25,7 @@ import {
 test.beforeEach(async ({ page }) => {
   await page.goto("./editor/");
   await expectEmptyState(page);
+  await useAutoSize(page);
 });
 
 /** The autosaved design, read straight from IndexedDB. */
@@ -96,7 +98,7 @@ test("canvas size presets and custom sizes", async ({ page }) => {
   await expectDesignSize(page, 1000, 630);
 
   await page.getByRole("radio", { name: /^Auto/ }).click();
-  await expectDesignSize(page, 1328, 878);
+  await expectDesignSize(page, 1344, 894);
 });
 
 test("the export button keeps focus while it exports", async ({ page }) => {
@@ -128,32 +130,41 @@ test("a short workspace hides the size readout and fits the canvas", async ({
   expect(box!.y + box!.height).toBeLessThanOrEqual(main!.y + main!.height);
 });
 
+// A 1200 x 750 shot in a macOS frame, plus 72px of padding on each side.
+const FRAMED_W = 1344;
+const FRAMED_H = 935;
+
 test("undo and redo with the buttons and the keyboard", async ({ page }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
   const undo = page.getByRole("button", { name: "Undo" });
   const redo = page.getByRole("button", { name: "Redo" });
   await expect(redo).toBeDisabled();
 
-  await openTab(page, "Style");
-  await setSlider(page, "Padding", "End");
-  await expectDesignSize(page, 1600, 1150);
+  await chooseFrame(page, "macOS");
+  await expectDesignSize(page, FRAMED_W, FRAMED_H);
   await undo.click();
-  await expectDesignSize(page, 1328, 878);
+  await expectDesignSize(page, 1344, 894);
   await redo.click();
-  await expectDesignSize(page, 1600, 1150);
+  await expectDesignSize(page, FRAMED_W, FRAMED_H);
 
   await page.keyboard.press("ControlOrMeta+z");
-  await expectDesignSize(page, 1328, 878);
+  await expectDesignSize(page, 1344, 894);
   await page.keyboard.press("ControlOrMeta+Shift+z");
-  await expectDesignSize(page, 1600, 1150);
+  await expectDesignSize(page, FRAMED_W, FRAMED_H);
 
   // Undoing the upload goes back to the empty state; redo brings it back.
   await undo.click();
   await undo.click();
   await expectEmptyState(page);
+  // Then the switch to Auto, back to the Desktop default.
+  await undo.click();
+  await expect(
+    page.getByRole("button", { name: /^Canvas size: Desktop/ }),
+  ).toBeVisible();
   await expect(undo).toBeDisabled();
   await redo.click();
-  await expectDesignSize(page, 1328, 878);
+  await redo.click();
+  await expectDesignSize(page, 1344, 894);
 });
 
 test("Delete removes the screenshot and undo brings it back", async ({
@@ -170,25 +181,27 @@ test("Delete removes the screenshot and undo brings it back", async ({
   await page.keyboard.press("Delete");
   await expectEmptyState(page);
   await page.keyboard.press("ControlOrMeta+z");
-  await expectDesignSize(page, 528, 428);
+  await expectDesignSize(page, 544, 444);
 });
 
 test("the design is restored after a reload", async ({ page }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
-  await openTab(page, "Style");
-  await setSlider(page, "Padding", "Home");
-  await expectDesignSize(page, 1200, 750);
+  await chooseFrame(page, "macOS");
+  await expectDesignSize(page, FRAMED_W, FRAMED_H);
   await expect
     .poll(async () => {
       const design = (await savedDesign(page)) as {
-        layers?: { padding?: number; imageId?: string | null }[];
+        layers?: { frame?: { kind?: string }; imageId?: string | null }[];
       } | null;
       return design?.layers?.[0];
     })
-    .toMatchObject({ padding: 0, imageId: expect.any(String) });
+    .toMatchObject({
+      frame: { kind: "macos" },
+      imageId: expect.any(String),
+    });
 
   await page.reload();
-  await expectDesignSize(page, 1200, 750);
+  await expectDesignSize(page, FRAMED_W, FRAMED_H);
   // A restored design starts a fresh history.
   await expect(page.getByRole("button", { name: "Undo" })).toBeDisabled();
   const { data } = await exportImage(page);
@@ -208,19 +221,22 @@ test("an edit made just before a reload is kept", async ({ page }) => {
     .toEqual(expect.any(String));
 
   await openTab(page, "Style");
-  const padding = page.getByRole("slider", { name: "Padding" });
-  await padding.focus();
-  for (let i = 0; i < 5; i += 1) await padding.press("ArrowRight");
-  await expectDesignSize(page, 1368, 918);
+  const border = page.getByRole("slider", { name: "Border width" });
+  await border.focus();
+  for (let i = 0; i < 5; i += 1) await border.press("ArrowRight");
+  await expect(border).toHaveAttribute("aria-valuenow", "15");
   // Quick arrow-key steps on a slider are one undo step.
   await page.getByRole("button", { name: "Undo" }).click();
-  await expectDesignSize(page, 1328, 878);
+  await expect(border).toHaveAttribute("aria-valuenow", "10");
   await page.getByRole("button", { name: "Redo" }).click();
-  await expectDesignSize(page, 1368, 918);
+  await expect(border).toHaveAttribute("aria-valuenow", "15");
 
   // Straight away, well inside the save delay.
   await page.reload();
-  await expectDesignSize(page, 1368, 918);
+  await openTab(page, "Style");
+  await expect(
+    page.getByRole("slider", { name: "Border width" }),
+  ).toHaveAttribute("aria-valuenow", "15");
 });
 
 test("an edit is kept when the browser drops the writes made on close", async ({
@@ -237,10 +253,10 @@ test("an edit is kept when the browser drops the writes made on close", async ({
     .toEqual(expect.any(String));
 
   await openTab(page, "Style");
-  const padding = page.getByRole("slider", { name: "Padding" });
-  await padding.focus();
-  for (let i = 0; i < 5; i += 1) await padding.press("ArrowRight");
-  await expectDesignSize(page, 1368, 918);
+  const border = page.getByRole("slider", { name: "Border width" });
+  await border.focus();
+  for (let i = 0; i < 5; i += 1) await border.press("ArrowRight");
+  await expect(border).toHaveAttribute("aria-valuenow", "15");
   // As WebKit sometimes does on a quick reload: no IndexedDB write made from
   // here on lands, neither the delayed save nor the one made on close.
   await page.evaluate(() => {
@@ -249,7 +265,10 @@ test("an edit is kept when the browser drops the writes made on close", async ({
     };
   });
   await page.reload();
-  await expectDesignSize(page, 1368, 918);
+  await openTab(page, "Style");
+  await expect(
+    page.getByRole("slider", { name: "Border width" }),
+  ).toHaveAttribute("aria-valuenow", "15");
 });
 
 test("a tab left untouched doesn't overwrite another tab's work", async ({
@@ -272,7 +291,7 @@ test("a tab left untouched doesn't overwrite another tab's work", async ({
   // Hiding or closing it must not write its empty design over that work.
   await other.close({ runBeforeUnload: true });
   await page.reload();
-  await expectDesignSize(page, 1328, 878);
+  await expectDesignSize(page, 1344, 894);
   expect(await savedImageId()).toEqual(expect.any(String));
 });
 
@@ -283,13 +302,13 @@ test("exports JPEG and WebP at other scales and remembers the choice", async ({
   await page.getByRole("button", { name: "Export options" }).click();
   await page.getByRole("radio", { name: "JPEG" }).click();
   await page.getByRole("radio", { name: "1×" }).click();
-  await expect(page.getByTestId("export-size")).toContainText("1328 × 878 px");
+  await expect(page.getByTestId("export-size")).toContainText("1344 × 894 px");
   await page.keyboard.press("Escape");
   await expect(exportButton(page)).toHaveText("Export JPEG 1×");
 
   const jpeg = await exportImage(page);
   expect(jpeg.name).toBe("fixture-1x.jpg");
-  expect(readJpegSize(jpeg.data)).toEqual({ width: 1328, height: 878 });
+  expect(readJpegSize(jpeg.data)).toEqual({ width: 1344, height: 894 });
 
   const webpSupported = await page.evaluate(() =>
     document
@@ -310,8 +329,8 @@ test("exports JPEG and WebP at other scales and remembers the choice", async ({
   expect(webpFile.name).toBe("fixture-3x.webp");
   expect(isWebp(webpFile.data)).toBe(true);
   expect(await imageSize(page, webpFile.data)).toEqual({
-    width: 3984,
-    height: 2634,
+    width: 4032,
+    height: 2682,
   });
 
   await page.reload();
@@ -345,8 +364,8 @@ test("the screenshot can be nudged and dragged on a fixed canvas", async ({
   await upload(page, makeSolidPng(1200, 750, RED));
   await chooseCanvasSize(page, /^X post/);
   await expectDesignSize(page, 1600, 900);
-  // The shot fits the 1472 x 772 space inside the padding: 1235 px wide,
-  // centred, so its left edge is at 182 and x = 150 is background.
+  // The shot fits the 1456 x 756 space inside the padding: 1210 px wide,
+  // centred, so its left edge is at 195 and x = 150 is background.
   const probe: [number, number] = [150 * 2, 450 * 2];
   const probeIsRed = async () => {
     const [pixel] = await samplePixels(page, (await exportImage(page)).data, [
@@ -385,39 +404,115 @@ test("copies the design to the clipboard as a PNG", async ({
   );
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await upload(page, makeSolidPng(400, 300, RED));
-  await page.getByRole("button", { name: "Copy image" }).click();
-  await expect(page.getByTestId("notice")).toContainText("Copied to clipboard");
+  const copyButton = page.getByRole("button", { name: "Copy image" });
+  await copyButton.click();
+  // Shown as a tooltip under the button, not as a notice.
+  const tooltip = page.getByTestId("copied-tooltip");
+  await expect(tooltip).toHaveText("Copied to clipboard");
+  await expect(page.getByTestId("notice")).toHaveCount(0);
+  const [button, tip] = [
+    (await copyButton.boundingBox())!,
+    (await tooltip.boundingBox())!,
+  ];
+  expect(tip.y).toBeGreaterThan(button.y + button.height);
+  expect(
+    Math.abs(tip.x + tip.width / 2 - (button.x + button.width / 2)),
+  ).toBeLessThan(2);
   const copied = await page.evaluate(async () => {
     const [item] = await navigator.clipboard.read();
     const bitmap = await createImageBitmap(await item.getType("image/png"));
     return { width: bitmap.width, height: bitmap.height };
   });
-  // (400 + 2 x 64) x (300 + 2 x 64) at the default 2x.
-  expect(copied).toEqual({ width: 1056, height: 856 });
+  // (400 + 2 x 72) x (300 + 2 x 72) at the default 2x.
+  expect(copied).toEqual({ width: 1088, height: 888 });
+
+  // The tooltip goes away on its own.
+  await expect(tooltip).toHaveCount(0);
 
   // The keyboard shortcut does the same when no text is selected.
-  await page
-    .getByTestId("notice")
-    .getByRole("button", { name: "Dismiss" })
-    .click();
   await page.keyboard.press("ControlOrMeta+c");
-  await expect(page.getByTestId("notice")).toContainText("Copied to clipboard");
+  await expect(tooltip).toHaveText("Copied to clipboard");
 });
 
 test("leaving the editor and coming back keeps the design and its history", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
-  await openTab(page, "Style");
-  await setSlider(page, "Padding", "Home");
-  await expectDesignSize(page, 1200, 750);
+  await chooseFrame(page, "macOS");
+  await expectDesignSize(page, FRAMED_W, FRAMED_H);
   // Straight away, before the autosave delay has passed.
   await page.getByRole("link", { name: "Screenshot Editor home" }).click();
   await page.getByRole("link", { name: "Open editor" }).click();
-  await expectDesignSize(page, 1200, 750);
+  await expectDesignSize(page, FRAMED_W, FRAMED_H);
   await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled();
 
   // And the change was saved: a full reload restores it.
   await page.reload();
-  await expectDesignSize(page, 1200, 750);
+  await expectDesignSize(page, FRAMED_W, FRAMED_H);
+});
+
+test("the empty editor shows a dotted drop area with the paste tip", async ({
+  page,
+}) => {
+  const dropArea = page.getByRole("button", {
+    name: /Drag and drop your screenshot here/,
+  });
+  await expect(dropArea).toContainText(
+    "Tip: If you have copied a screenshot, you can paste it here with Ctrl+V (Windows) or Cmd+V (Mac)",
+  );
+  await expect(dropArea).toHaveCSS("border-top-style", "dotted");
+  await expect(dropArea).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(stage(page)).toHaveCount(0);
+  await expect(page.getByRole("toolbar", { name: "Zoom" })).toHaveCount(0);
+});
+
+test("zooms the canvas in, out and back to fit", async ({ page }) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await expectDesignSize(page, 1344, 894);
+  const level = page.getByTestId("zoom-level");
+  const zoomIn = page.getByRole("button", { name: "Zoom in" });
+  const zoomOut = page.getByRole("button", { name: "Zoom out" });
+  const reset = page.getByRole("button", { name: "Reset zoom" });
+  const scroller = page.getByTestId("canvas-scroller");
+  const percent = async () =>
+    Number((await level.textContent())!.trim().replace("%", ""));
+  const stageWidth = async () => (await stage(page).boundingBox())!.width;
+
+  await expect(reset).toBeDisabled();
+  const fit = await percent();
+  expect(fit).toBeLessThan(100);
+  const fitWidth = await stageWidth();
+
+  await zoomIn.click();
+  await expect.poll(percent).toBeGreaterThan(fit);
+  expect(await stageWidth()).toBeGreaterThan(fitWidth);
+  await expect(reset).toBeEnabled();
+
+  // Up to 200%, where the design is bigger than the workspace and scrolls.
+  while (await zoomIn.isEnabled()) await zoomIn.click();
+  await expect(level).toHaveText("200%");
+  expect(await stageWidth()).toBe(1344 * 2);
+  expect(
+    await scroller.evaluate(
+      (element) => element.scrollWidth > element.clientWidth,
+    ),
+  ).toBe(true);
+
+  await zoomOut.click();
+  await expect(level).toHaveText("150%");
+
+  // Zooming only changes the view: the export keeps its own size.
+  const { data } = await exportImage(page);
+  expect(readPngSize(data)).toEqual({ width: 2688, height: 1788 });
+
+  await reset.click();
+  await expect.poll(percent).toBe(fit);
+  await expect(reset).toBeDisabled();
+  expect(await stageWidth()).toBe(fitWidth);
+
+  // A new screenshot starts fitted again.
+  await zoomIn.click();
+  await upload(page, makeSolidPng(800, 600, RED), "second.png");
+  await expectDesignSize(page, 944, 744);
+  await expect(reset).toBeDisabled();
 });

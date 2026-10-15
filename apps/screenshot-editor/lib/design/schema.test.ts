@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createDefaultDesign, defaultShotStyle } from "./defaults";
+import {
+  createDefaultDesign,
+  defaultBackground,
+  defaultShotStyle,
+} from "./defaults";
 import { migrateDesign } from "./migrate";
 import { referencedImageIds } from "./refs";
 import { designSchema, type Design } from "./schema";
@@ -68,7 +72,6 @@ describe("design schema", () => {
           { offset: 1, color: "#ffffff" },
         ],
       },
-      { kind: "mesh", presetId: "candy" },
       { kind: "image", source: { type: "upload", imageId: "img-1" } },
       { kind: "image", source: { type: "wallpaper", wallpaperId: "waves" } },
       { kind: "fromImage", angle: 90 },
@@ -114,7 +117,7 @@ describe("migrateDesign", () => {
           imageId: "img-1",
           padding: 100,
           radius: 20,
-          shadow: { ...current.layers[0].shadow, preset: "hard" },
+          shadow: { ...current.layers[0].shadow, preset: "soft" },
         },
       ],
     };
@@ -135,6 +138,14 @@ describe("migrateDesign", () => {
     const design = createDefaultDesign();
     const saved = { ...design, backgroundFx: { noise: 0.4, blur: 3 } };
     expect(migrateDesign(saved)?.backgroundFx).toEqual({ blur: 3 });
+  });
+
+  it("gives a design saved with a mesh background the default background", () => {
+    const saved = {
+      ...createDefaultDesign(),
+      background: { kind: "mesh", presetId: "candy" },
+    };
+    expect(migrateDesign(saved)?.background).toEqual(defaultBackground());
   });
 
   it("keeps the size of a removed size preset as a custom size", () => {

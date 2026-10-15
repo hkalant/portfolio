@@ -106,6 +106,7 @@ export function ChromeNode({ frame, rect, unit, cornerRadius }: Props) {
           address,
           measureText(frame.url, ADDRESS_FONT_SIZE * unit),
           unit,
+          frame.kind === "windows-browser" ? "left" : "center",
         )
       : null;
 

@@ -1,7 +1,18 @@
 import { mixHex } from "@/lib/render/color";
-import { BLOB_FALLOFF } from "@/lib/render/mesh";
 import { createRandom } from "@/lib/render/random";
 import { hexToRgba } from "./colors";
+
+/**
+ * Alpha along a blob's radius, centre to edge: a smoothstep fall-off, so a
+ * blob has no visible rim. [offset, alpha] pairs.
+ */
+export const BLOB_FALLOFF: readonly (readonly [number, number])[] = Array.from(
+  { length: 9 },
+  (_, i) => {
+    const t = i / 8;
+    return [t, Math.round((1 - t * t * (3 - 2 * t)) * 1000) / 1000] as const;
+  },
+);
 
 // Built-in wallpapers, drawn by code (no image files). Each is rendered once
 // into a WALLPAPER_SIZE canvas and then used like an uploaded background.

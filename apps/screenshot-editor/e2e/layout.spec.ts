@@ -4,11 +4,32 @@ import {
   expectDesignSize,
   expectEmptyState,
   RED,
-  setSlider,
   upload,
 } from "./helpers/editor";
 import { expect, test } from "./helpers/fixtures";
 import { makeSolidPng, readPngSize } from "./helpers/png";
+
+test("a new design starts on the Desktop size, listed above Auto", async ({
+  page,
+}) => {
+  await page.goto("./editor/");
+  await expectEmptyState(page);
+  const sizeButton = page.getByRole("button", { name: /^Canvas size/ });
+  await expect(sizeButton).toHaveAccessibleName(
+    "Canvas size: Desktop, 1920 × 1080",
+  );
+  await upload(page, makeSolidPng(1200, 750, RED));
+  await expectDesignSize(page, 1920, 1080);
+
+  await sizeButton.click();
+  const options = page.locator('[aria-label="Canvas size"]').getByRole("radio");
+  await expect(options.nth(0)).toHaveAccessibleName(/^Desktop/);
+  await expect(options.nth(0)).toHaveAttribute("aria-checked", "true");
+  await expect(options.nth(1)).toHaveAccessibleName(
+    /^Auto\s*Fits the screenshot and padding/,
+  );
+  await expect(options.nth(2)).toHaveAccessibleName(/^X post/);
+});
 
 test("the theme can be switched and is remembered", async ({ page }) => {
   await page.goto("./editor/");
@@ -71,13 +92,12 @@ test.describe("on a phone", () => {
     await page.goto("./editor/");
     await expectEmptyState(page);
     await upload(page, makeSolidPng(1200, 750, RED));
-    await expectDesignSize(page, 1328, 878);
+    // A new design starts on the Desktop size.
+    await expectDesignSize(page, 1920, 1080);
 
     const style = page.getByRole("button", { name: "Style", exact: true });
     await style.click();
     await expect(style).toHaveAttribute("aria-pressed", "true");
-    await setSlider(page, "Padding", "Home");
-    await expectDesignSize(page, 1200, 750);
 
     await page.getByRole("button", { name: "Size", exact: true }).click();
     await page.getByRole("radio", { name: /^Story/ }).click();
@@ -111,7 +131,7 @@ test.describe("on a phone", () => {
     await page.goto("./editor/");
     await upload(page, makeSolidPng(1200, 750, RED));
     await page.getByRole("button", { name: "Style", exact: true }).click();
-    const slider = page.getByRole("slider", { name: "Padding" });
+    const slider = page.getByRole("slider", { name: "Border width" });
     await slider.scrollIntoViewIfNeeded();
     const value = await slider.getAttribute("aria-valuenow");
     const measure = async () => {

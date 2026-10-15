@@ -6,10 +6,11 @@ This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 
 ## Features
 
-- **Canvas sizes:** Auto (the screenshot plus padding), presets for X, LinkedIn, Open Graph, Instagram, stories and YouTube, or a custom size up to 4000 × 4000.
-- **Backgrounds:** gradients (linear or radial), solid colours, mesh gradients, built-in wallpapers, your own image (with blur), a gradient made from the screenshot's colours, or transparent.
-- **Frames:** macOS window, browser, Windows window, minimal bar and glass, each light or dark, with a window title or address.
-- **Style:** padding, scale, position (drag, arrow keys or a 9-point grid), rotation, corner radius, shadow presets or a custom shadow, border, and an inset around the screenshot.
+- **Adding a screenshot:** the editor opens on an empty, dotted drop area. Drag a screenshot onto it, paste one with Ctrl+V or ⌘V, click the area to pick a file, or try the sample image.
+- **Zoom:** buttons under the canvas zoom the preview out and in (10% to 200%, scrolling when it is bigger than the workspace) and reset it to fit. A new screenshot starts fitted. Zooming never changes the export.
+- **Canvas sizes:** Desktop (1920 × 1080, the default), Auto (the screenshot plus padding), presets for X, LinkedIn, Open Graph, Instagram, stories and YouTube, or a custom size up to 4000 × 4000.
+- **Backgrounds:** an image (a linear gradient, or your own upload with blur), solid colours, or transparent.
+- **Style:** the tool also holds the frame (macOS window, macOS browser, Windows window, Windows browser, or minimal bar, each light or dark, with a window title or address), shadow presets (None, Soft, Medium, Floating; Medium by default) and a border (10px white at 30% opacity by default). The padding can be set from 0 to 200px (72px by default). The corner radius is fixed at 15px and the screenshot is not rotated.
 - **Export:** PNG, JPEG or WebP at 1×, 2× or 3×, or copy a PNG to the clipboard. Exports larger than the browser allows are reduced to the largest size it can make, and the editor says so.
 - **Undo and redo**, and **autosave**: the last design and its images are kept in this browser (IndexedDB) and restored on the next visit.
 - **Phones and tablets:** a mobile layout with the settings in a panel under the canvas.
@@ -44,7 +45,6 @@ Run these from `apps/screenshot-editor/`. Use Node 22 (see `.nvmrc`).
 | `npm test`                        | Unit tests (Vitest)                                                       |
 | `npm run test:e2e`                | Browser tests (Playwright) against the built `out/` folder                |
 | `npm run test:publish`            | Tests the Bitbucket deploy script against local git repos                 |
-| `npm run make:sample`             | Re-render the sample screenshot in `assets/samples/`                      |
 
 Always run ESLint and TypeScript through these scripts. Global installs of newer versions (ESLint 10, TypeScript 6+) behave differently.
 
@@ -146,12 +146,12 @@ components/ui/          Small shadcn-style components on Radix primitives
 lib/design/             Design model (zod schema, migration), presets, frames, layout maths
 lib/store/              Zustand store with its own undo history
 lib/image/              File checks, loading, downscaling, intake, colour sampling
-lib/render/             Canvas drawing helpers (mesh, wallpapers, blur, frames)
+lib/render/             Canvas drawing helpers (wallpapers, blur, frames)
 lib/export/             Export, copy, size limits and file names
 lib/persist/            Autosave (IndexedDB) and preferences (localStorage)
 lib/hooks/              Browser hooks (resize, paste, drop, pixel ratio, shortcuts, autosave, theme)
-assets/samples/         Sample screenshot (made by scripts/make-sample-image.mjs)
-scripts/                Static server, sample generator, Bitbucket deploy scripts and tests
+assets/samples/         Sample screenshot (an Oxford Brookes Moodle course page)
+scripts/                Static server, Bitbucket deploy scripts and tests
 e2e/                    Playwright tests
 ```
 
@@ -159,8 +159,8 @@ e2e/                    Playwright tests
 
 ## Notes
 
-- **Rendering.** The canvas uses Konva. Without a frame or inset, the screenshot is one Konva `Image` with `cornerRadius` and shadow properties; Konva draws the rounded image into a buffer first, so the shadow follows the corners (and the outline of a transparent PNG). This relies on Konva internals, which is why `konva` is pinned exactly and an e2e test checks the pixels.
-- **Export.** The export renders the layer at its true size times the chosen scale, whatever the on-screen zoom, so a 1328 × 878 design exports at 2× as 2656 × 1756. Browsers limit canvases (Safari to 16,777,216 pixels in area, all to 16,384 px a side); larger exports are scaled down to fit.
+- **Rendering.** The canvas uses Konva. Without a frame, the screenshot is one Konva `Image` with `cornerRadius` and shadow properties; Konva draws the rounded image into a buffer first, so the shadow follows the corners (and the outline of a transparent PNG). This relies on Konva internals, which is why `konva` is pinned exactly and an e2e test checks the pixels.
+- **Export.** The export renders the layer at its true size times the chosen scale, whatever the on-screen zoom, so a 1328 × 878 design exports at 2× as 2656 × 1756. Browsers limit canvases (Safari to 16,777,216 pixels in area, all to 16,384 px a side); larger exports are scaled down to fit. The same limits cap the zoom, and a zoomed-in preview on a high-density screen is drawn at a slightly lower pixel density when it would pass them.
 - **Large images.** Images over 50 megapixels or 50 MB are refused. Images longer than 3200 px on a side are downscaled when loaded. Screenshots are shown at most 1600 px long in the design, so 3× exports scale them up.
 - **Storage.** Autosave uses an IndexedDB database named `screenshot-editor`, and preferences use localStorage keys starting with `screenshot-editor:`, because every app on the same `bitbucket.io` site shares one browser origin. Private windows or blocked storage just turn autosave off.
 - **WebP.** Browsers that can't encode WebP (some Safari versions) show the option disabled.

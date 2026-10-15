@@ -2,9 +2,12 @@ import { ImageUp } from "lucide-react";
 import { useId, useMemo, useRef, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { defaultBackground } from "@/lib/design/defaults";
-import { GRADIENT_PRESETS, toCssLinearGradient } from "@/lib/design/gradients";
+import {
+  BROOKES_COLORS,
+  GRADIENT_PRESETS,
+  toCssLinearGradient,
+} from "@/lib/design/gradients";
 import { ANGLE, BLUR } from "@/lib/design/limits";
-import { DEFAULT_MESH, MESH_PRESETS } from "@/lib/design/meshes";
 import type {
   Background,
   BackgroundFx,
@@ -12,18 +15,10 @@ import type {
   LinearBackground,
   RadialBackground,
 } from "@/lib/design/schema";
-import { DEFAULT_WALLPAPER, WALLPAPERS } from "@/lib/design/wallpapers";
 import { ACCEPT_ATTR } from "@/lib/image/accept";
-import { dominantColors, sampleImagePixels } from "@/lib/image/colors";
 import { ingestFile } from "@/lib/image/ingest";
-import { fromImageStops } from "@/lib/render/fromImage";
-import { meshCss } from "@/lib/render/mesh";
-import { imageThumbnail, wallpaperThumbnail } from "@/lib/render/wallpaper";
-import {
-  selectActiveImage,
-  selectLastBackgroundUpload,
-  useEditorStore,
-} from "@/lib/store/editor";
+import { imageThumbnail } from "@/lib/render/wallpaper";
+import { selectLastBackgroundUpload, useEditorStore } from "@/lib/store/editor";
 import {
   backgroundChoice,
   BackgroundKindPicker,
@@ -33,29 +28,10 @@ import { ColorField } from "../controls/ColorField";
 import { LabeledSlider } from "../controls/LabeledSlider";
 import { SwatchGrid, type Swatch } from "../controls/SwatchGrid";
 
-const SOLID_COLORS: readonly { name: string; color: string }[] = [
-  { name: "White", color: "#ffffff" },
-  { name: "Light grey", color: "#e5e7eb" },
-  { name: "Black", color: "#0a0a0a" },
-  { name: "Navy", color: "#1e2a5a" },
-  { name: "Blue", color: "#3b82f6" },
-  { name: "Teal", color: "#14b8a6" },
-  { name: "Green", color: "#22c55e" },
-  { name: "Yellow", color: "#facc15" },
-  { name: "Orange", color: "#f97316" },
-  { name: "Pink", color: "#ec4899" },
-];
-
 const GRADIENT_SWATCHES: readonly Swatch[] = GRADIENT_PRESETS.map((preset) => ({
   id: preset.id,
   name: preset.name,
   style: { backgroundImage: toCssLinearGradient(preset.angle, preset.stops) },
-}));
-
-const MESH_SWATCHES: readonly Swatch[] = MESH_PRESETS.map((preset) => ({
-  id: preset.id,
-  name: preset.name,
-  style: meshCss(preset),
 }));
 
 /** The newest gradient in the undo history, so switching back restores it. */
@@ -72,24 +48,12 @@ function lastGradient(past: readonly Design[]): Background | null {
 function chooseKind(choice: BackgroundChoice) {
   const state = useEditorStore.getState();
   switch (choice) {
-    case "gradient":
+    case "image":
+      // A gradient; an uploaded image can be picked from the same panel.
       state.setBackground(lastGradient(state.past) ?? defaultBackground());
       break;
     case "solid":
       state.setBackground({ kind: "solid", color: "#ffffff" });
-      break;
-    case "mesh":
-      state.applyMeshPreset(DEFAULT_MESH.id);
-      break;
-    case "image": {
-      // Back to the last uploaded background, if there is one.
-      const upload = selectLastBackgroundUpload(state);
-      if (upload) state.setBackgroundImage(upload);
-      else state.setWallpaper(DEFAULT_WALLPAPER.id);
-      break;
-    }
-    case "fromImage":
-      state.setFromImage();
       break;
     case "none":
       state.setTransparent();
@@ -100,32 +64,45 @@ function chooseKind(choice: BackgroundChoice) {
 export function BackgroundPanel() {
   const background = useEditorStore((state) => state.design.background);
   const fx = useEditorStore((state) => state.design.backgroundFx);
-  const applyMeshPreset = useEditorStore((state) => state.applyMeshPreset);
-  const choice = backgroundChoice(background.kind);
+  const isGradient =
+    background.kind === "linear" || background.kind === "radial";
 
   return (
     <div className="space-y-6">
-      <BackgroundKindPicker value={choice} onChange={chooseKind} />
-      {(background.kind === "linear" || background.kind === "radial") && (
-        <GradientControls background={background} />
+      <BackgroundKindPicker
+        value={backgroundChoice(background.kind)}
+        onChange={chooseKind}
+      />
+      {(isGradient || background.kind === "image") && (
+        <>
+          <GradientSwatches
+            presetId={isGradient ? background.presetId : null}
+          />
+          <ImageControls
+            background={background.kind === "image" ? background : null}
+          />
+        </>
       )}
+      {isGradient && <GradientControls background={background} />}
       {background.kind === "solid" && (
         <SolidControls color={background.color} />
       )}
-      {background.kind === "mesh" && (
-        <SwatchGrid
-          label="Presets"
-          swatches={MESH_SWATCHES}
-          selectedId={background.presetId}
-          onSelect={applyMeshPreset}
-        />
-      )}
-      {background.kind === "image" && <ImageControls background={background} />}
-      {background.kind === "fromImage" && (
-        <FromImageControls angle={background.angle} />
-      )}
-      {choice === "image" && <EffectsControls fx={fx} />}
+      {background.kind === "image" && <EffectsControls fx={fx} />}
     </div>
+  );
+}
+
+function GradientSwatches({ presetId }: { presetId: string | null }) {
+  const applyGradientPreset = useEditorStore(
+    (state) => state.applyGradientPreset,
+  );
+  return (
+    <SwatchGrid
+      label="Oxford Brookes"
+      swatches={GRADIENT_SWATCHES}
+      selectedId={presetId}
+      onSelect={applyGradientPreset}
+    />
   );
 }
 
@@ -134,22 +111,14 @@ function GradientControls({
 }: {
   background: LinearBackground | RadialBackground;
 }) {
-  const applyGradientPreset = useEditorStore(
-    (state) => state.applyGradientPreset,
-  );
   const setGradientAngle = useEditorStore((state) => state.setGradientAngle);
   const setGradientStop = useEditorStore((state) => state.setGradientStop);
+  const swapGradientStops = useEditorStore((state) => state.swapGradientStops);
   const { stops } = background;
   const last = stops.length - 1;
 
   return (
     <>
-      <SwatchGrid
-        label="Presets"
-        swatches={GRADIENT_SWATCHES}
-        selectedId={background.presetId}
-        onSelect={applyGradientPreset}
-      />
       {background.kind === "linear" && (
         <LabeledSlider
           label="Angle"
@@ -161,12 +130,24 @@ function GradientControls({
           onChange={setGradientAngle}
         />
       )}
-      <div className="space-y-2">
+      <div className="space-y-1">
         <ColorField
           label="Start colour"
           value={stops[0].color}
           onChange={(color) => setGradientStop(0, color)}
         />
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-6"
+            aria-label="Swap colours"
+            title="Swap colours"
+            onClick={swapGradientStops}
+          >
+            <ArrowsUpDownIcon />
+          </Button>
+        </div>
         <ColorField
           label="End colour"
           value={stops[last].color}
@@ -177,12 +158,32 @@ function GradientControls({
   );
 }
 
-const SOLID_SWATCHES: readonly Swatch[] = SOLID_COLORS.map(
-  ({ name, color }) => ({
-    id: color,
-    name,
-    style: { backgroundColor: color },
-  }),
+/** Font Awesome Free "arrows-up-down" (solid), CC BY 4.0. */
+function ArrowsUpDownIcon() {
+  return (
+    <svg
+      viewBox="0 0 320 512"
+      aria-hidden="true"
+      className="size-3 fill-current"
+    >
+      <path d="M182.6 9.4c-12.5-12.5-32.8-12.5-45.3 0l-96 96c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L128 109.3V402.7L86.6 361.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l96 96c12.5 12.5 32.8 12.5 45.3 0l96-96c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 402.7V109.3l41.4 41.4c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-96-96z" />
+    </svg>
+  );
+}
+
+const BROOKES_SOLID_COLORS: readonly { name: string; color: string }[] = [
+  { name: "Charcoal", color: BROOKES_COLORS.charcoal },
+  { name: "Charcoal 60%", color: BROOKES_COLORS.charcoal60 },
+  { name: "Charcoal 20%", color: BROOKES_COLORS.charcoal20 },
+  { name: "Charcoal 10%", color: BROOKES_COLORS.charcoal10 },
+  { name: "Pink", color: BROOKES_COLORS.pink },
+  { name: "Yellow", color: BROOKES_COLORS.yellow },
+  { name: "Red 20%", color: BROOKES_COLORS.red20 },
+  { name: "Green 20%", color: BROOKES_COLORS.green20 },
+];
+
+const BROOKES_SOLID_SWATCHES: readonly Swatch[] = BROOKES_SOLID_COLORS.map(
+  ({ name, color }) => ({ id: color, name, style: { backgroundColor: color } }),
 );
 
 function SolidControls({ color }: { color: string }) {
@@ -192,11 +193,10 @@ function SolidControls({ color }: { color: string }) {
     <div className="space-y-4">
       <ColorField label="Colour" value={color} onChange={setSolidColor} />
       <SwatchGrid
-        label="Quick colours"
-        hideLabel
-        swatches={SOLID_SWATCHES}
+        label="Oxford Brookes"
+        swatches={BROOKES_SOLID_SWATCHES}
         selectedId={color}
-        columns={10}
+        columns={8}
         shape="dot"
         // A click is its own undo step, unlike dragging in the colour picker.
         onSelect={(next) => setBackground({ kind: "solid", color: next })}
@@ -210,49 +210,27 @@ const UPLOAD_TILE_ID = "upload";
 function ImageControls({
   background,
 }: {
-  background: Extract<Background, { kind: "image" }>;
+  background: Extract<Background, { kind: "image" }> | null;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const setWallpaper = useEditorStore((state) => state.setWallpaper);
   const setBackgroundImage = useEditorStore(
     (state) => state.setBackgroundImage,
   );
-  // Stays in the grid after picking a wallpaper, so it can be picked again.
+  // Stays in the grid after switching away, so it can be picked again.
   const upload = useEditorStore(selectLastBackgroundUpload);
-  const wallpaperSwatches = useMemo(
-    () =>
-      WALLPAPERS.map((wallpaper): Swatch => {
-        const thumbnail = wallpaperThumbnail(wallpaper.id);
-        const [from, to] = wallpaper.swatch;
-        return {
-          id: wallpaper.id,
-          name: wallpaper.name,
-          style: {
-            backgroundImage: [
-              thumbnail && `url("${thumbnail}")`,
-              `linear-gradient(135deg, ${from}, ${to})`,
-            ]
-              .filter(Boolean)
-              .join(", "),
-          },
-        };
-      }),
-    [],
+  const thumbnail = useMemo(
+    () => (upload ? imageThumbnail(upload.source) : null),
+    [upload],
   );
-  const swatches = useMemo(() => {
-    const thumbnail = upload && imageThumbnail(upload.source);
-    if (!upload || !thumbnail) return wallpaperSwatches;
-    const uploadTile: Swatch = {
-      id: UPLOAD_TILE_ID,
-      name: "Uploaded image",
-      style: { backgroundImage: `url("${thumbnail}")` },
-    };
-    return [uploadTile, ...wallpaperSwatches];
-  }, [upload, wallpaperSwatches]);
   const selectedId =
-    background.source.type === "upload"
-      ? UPLOAD_TILE_ID
-      : background.source.wallpaperId;
+    background?.source.type === "upload" ? UPLOAD_TILE_ID : null;
+  const uploadTile: Swatch | null = thumbnail
+    ? {
+        id: UPLOAD_TILE_ID,
+        name: "Uploaded image",
+        style: { backgroundImage: `url("${thumbnail}")` },
+      }
+    : null;
 
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -262,18 +240,19 @@ function ImageControls({
 
   return (
     <div className="space-y-4">
-      <SwatchGrid
-        label="Wallpapers"
-        swatches={swatches}
-        selectedId={selectedId}
-        columns={3}
-        aspect="aspect-[4/3]"
-        onSelect={(id) => {
-          if (id !== UPLOAD_TILE_ID) setWallpaper(id);
-          else if (upload && background.source.type !== "upload")
-            setBackgroundImage(upload);
-        }}
-      />
+      {uploadTile && (
+        <SwatchGrid
+          label="Your image"
+          swatches={[uploadTile]}
+          selectedId={selectedId}
+          columns={3}
+          aspect="aspect-[4/3]"
+          onSelect={() => {
+            if (upload && background?.source.type !== "upload")
+              setBackgroundImage(upload);
+          }}
+        />
+      )}
       <Button
         variant="outline"
         size="sm"
@@ -293,49 +272,6 @@ function ImageControls({
         data-testid="background-file-input"
         onChange={onFileChange}
       />
-    </div>
-  );
-}
-
-function FromImageControls({ angle }: { angle: number }) {
-  const setFromImageAngle = useEditorStore((state) => state.setFromImageAngle);
-  const screenshot = useEditorStore(selectActiveImage);
-  const source = screenshot?.source ?? null;
-  const preview = useMemo(() => {
-    const pixels = source && sampleImagePixels(source);
-    const stops = pixels && fromImageStops(dominantColors(pixels));
-    return stops ? toCssLinearGradient(90, stops) : null;
-  }, [source]);
-
-  return (
-    <div className="space-y-4">
-      <LabeledSlider
-        label="Angle"
-        value={angle}
-        min={ANGLE.min}
-        max={ANGLE.max}
-        step={ANGLE.step}
-        unit="°"
-        onChange={setFromImageAngle}
-      />
-      {screenshot ? (
-        preview && (
-          <div className="space-y-2">
-            <div
-              className="h-6 rounded-md border"
-              style={{ backgroundImage: preview }}
-              aria-hidden
-            />
-            <p className="text-xs text-muted-foreground">
-              Colours picked from your screenshot.
-            </p>
-          </div>
-        )
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Add a screenshot to build a gradient from its colours.
-        </p>
-      )}
     </div>
   );
 }

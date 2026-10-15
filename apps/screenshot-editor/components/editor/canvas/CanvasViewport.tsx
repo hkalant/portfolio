@@ -1,8 +1,9 @@
 "use client";
 
 import { LoaderCircle } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { computePreviewScale } from "@/lib/design/layout";
+import { atZoomLimit, maxZoom, minZoom, stepZoom } from "@/lib/design/zoom";
 import { planExport } from "@/lib/export/exportImage";
 import { useElementSize } from "@/lib/hooks/useElementSize";
 import { CANVAS_FOCUS_ATTRIBUTE } from "@/lib/hooks/useShortcuts";
@@ -11,13 +12,18 @@ import { useDesignLayout } from "@/lib/store/hooks";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "../EmptyState";
 import { DesignStage } from "./DesignStage";
+import { ZoomControls } from "./ZoomControls";
 
-// Room kept free at the bottom of the workspace for the size readout: two
-// lines, since a capped export's note wraps in a narrow workspace.
-const READOUT_SPACE = 40;
+// Room kept free at the bottom of the workspace for the zoom controls.
+const CONTROLS_SPACE = 44;
+// Below this workspace height the zoom controls would cover the canvas.
+const CONTROLS_MIN_HEIGHT = 120;
+// More room under them for the size readout: two lines, since a capped
+// export's note wraps in a narrow workspace.
+const READOUT_SPACE = 36;
 // Below this workspace height (a phone in landscape with a panel open) the
 // readout would crowd out the canvas, so only screen readers get it.
-const READOUT_MIN_HEIGHT = 160;
+const READOUT_MIN_HEIGHT = 200;
 
 type Props = {
   onUpload: () => void;
@@ -37,11 +43,67 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
   const pruneImages = useEditorStore((state) => state.pruneImages);
   // An absolutely positioned box: its size never depends on the stage inside it.
   const [measureRef, size] = useElementSize<HTMLDivElement>();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // The zoom the user picked, or null to fit the workspace. A new screenshot
+  // starts fitted again.
+  const [zoom, setZoom] = useState<number | null>(null);
+  const [zoomImageId, setZoomImageId] = useState(image?.id);
+  if (zoomImageId !== image?.id) {
+    setZoomImageId(image?.id);
+    setZoom(null);
+  }
+  // The point of the design at the middle of the workspace, as fractions of
+  // the scrolled content, kept there when the zoom changes.
+  const zoomAnchor = useRef<{ x: number; y: number } | null>(null);
 
   // Free images nothing refers to any more, once the new design is on screen.
   useEffect(() => {
     pruneImages();
   }, [revision, pruneImages]);
+
+  const showControls = size.height >= CONTROLS_MIN_HEIGHT;
+  const showReadout = size.height >= READOUT_MIN_HEIGHT;
+  const bottomSpace =
+    (showControls ? CONTROLS_SPACE : 0) + (showReadout ? READOUT_SPACE : 0);
+  const margin = size.width < 480 ? 16 : 32;
+  const fit = layout
+    ? computePreviewScale(
+        { width: size.width, height: size.height - bottomSpace },
+        layout.canvas,
+        margin,
+      )
+    : 1;
+  const limits = {
+    min: minZoom(fit),
+    max: layout ? Math.max(fit, maxZoom(layout.canvas)) : 1,
+  };
+  const scale =
+    zoom === null ? fit : Math.min(limits.max, Math.max(limits.min, zoom));
+
+  useLayoutEffect(() => {
+    const scroller = scrollRef.current;
+    const anchor = zoomAnchor.current;
+    zoomAnchor.current = null;
+    if (!scroller || !anchor) return;
+    scroller.scrollLeft =
+      anchor.x * scroller.scrollWidth - scroller.clientWidth / 2;
+    scroller.scrollTop =
+      anchor.y * scroller.scrollHeight - scroller.clientHeight / 2;
+  }, [scale]);
+
+  const changeZoom = (next: number | null) => {
+    const scroller = scrollRef.current;
+    if (scroller)
+      zoomAnchor.current = {
+        x:
+          (scroller.scrollLeft + scroller.clientWidth / 2) /
+          scroller.scrollWidth,
+        y:
+          (scroller.scrollTop + scroller.clientHeight / 2) /
+          scroller.scrollHeight,
+      };
+    setZoom(next);
+  };
 
   if (!image || !layout) {
     return (
@@ -56,50 +118,67 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
     );
   }
 
-  const readoutSpace = size.height >= READOUT_MIN_HEIGHT ? READOUT_SPACE : 0;
-  const scale = computePreviewScale(
-    { width: size.width, height: size.height - readoutSpace },
-    layout.canvas,
-    size.width < 480 ? 16 : 32,
-  );
   const { width, height } = layout.canvas;
   const plan = planExport(layout.canvas, scaleOption);
 
   return (
     <div ref={measureRef} className="absolute inset-0 overflow-hidden">
       {size.width > 0 && (
+        // Scrolls when zoomed in past the workspace.
         <div
-          className="flex h-full items-center justify-center"
-          style={{ paddingBottom: readoutSpace }}
+          ref={scrollRef}
+          className="absolute inset-x-0 top-0 overflow-auto"
+          style={{ bottom: bottomSpace }}
+          data-testid="canvas-scroller"
         >
           <div
-            {...{ [CANVAS_FOCUS_ATTRIBUTE]: "" }}
-            tabIndex={layout.draggable ? 0 : -1}
-            aria-label={
-              layout.draggable
-                ? "Design canvas. Drag the screenshot or use the arrow keys to move it."
-                : "Design canvas"
-            }
-            className={cn(
-              "rounded-[2px] outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",
-              transparent && "checkerboard",
-            )}
+            className="flex min-h-full w-max min-w-full"
+            style={{ padding: margin }}
           >
-            <DesignStage image={image} layout={layout} scale={scale} />
+            <div
+              {...{ [CANVAS_FOCUS_ATTRIBUTE]: "" }}
+              tabIndex={layout.draggable ? 0 : -1}
+              aria-label={
+                layout.draggable
+                  ? "Design canvas. Drag the screenshot or use the arrow keys to move it."
+                  : "Design canvas"
+              }
+              className={cn(
+                // Auto margins centre it, and unlike centring with flex they
+                // keep all of it reachable by scrolling when it is bigger.
+                "m-auto rounded-[2px] outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                transparent && "checkerboard",
+              )}
+            >
+              <DesignStage image={image} layout={layout} scale={scale} />
+            </div>
           </div>
         </div>
       )}
-      <p
-        className={cn(
-          "absolute inset-x-0 bottom-2 px-3 text-center text-xs/4 text-balance text-muted-foreground tabular-nums",
-          readoutSpace === 0 && "sr-only",
+      <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 px-3 pb-2">
+        {showControls && (
+          <ZoomControls
+            zoom={scale}
+            canZoomIn={!atZoomLimit(scale, limits.max) && scale < limits.max}
+            canZoomOut={!atZoomLimit(scale, limits.min) && scale > limits.min}
+            canReset={zoom !== null}
+            onZoomIn={() => changeZoom(stepZoom(scale, "in", limits))}
+            onZoomOut={() => changeZoom(stepZoom(scale, "out", limits))}
+            onReset={() => changeZoom(null)}
+          />
         )}
-        data-testid="size-readout"
-      >
-        {width} × {height} · {Math.round(scale * 100)}% · exports{" "}
-        {plan.pixels.width} × {plan.pixels.height}
-        {plan.capped && " (largest size this browser allows)"}
-      </p>
+        <p
+          className={cn(
+            "text-center text-xs/4 text-balance text-muted-foreground tabular-nums",
+            !showReadout && "sr-only",
+          )}
+          data-testid="size-readout"
+        >
+          {width} × {height} · exports {plan.pixels.width} ×{" "}
+          {plan.pixels.height}
+          {plan.capped && " (largest size this browser allows)"}
+        </p>
+      </div>
       {loading && (
         <div className="absolute top-3 right-3 flex items-center gap-2 rounded-full glass px-3 py-1.5 text-xs">
           <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
