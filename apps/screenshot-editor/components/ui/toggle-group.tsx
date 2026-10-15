@@ -9,8 +9,8 @@ const GlideContext = React.createContext(false);
 
 const ITEM = '[data-slot="toggle-group-item"]';
 /** How long the highlight's leading and trailing edges take, in ms. */
-const LEAD_MS = 180;
-const TRAIL_MS = 320;
+const LEAD_MS = 300;
+const TRAIL_MS = 520;
 
 /**
  * Segmented-control styling for a Radix toggle group. With `glide`, one
@@ -56,7 +56,7 @@ function ToggleGroup({
         ? [TRAIL_MS, LEAD_MS]
         : [LEAD_MS, TRAIL_MS];
       highlight.style.transitionDuration =
-        animate && before ? `${leftMs}ms, ${rightMs}ms, 150ms` : "0ms";
+        animate && before ? `${leftMs}ms, ${rightMs}ms, 200ms` : "0ms";
       highlight.style.left = `${left}px`;
       highlight.style.right = `${right}px`;
       highlight.style.top = `${target.offsetTop}px`;
@@ -125,7 +125,7 @@ function ToggleGroupItem({
         "flex h-8 min-w-0 flex-1 items-center justify-center rounded-full px-1.5 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",
         // With glide, the highlight behind the items is the fill.
         glide
-          ? "duration-200 data-highlight:text-selected-foreground"
+          ? "duration-300 data-highlight:text-selected-foreground"
           : "data-[state=on]:bg-selected data-[state=on]:text-selected-foreground data-[state=on]:sheen",
         className,
       )}

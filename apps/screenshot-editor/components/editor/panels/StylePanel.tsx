@@ -56,6 +56,7 @@ export function StylePanel() {
         <Segmented<ShadowPresetId | "custom">
           label="Shadow"
           hideLabel
+          glide
           value={shadow.preset}
           options={SHADOW_OPTIONS}
           onChange={setShadowPreset}
