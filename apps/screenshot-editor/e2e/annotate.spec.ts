@@ -497,3 +497,57 @@ test("a step can be resized from a corner, and the next step matches", async ({
   expectColor(grown, "#d10373", 20);
   expectColor(next, "#d10373", 20);
 });
+
+test("an arrow is drawn by dragging, its ends move, and it can be deleted", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await tool(page, "Arrow").click();
+  await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
+  // From (80, 60) to (240, 180) on the screenshot: 200 px along (0.8, 0.6).
+  await drag(page, [0.2, 0.2], [0.6, 0.6]);
+
+  const [line, head, beyond] = await pixelsOnImage(page, [
+    [0.4, 0.4],
+    // 5 px back from the tip, inside the head.
+    [0.59, 0.59],
+    // 8 px past the tip.
+    [0.616, 0.616],
+  ]);
+  expectColor(line, "#424a52", 20);
+  expectColor(head, "#424a52", 20);
+  expect(isRed(beyond)).toBe(true);
+
+  // Pressing the arrow (arrow tool still on) selects it; then pull its tip
+  // up to the right.
+  await nextFrame(page);
+  const middle = await onImage(page, 0.4, 0.4);
+  await page.mouse.click(middle.x, middle.y);
+  await expect(
+    page.getByRole("button", { name: "Delete arrow" }),
+  ).toBeVisible();
+  await nextFrame(page);
+  await drag(page, [0.6, 0.6], [0.8, 0.3]);
+
+  // Now from (80, 60) to (320, 90).
+  const [moved, old] = await pixelsOnImage(page, [
+    [0.5, 0.25],
+    [0.4, 0.4],
+  ]);
+  expectColor(moved, "#424a52", 20);
+  expect(isRed(old)).toBe(true);
+  // Still selected, and still one arrow.
+  await expect(
+    page.getByRole("button", { name: "Delete arrow" }),
+  ).toBeVisible();
+
+  // Exporting moved the focus to the toolbar: press the arrow again first.
+  const now = await onImage(page, 0.5, 0.25);
+  await page.mouse.click(now.x, now.y);
+  await page.keyboard.press("Delete");
+  await expect(page.getByRole("button", { name: "Delete arrow" })).toHaveCount(
+    0,
+  );
+  const [gone] = await pixelsOnImage(page, [[0.5, 0.25]]);
+  expect(isRed(gone)).toBe(true);
+});

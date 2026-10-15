@@ -1,15 +1,28 @@
 import Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Circle, Ellipse, Group, Rect, Text, Transformer } from "react-konva";
+import {
+  Circle,
+  Ellipse,
+  Group,
+  Line,
+  Rect,
+  Text,
+  Transformer,
+} from "react-konva";
 import { create } from "zustand";
 import {
+  ARROW_HEAD,
+  ARROW_STROKE,
+  arrowGeometry,
   clampStepSize,
   clampToArea,
+  clickArrow,
   clickBox,
   MAX_STEP_SIZE,
   MIN_STEP_SIZE,
   dragBox,
+  fitArrow,
   fitBox,
   inArea,
   isDrag,
@@ -23,6 +36,8 @@ import {
 import type { Rect as LayoutRect } from "@/lib/design/layout";
 import type {
   Annotation,
+  AnnotationColor,
+  ArrowAnnotation,
   ShapeAnnotation,
   ShapeKind,
   StepAnnotation,
@@ -38,8 +53,10 @@ const ANNOTATION_NAME = "annotation";
 
 const SELECTION_COLOR = "#0a84ff";
 
-/** Screen px: a step, or an outline's border, can be pressed this far out. */
+/** Screen px: a step, an outline's border or an arrow can be pressed this far out. */
 const MIN_HIT = 12;
+/** Screen px: the radius of the handles on a selected arrow's ends. */
+const END_HANDLE = 5;
 
 /** Where the selected annotation is on screen, in stage px. Not part of the design. */
 export type SelectionFrame = {
@@ -190,6 +207,43 @@ function ShapeBody({
   );
 }
 
+/** An arrow drawn from its tail, `delta` px to the tip of its head. */
+function ArrowBody({
+  delta,
+  color,
+  unit,
+  zoom,
+}: {
+  delta: Point;
+  color: AnnotationColor;
+  unit: number;
+  zoom: number;
+}) {
+  const width = ARROW_STROKE * unit;
+  const { line, head } = arrowGeometry(delta, width, ARROW_HEAD * unit);
+  return (
+    <>
+      <Line
+        points={line}
+        stroke={color}
+        strokeWidth={width}
+        lineCap="round"
+        // Thin arrows (zoomed out, on a phone) are still easy to press.
+        hitStrokeWidth={Math.max(width, MIN_HIT / zoom)}
+      />
+      <Line
+        points={head}
+        closed
+        fill={color}
+        // Softens the head's corners without moving its tip.
+        stroke={color}
+        strokeWidth={width * 0.4}
+        lineJoin="round"
+      />
+    </>
+  );
+}
+
 /** The size of a shape annotation's node, in canvas px. */
 function shapeSize(group: Konva.Group) {
   const body = group.getChildren()[0];
@@ -223,7 +277,7 @@ function placeShape(
     });
 }
 
-/** Steps and shapes over the screenshot, and the tools that add and edit them. */
+/** Steps, shapes and arrows over the screenshot, and the tools that add and edit them. */
 export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
   const annotations = useEditorStore((state) => state.design.annotations);
   const tool = useEditorStore((state) => state.annotationTool);
@@ -237,6 +291,10 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
   // While the selection is dragged or resized, its delete button hides.
   const moving = useRef(false);
   const [draft, setDraft] = useState<Box | null>(null);
+  const [arrowDraft, setArrowDraft] = useState<{
+    start: Point;
+    end: Point;
+  } | null>(null);
 
   // Lengths are in image widths; this turns them into canvas px.
   const unit = image.width;
@@ -265,6 +323,16 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
       window.removeEventListener("pointerup", finish);
       window.removeEventListener("pointercancel", cancel);
       if (!start || tool === "select" || tool === "step") return;
+      if (tool === "arrow") {
+        const arrow =
+          end && isDrag(start, end)
+            ? { start, end: clampToArea(end, area) }
+            : clickArrow(start, area);
+        start = end = null;
+        setArrowDraft(null);
+        store().addArrow(arrow.start, arrow.end);
+        return;
+      }
       const box =
         end && isDrag(start, end)
           ? dragBox(start, end, tool, area)
@@ -278,6 +346,7 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
       window.removeEventListener("pointercancel", cancel);
       start = end = null;
       setDraft(null);
+      setArrowDraft(null);
     };
 
     const onDown = (event: KonvaEventObject<PointerEvent>) => {
@@ -310,7 +379,10 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
     const onMove = () => {
       if (!start || tool === "select" || tool === "step") return;
       end = pointer();
-      if (end && isDrag(start, end)) setDraft(dragBox(start, end, tool, area));
+      if (!end || !isDrag(start, end)) return;
+      if (tool === "arrow")
+        setArrowDraft({ start, end: clampToArea(end, area) });
+      else setDraft(dragBox(start, end, tool, area));
     };
 
     stage.on("pointerdown.annotate", onDown);
@@ -398,6 +470,12 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
       let to: Point;
       if (annotation.kind === "step") {
         to = clampToArea({ x: node.x() / unit, y: node.y() / unit }, area);
+      } else if (annotation.kind === "arrow") {
+        to = fitArrow(
+          { x: node.x() / unit, y: node.y() / unit },
+          { x: annotation.dx, y: annotation.dy },
+          area,
+        );
       } else {
         const box = fitBox(
           {
@@ -502,7 +580,41 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
     },
   });
 
+  // A selected arrow's ends are dragged on their own.
+  const endProps = (arrow: ArrowAnnotation, end: "start" | "end") => ({
+    draggable: true,
+    onDragStart: (event: KonvaEventObject<DragEvent>) => {
+      event.cancelBubble = true;
+      startMoving();
+    },
+    onDragMove: (event: KonvaEventObject<DragEvent>) => {
+      event.cancelBubble = true;
+      const node = event.target;
+      const to = clampToArea({ x: node.x() / unit, y: node.y() / unit }, area);
+      node.position({ x: to.x * unit, y: to.y * unit });
+      const current = useEditorStore
+        .getState()
+        .design.annotations.find((item) => item.id === arrow.id);
+      if (current?.kind !== "arrow") return;
+      const tail = { x: current.x, y: current.y };
+      const tip = { x: current.x + current.dx, y: current.y + current.dy };
+      const [from, onto] = end === "start" ? [to, tip] : [tail, to];
+      useEditorStore.getState().setArrowEnds(arrow.id, from, onto);
+    },
+    onDragEnd: (event: KonvaEventObject<DragEvent>) => {
+      event.cancelBubble = true;
+      stopMoving(arrow.id);
+    },
+    onMouseEnter: (event: KonvaEventObject<MouseEvent>) => {
+      setCursor(event.target, "move");
+    },
+    onMouseLeave: (event: KonvaEventObject<MouseEvent>) => {
+      if (!moving.current) setCursor(event.target, restCursor);
+    },
+  });
+
   const selectedShape = selected?.kind === "shape" ? selected : null;
+  const selectedArrow = selected?.kind === "arrow" ? selected : null;
   // Steps and circles keep their proportions, from the corners.
   const roundSelection =
     selected?.kind === "step" || selectedShape?.shape === "circle";
@@ -510,7 +622,23 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
   return (
     <Group ref={rootRef} x={image.x} y={image.y}>
       {annotations.map((annotation) =>
-        annotation.kind === "step" ? (
+        annotation.kind === "arrow" ? (
+          <Group
+            key={annotation.id}
+            ref={register(annotation.id)}
+            name={ANNOTATION_NAME}
+            x={annotation.x * unit}
+            y={annotation.y * unit}
+            {...dragProps(annotation)}
+          >
+            <ArrowBody
+              delta={{ x: annotation.dx * unit, y: annotation.dy * unit }}
+              color={annotation.color}
+              unit={unit}
+              zoom={zoom}
+            />
+          </Group>
+        ) : annotation.kind === "step" ? (
           <Group
             key={`${annotation.id}-${fontReady ? "font" : "fallback"}`}
             ref={register(annotation.id)}
@@ -553,7 +681,10 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
         >
           <ShapeBody
             shape={{
-              shape: tool === "select" || tool === "step" ? "rect" : tool,
+              shape:
+                tool === "select" || tool === "step" || tool === "arrow"
+                  ? "rect"
+                  : tool,
               color,
               filled,
             }}
@@ -564,7 +695,56 @@ export function AnnotationsNode({ image, area, zoom, shotDraggable }: Props) {
           />
         </Group>
       )}
-      {selected && (
+      {arrowDraft && (
+        <Group
+          name={EXPORT_HIDDEN}
+          x={arrowDraft.start.x * unit}
+          y={arrowDraft.start.y * unit}
+          opacity={0.75}
+          listening={false}
+        >
+          <ArrowBody
+            delta={{
+              x: (arrowDraft.end.x - arrowDraft.start.x) * unit,
+              y: (arrowDraft.end.y - arrowDraft.start.y) * unit,
+            }}
+            color={color}
+            unit={unit}
+            zoom={zoom}
+          />
+        </Group>
+      )}
+      {selectedArrow &&
+        (["start", "end"] as const).map((end) => {
+          const at =
+            end === "start"
+              ? { x: selectedArrow.x, y: selectedArrow.y }
+              : {
+                  x: selectedArrow.x + selectedArrow.dx,
+                  y: selectedArrow.y + selectedArrow.dy,
+                };
+          return (
+            <Circle
+              key={`${selectedArrow.id}-${end}`}
+              // Pressing it keeps the arrow selected; it is never exported.
+              name={`${ANNOTATION_NAME} ${EXPORT_HIDDEN}`}
+              x={at.x * unit}
+              y={at.y * unit}
+              radius={END_HANDLE / zoom}
+              fill="#ffffff"
+              stroke={SELECTION_COLOR}
+              strokeWidth={1.5 / zoom}
+              hitFunc={(context, shape) => {
+                context.beginPath();
+                context.arc(0, 0, MIN_HIT / zoom, 0, Math.PI * 2, false);
+                context.closePath();
+                context.fillStrokeShape(shape);
+              }}
+              {...endProps(selectedArrow, end)}
+            />
+          );
+        })}
+      {selected && selected.kind !== "arrow" && (
         <Transformer
           ref={transformerRef}
           name={EXPORT_HIDDEN}

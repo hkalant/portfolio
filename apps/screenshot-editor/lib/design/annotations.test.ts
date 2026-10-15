@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  arrowGeometry,
+  clickArrow,
   clickBox,
   dragBox,
+  fitArrow,
   fitBox,
   imageArea,
   canvasArea,
@@ -138,6 +141,62 @@ describe("annotation area", () => {
       x: -0.18,
       y: -0.125,
     });
+  });
+});
+
+describe("arrows", () => {
+  const area = imageArea(0.5);
+
+  it("point at a click from above left, or from where there is room", () => {
+    expect(clickArrow({ x: 0.5, y: 0.25 }, area)).toEqual({
+      start: { x: 0.4, y: 0.18 },
+      end: { x: 0.5, y: 0.25 },
+    });
+    // In the top-left corner, the arrow comes from below right instead.
+    const corner = clickArrow({ x: 0, y: 0 }, area);
+    expect(corner.end).toEqual({ x: 0, y: 0 });
+    expect(corner.start.x).toBeCloseTo(0.1);
+    expect(corner.start.y).toBeCloseTo(0.07);
+  });
+
+  it("move only as far as keeps both ends in the area", () => {
+    // Tail at the left edge, pointing up and right.
+    expect(fitArrow({ x: -1, y: 0.1 }, { x: 0.3, y: -0.2 }, area)).toEqual({
+      x: 0,
+      y: 0.2,
+    });
+    expect(fitArrow({ x: 2, y: 2 }, { x: 0.3, y: 0.2 }, area)).toEqual({
+      x: 0.7,
+      y: 0.3,
+    });
+  });
+
+  it("end their line inside the head, which ends at the tip", () => {
+    const { line, head } = arrowGeometry({ x: 100, y: 0 }, 4, 20);
+    expect(line).toEqual([0, 0, 82, 0]);
+    expect(head.slice(0, 2)).toEqual([100, 0]);
+    expect(head[2]).toBe(80);
+    expect(Math.abs(head[3] - head[5])).toBeCloseTo(22);
+    // A short arrow gets a smaller head.
+    expect(arrowGeometry({ x: 0, y: 10 }, 4, 20).head[3]).toBeCloseTo(4);
+  });
+
+  it("are saved with the design", () => {
+    const design = {
+      ...createDefaultDesign(),
+      annotations: [
+        {
+          id: "a1",
+          kind: "arrow",
+          x: 0.1,
+          y: 0.1,
+          dx: 0.3,
+          dy: -0.05,
+          color: "#d10373",
+        },
+      ],
+    };
+    expect(designSchema.safeParse(design).success).toBe(true);
   });
 });
 

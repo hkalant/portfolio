@@ -1,6 +1,12 @@
 "use client";
 
-import { Circle, MousePointer2, RotateCcw, Trash2 } from "lucide-react";
+import {
+  Circle,
+  MousePointer2,
+  MoveUpRight,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { useState, type ReactNode } from "react";
 import {
   ANNOTATION_COLOR_NAMES,
@@ -168,9 +174,10 @@ const SHAPE_TOOLS: readonly {
   { tool: "rect", label: "Rectangle", icon: <SquareIcon /> },
   { tool: "rounded", label: "Rounded rectangle", icon: <RoundedIcon /> },
   { tool: "circle", label: "Circle", icon: <Circle aria-hidden /> },
+  { tool: "arrow", label: "Arrow", icon: <MoveUpRight aria-hidden /> },
 ];
 
-/** Tools for drawing steps and shapes on the screenshot. */
+/** Tools for drawing steps, shapes and arrows on the screenshot. */
 export function AnnotationToolbar() {
   const tool = useEditorStore((state) => state.annotationTool);
   const color = useEditorStore((state) => state.annotationColor);

@@ -4,6 +4,7 @@ import {
   clampStepSize,
   clampToArea,
   DEFAULT_ANNOTATION_COLOR,
+  fitArrow,
   fitBox,
   isAnnotationColor,
   MAX_STEP_NUMBER,
@@ -57,8 +58,8 @@ import type { LoadedImage } from "@/lib/image/load";
 import { clamp } from "@/lib/utils";
 
 export type PanelId = "background" | "style";
-/** What a press on the canvas does: select and move, add a step, or draw a shape. */
-export type AnnotationTool = "select" | "step" | ShapeKind;
+/** What a press on the canvas does: select and move, add a step, or draw a shape or an arrow. */
+export type AnnotationTool = "select" | "step" | ShapeKind | "arrow";
 /** The mobile layout also has a Size tab; null means its panel is closed. */
 export type MobilePanelId = PanelId | "size";
 
@@ -160,6 +161,10 @@ export type EditorState = {
   /** Adds a step numbered `nextStep` at a point on the screenshot. */
   addStep: (point: Point) => void;
   addShape: (shape: ShapeKind, box: Box) => void;
+  /** Adds an arrow from its tail to the tip of its head. */
+  addArrow: (start: Point, end: Point) => void;
+  /** Moves an arrow's ends. */
+  setArrowEnds: (id: string, start: Point, end: Point) => void;
   moveAnnotation: (id: string, point: Point) => void;
   /** Moves an annotation by canvas pixels, keeping it on the screenshot. */
   nudgeAnnotation: (id: string, dx: number, dy: number) => void;
@@ -192,6 +197,12 @@ function updateShot(design: Design, patch: Partial<ShotLayer>): Design {
 }
 
 const shotOf = (design: Design) => design.layers[0];
+
+/** From an arrow's tail to its tip, rounded like the positions. */
+const arrowDelta = (from: Point, to: Point) => ({
+  dx: Math.round((to.x - from.x) * 10000) / 10000,
+  dy: Math.round((to.y - from.y) * 10000) / 10000,
+});
 
 /** Adding an annotation leaves the old selection behind. */
 const NO_SELECTION = { selectedAnnotationId: null };
@@ -815,6 +826,52 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         NO_SELECTION,
       ),
 
+    addArrow: (start, end) => {
+      if (![start.x, start.y, end.x, end.y].every(finite)) return;
+      const from = roundPoint(start);
+      const to = roundPoint(end);
+      if (from.x === to.x && from.y === to.y) return;
+      commit(
+        (design) => ({
+          ...design,
+          annotations: [
+            ...design.annotations,
+            {
+              id: newAnnotationId(),
+              kind: "arrow",
+              ...from,
+              ...arrowDelta(from, to),
+              color: get().annotationColor,
+            },
+          ],
+        }),
+        undefined,
+        NO_SELECTION,
+      );
+    },
+
+    setArrowEnds: (id, start, end) => {
+      if (![start.x, start.y, end.x, end.y].every(finite)) return;
+      const from = roundPoint(start);
+      const to = roundPoint(end);
+      // An arrow always points somewhere.
+      if (from.x === to.x && from.y === to.y) return;
+      const delta = arrowDelta(from, to);
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind !== "arrow" ||
+            (annotation.x === from.x &&
+              annotation.y === from.y &&
+              annotation.dx === delta.dx &&
+              annotation.dy === delta.dy)
+              ? null
+              : { ...annotation, ...from, ...delta },
+          ),
+        `annotation-resize-${id}`,
+      );
+    },
+
     moveAnnotation: (id, point) => {
       if (!finite(point.x) || !finite(point.y)) return;
       const to = roundPoint(point);
@@ -851,11 +908,17 @@ export const useEditorStore = create<EditorState>()((set, get) => {
             const to =
               annotation.kind === "step"
                 ? clampToArea(moved, area)
-                : fitBox(
-                    { ...annotation, ...moved },
-                    area,
-                    annotation.shape === "circle",
-                  );
+                : annotation.kind === "arrow"
+                  ? fitArrow(
+                      moved,
+                      { x: annotation.dx, y: annotation.dy },
+                      area,
+                    )
+                  : fitBox(
+                      { ...annotation, ...moved },
+                      area,
+                      annotation.shape === "circle",
+                    );
             const rounded = roundPoint(to);
             return rounded.x === annotation.x && rounded.y === annotation.y
               ? null

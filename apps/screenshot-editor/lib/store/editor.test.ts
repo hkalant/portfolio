@@ -528,6 +528,36 @@ describe("editor store: annotations", () => {
     expect(annotations()).toHaveLength(1);
   });
 
+  it("adds arrows, moves their ends and keeps them on the canvas", () => {
+    state().setAnnotationColor("#424a52");
+    state().addArrow({ x: 0.1, y: 0.1 }, { x: 0.4, y: 0.3 });
+    // A zero-length arrow is no arrow.
+    state().addArrow({ x: 0.2, y: 0.2 }, { x: 0.2, y: 0.2 });
+    expect(annotations()).toHaveLength(1);
+    const [arrow] = annotations();
+    expect(arrow).toMatchObject({
+      kind: "arrow",
+      x: 0.1,
+      y: 0.1,
+      dx: 0.3,
+      dy: 0.2,
+      color: "#424a52",
+    });
+    later();
+    state().setArrowEnds(arrow.id, { x: 0.1, y: 0.1 }, { x: 0.5, y: 0.1 });
+    expect(annotations()[0]).toMatchObject({ dx: 0.4, dy: 0 });
+    later();
+    // The canvas is the 1000 x 500 screenshot plus padding: the whole arrow
+    // stops at its right edge.
+    state().nudgeAnnotation(arrow.id, 5000, 0);
+    const moved = annotations()[0];
+    expect(moved.kind === "arrow" && moved.x + moved.dx).toBeLessThan(1.2);
+    expect(moved.x).toBeGreaterThan(0.6);
+    state().undo();
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ x: 0.1, dx: 0.3, dy: 0.2 });
+  });
+
   it("starts a new screenshot without the old one's annotations", () => {
     state().addStep({ x: 0.1, y: 0.1 });
     state().setImage(fakeImage("other"));

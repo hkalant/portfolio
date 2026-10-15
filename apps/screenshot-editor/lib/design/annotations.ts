@@ -34,6 +34,12 @@ export const STEP_RADIUS = 0.019;
 export const SHAPE_STROKE = 0.004;
 /** Corner radius of a rounded rectangle. */
 export const SHAPE_CORNER = 0.012;
+/** Width of an arrow's line. */
+export const ARROW_STROKE = 0.006;
+/** Length of an arrow's head, from its base to its tip. */
+export const ARROW_HEAD = 0.028;
+/** A click without a drag makes an arrow this long, pointing at the click. */
+export const DEFAULT_ARROW = { x: 0.1, y: 0.07 };
 /** A click without a drag makes a shape this size, centred on the click. */
 export const DEFAULT_SHAPE_SIZE = { width: 0.16, height: 0.1 };
 /** Drags shorter than this are clicks. */
@@ -183,6 +189,89 @@ export function fitBox(box: Box, area: Box, square = false): Box {
     y: clamp(box.y, area.y, area.y + area.height - height),
     width,
     height,
+  };
+}
+
+/**
+ * The arrow for a click at `point`: it points at the click from above left,
+ * or from wherever there is room.
+ */
+export function clickArrow(
+  point: Point,
+  area: Box,
+): { start: Point; end: Point } {
+  const end = clampToArea(point, area);
+  const candidates = [
+    { x: -1, y: -1 },
+    { x: 1, y: -1 },
+    { x: -1, y: 1 },
+    { x: 1, y: 1 },
+  ].map((sign) =>
+    clampToArea(
+      {
+        x: end.x + sign.x * DEFAULT_ARROW.x,
+        y: end.y + sign.y * DEFAULT_ARROW.y,
+      },
+      area,
+    ),
+  );
+  // The longest of the four, preferring the first.
+  const length = (start: Point) => Math.hypot(end.x - start.x, end.y - start.y);
+  const start = candidates.reduce((best, next) =>
+    length(next) > length(best) + 1e-9 ? next : best,
+  );
+  return { start, end };
+}
+
+/**
+ * Where an arrow's tail can go so the whole arrow stays in the area (as far
+ * as its size allows).
+ */
+export function fitArrow(start: Point, delta: Point, area: Box): Point {
+  return {
+    x: clamp(
+      start.x,
+      area.x + Math.max(0, -delta.x),
+      Math.max(area.x, area.x + area.width - Math.max(0, delta.x)),
+    ),
+    y: clamp(
+      start.y,
+      area.y + Math.max(0, -delta.y),
+      Math.max(area.y, area.y + area.height - Math.max(0, delta.y)),
+    ),
+  };
+}
+
+/**
+ * An arrow's line and head, in px from its tail, for an arrow `delta` px
+ * long drawn `width` px wide. The line stops inside the head, so its round
+ * end never shows past the tip.
+ */
+export function arrowGeometry(
+  delta: Point,
+  width: number,
+  headLength: number,
+): { line: number[]; head: number[] } {
+  const length = Math.hypot(delta.x, delta.y);
+  if (length === 0) return { line: [0, 0, 0, 0], head: [0, 0, 0, 0, 0, 0] };
+  // A short arrow gets a smaller head.
+  const head = Math.min(headLength, length * 0.6);
+  const half = head * 0.55;
+  const ux = delta.x / length;
+  const uy = delta.y / length;
+  const baseX = delta.x - ux * head;
+  const baseY = delta.y - uy * head;
+  const lineEnd = Math.max(0, length - head + Math.min(width, head) / 2);
+  return {
+    line: [0, 0, ux * lineEnd, uy * lineEnd],
+    head: [
+      delta.x,
+      delta.y,
+      baseX - uy * half,
+      baseY + ux * half,
+      baseX + uy * half,
+      baseY - ux * half,
+    ],
   };
 }
 

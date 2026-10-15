@@ -142,7 +142,7 @@ export const shotLayerSchema = z.object({
 // widths": 1 is the screenshot's width, so they follow it when it moves or
 // is resized. x runs 0 to 1 across, y 0 to height / width down.
 
-/** The only colours steps and shapes may use (the Oxford Brookes palette). */
+/** The only colours steps, shapes and arrows may use (the Oxford Brookes palette). */
 export const ANNOTATION_COLORS = ["#424a52", "#d10373", "#f9c909"] as const;
 export const annotationColorSchema = z.enum(ANNOTATION_COLORS);
 
@@ -182,9 +182,22 @@ export const shapeAnnotationSchema = z.object({
   filled: z.boolean(),
 });
 
+export const arrowAnnotationSchema = z.object({
+  id: z.string().min(1),
+  kind: z.literal("arrow"),
+  /** The tail. */
+  x: imagePosition,
+  y: imagePosition,
+  /** From the tail to the tip of the head. */
+  dx: z.number().min(-200).max(200),
+  dy: z.number().min(-200).max(200),
+  color: annotationColorSchema,
+});
+
 export const annotationSchema = z.discriminatedUnion("kind", [
   stepAnnotationSchema,
   shapeAnnotationSchema,
+  arrowAnnotationSchema,
 ]);
 
 export const designSchema = z.object({
@@ -234,6 +247,7 @@ export type AnnotationColor = (typeof ANNOTATION_COLORS)[number];
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
 export type StepAnnotation = z.infer<typeof stepAnnotationSchema>;
 export type ShapeAnnotation = z.infer<typeof shapeAnnotationSchema>;
+export type ArrowAnnotation = z.infer<typeof arrowAnnotationSchema>;
 export type Annotation = z.infer<typeof annotationSchema>;
 export type Design = z.infer<typeof designSchema>;
 export type DesignV1 = z.infer<typeof designV1Schema>;

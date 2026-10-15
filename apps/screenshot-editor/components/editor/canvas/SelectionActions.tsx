@@ -42,7 +42,9 @@ export function SelectionActions({ width, height }: Props) {
   const label =
     selected.kind === "step"
       ? `Delete step ${selected.number}`
-      : `Delete ${SHAPE_NAMES[selected.shape]}`;
+      : selected.kind === "arrow"
+        ? "Delete arrow"
+        : `Delete ${SHAPE_NAMES[selected.shape]}`;
 
   return (
     <button
