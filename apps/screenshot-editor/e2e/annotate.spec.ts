@@ -731,3 +731,37 @@ test("a blur box blurs the screenshot under it, and its slider sets how much", a
   expect(light[2]).toBeGreaterThan(inside[2]);
   expect(light[0]).toBeLessThan(inside[0]);
 });
+
+test("a highlight has a solid border and a see-through fill in its colour", async ({
+  page,
+}) => {
+  await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
+  await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
+  await tool(page, "Highlight").click();
+  // Always a border and a fill: no choice between them.
+  await expect(tool(page, "Filled shape")).toHaveCount(0);
+  await drag(page, [0.3, 0.3], [0.7, 0.7]);
+  await nextFrame(page);
+  const [border, inside] = await pixelsOnImage(page, [
+    [0.3, 0.5],
+    [0.5, 0.5],
+  ]);
+  expectColor(border, "#424a52", 20);
+  // The screenshot shows through, a little tinted.
+  expect(isRed(inside)).toBe(true);
+  expect(inside[0]).toBeLessThan(250);
+
+  // Recolouring changes the border and the fill together.
+  const at = await onImage(page, 0.5, 0.5);
+  await page.mouse.click(at.x, at.y);
+  await expect(
+    page.getByRole("button", { name: "Delete highlight" }),
+  ).toBeVisible();
+  await toolbar(page).getByRole("radio", { name: "Yellow" }).click();
+  const [yellowBorder, yellowInside] = await pixelsOnImage(page, [
+    [0.3, 0.5],
+    [0.5, 0.5],
+  ]);
+  expectColor(yellowBorder, "#f9c909", 20);
+  expect(yellowInside[1]).toBeGreaterThan(inside[1] + 10);
+});

@@ -146,8 +146,17 @@ export const shotLayerSchema = z.object({
 export const ANNOTATION_COLORS = ["#424a52", "#d10373", "#f9c909"] as const;
 export const annotationColorSchema = z.enum(ANNOTATION_COLORS);
 
-/** A "blur" box blurs the screenshot under it instead of drawing a shape. */
-export const SHAPE_KINDS = ["rect", "rounded", "circle", "blur"] as const;
+/**
+ * A "highlight" is a rectangle with a solid border and a see-through fill; a
+ * "blur" box blurs the screenshot under it instead of drawing a shape.
+ */
+export const SHAPE_KINDS = [
+  "rect",
+  "rounded",
+  "circle",
+  "highlight",
+  "blur",
+] as const;
 /** Arrow looks; the first is the default. */
 export const ARROW_STYLES = ["tapered", "chevron", "halo", "refined"] as const;
 /**

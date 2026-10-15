@@ -26,6 +26,7 @@ import {
   isDrag,
   snapEnd,
   SHAPE_CORNER,
+  HIGHLIGHT_FILL_OPACITY,
   SHAPE_STROKE,
   STEP_RADIUS,
   stepTextColor,
@@ -39,6 +40,7 @@ import {
   paintArrow,
 } from "@/lib/design/arrowShape";
 import { blurArea, DEFAULT_BLUR_INTENSITY } from "@/lib/design/blur";
+import { hexToRgba } from "@/lib/design/colors";
 import type { Rect as LayoutRect } from "@/lib/design/layout";
 import type {
   Annotation,
@@ -222,16 +224,25 @@ function ShapeBody({
       />
     );
   const strokeWidth = SHAPE_STROKE * unit;
-  const paint = shape.filled
-    ? { fill: shape.color }
-    : {
-        stroke: shape.color,
-        strokeWidth,
-        hitStrokeWidth: Math.max(strokeWidth, MIN_HIT / zoom),
-        // Transparent, but pressable inside to pick it up.
-        fill: "rgba(0, 0, 0, 0)",
-        fillEnabled: !borderOnly,
-      };
+  const paint =
+    shape.shape === "highlight"
+      ? {
+          // A solid border round a see-through fill of the same colour.
+          stroke: shape.color,
+          strokeWidth,
+          hitStrokeWidth: Math.max(strokeWidth, MIN_HIT / zoom),
+          fill: hexToRgba(shape.color, HIGHLIGHT_FILL_OPACITY),
+        }
+      : shape.filled
+        ? { fill: shape.color }
+        : {
+            stroke: shape.color,
+            strokeWidth,
+            hitStrokeWidth: Math.max(strokeWidth, MIN_HIT / zoom),
+            // Transparent, but pressable inside to pick it up.
+            fill: "rgba(0, 0, 0, 0)",
+            fillEnabled: !borderOnly,
+          };
   if (shape.shape === "circle")
     return (
       <Ellipse
@@ -925,6 +936,7 @@ export function AnnotationsNode({
                 tool === "rect" ||
                 tool === "rounded" ||
                 tool === "circle" ||
+                tool === "highlight" ||
                 tool === "blur"
                   ? tool
                   : "rect",

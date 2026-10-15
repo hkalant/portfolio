@@ -2,6 +2,7 @@
 
 import {
   Circle,
+  Highlighter,
   MousePointer2,
   MoveUpRight,
   RotateCcw,
@@ -182,6 +183,11 @@ const SHAPE_TOOLS: readonly {
   { tool: "rounded", label: "Rounded rectangle", icon: <RoundedIcon /> },
   { tool: "circle", label: "Circle", icon: <Circle aria-hidden /> },
   {
+    tool: "highlight",
+    label: "Highlight",
+    icon: <Highlighter aria-hidden />,
+  },
+  {
     tool: "arrow",
     label: "Arrow",
     icon: <MoveUpRight aria-hidden />,
@@ -301,7 +307,11 @@ export function AnnotationToolbar() {
   const blurMode =
     tool === "blur" ||
     (selected?.kind === "shape" && selected.shape === "blur");
-  const showFill = !blurMode && (shapeTool || selected?.kind === "shape");
+  // Highlights are always a border and a light fill.
+  const showFill =
+    !blurMode &&
+    (shapeTool ||
+      (selected?.kind === "shape" && selected.shape !== "highlight"));
 
   return (
     <div
