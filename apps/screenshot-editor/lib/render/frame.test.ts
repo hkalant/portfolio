@@ -147,6 +147,21 @@ describe("chromeLayout", () => {
     expect(win!.title!.x + win!.title!.width).toBeLessThan(880 - 23);
   });
 
+  it("gives the Windows browser an address bar on the left and the three glyphs", () => {
+    const tall = { width: 1000, height: 48 };
+    const win = chromeLayout("windows-browser", tall, 1, "light");
+    expect(win?.dots).toEqual([]);
+    expect(win?.title).toBeNull();
+    expect(win?.captions?.close[0]).toEqual([972, 19, 982, 29]);
+    expect(win?.address).toEqual({
+      x: 12,
+      y: 9,
+      width: 1000 - 3 * 46 - 24,
+      height: 30,
+      cornerRadius: 15,
+    });
+  });
+
   it("gives the minimal frame three grey dots in the theme colour", () => {
     const minimal = chromeLayout(
       "minimal",
@@ -241,6 +256,14 @@ describe("address bar", () => {
     expect(text.x).toBeCloseTo(lock.body.x + 15);
     expect(text.x + text.width).toBe(800 - 12);
     expect(lock.shackle.y + lock.shackle.height).toBeGreaterThan(lock.body.y);
+  });
+
+  it("starts the lock at the left padding when aligned left", () => {
+    const pill = { x: 200, y: 10, width: 600, height: 28 };
+    const { lock, text } = addressContents(pill, 100, 1, "left");
+    expect(lock.body.x).toBe(212);
+    expect(text.x).toBe(227);
+    expect(text.align).toBe("left");
   });
 
   it("keeps long text inside the pill's padding", () => {

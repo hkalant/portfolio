@@ -127,9 +127,15 @@ test("window frames add a title bar above the screenshot", async ({ page }) => {
   expect(brightness(darkBar)).toBeLessThan(80);
 
   await page.getByLabel("Window title").fill("My app");
-  await frame("Browser").click();
+  await expect(frame("Browser")).toHaveCount(0);
+  await frame("macOS browser").click();
   await expectDesignSize(page, 1144, 792);
   await page.getByLabel("Address").fill("example.com");
+
+  await frame("Windows browser").click();
+  await expectDesignSize(page, 1144, 792);
+  await expect(page.getByLabel("Address")).toHaveValue("example.com");
+  await expect(page.getByLabel("Window title")).toHaveCount(0);
   await expect(frame("Glass")).toHaveCount(0);
   await frame("None").click();
   await expectDesignSize(page, 1144, 744);

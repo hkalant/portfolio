@@ -253,6 +253,51 @@ export function addressPill(
   };
 }
 
+/** Windows minimise, maximise and close, right-aligned in the bar. */
+function captionGlyphs(bar: Size, unit: number, edge: number): CaptionGlyphs {
+  const half = 5 * unit;
+  const centreY = bar.height / 2;
+  const centreX = (index: number) =>
+    bar.width - edge - (index + 0.5) * CAPTION * unit;
+  const close = centreX(0);
+  const maximise = centreX(1);
+  const minimise = centreX(2);
+  return {
+    minimise: [minimise - half, centreY, minimise + half, centreY],
+    maximise: {
+      x: maximise - half,
+      y: centreY - half,
+      width: 2 * half,
+      height: 2 * half,
+    },
+    close: [
+      [close - half, centreY - half, close + half, centreY + half],
+      [close - half, centreY + half, close + half, centreY - half],
+    ],
+    strokeWidth: unit,
+  };
+}
+
+/** The Windows browser's address bar: from the left, up to the caption buttons. */
+export function windowsAddressBar(
+  bar: Size,
+  unit: number,
+  edge = 0,
+): (Box & { cornerRadius: number }) | null {
+  const left = edge + 12 * unit;
+  const right = bar.width - edge - 3 * CAPTION * unit - 12 * unit;
+  const width = right - left;
+  if (width < 48 * unit) return null;
+  const height = Math.max(0, Math.min(30 * unit, bar.height - 14 * unit));
+  return {
+    x: left,
+    y: (bar.height - height) / 2,
+    width,
+    height,
+    cornerRadius: height / 2,
+  };
+}
+
 /**
  * The title-bar parts of a frame, or null for frames without one.
  * `cornerRadius` is the window's outer radius: the controls keep clear of it.
@@ -305,13 +350,6 @@ export function chromeLayout(
         separator,
       };
     case "windows": {
-      const half = 5 * unit;
-      const centreY = bar.height / 2;
-      const centreX = (index: number) =>
-        bar.width - edge - (index + 0.5) * CAPTION * unit;
-      const close = centreX(0);
-      const maximise = centreX(1);
-      const minimise = centreX(2);
       const left = edge + 14 * unit;
       return {
         ...empty,
@@ -323,23 +361,17 @@ export function chromeLayout(
           align: "left",
           fontSize: 12 * unit,
         }),
-        captions: {
-          minimise: [minimise - half, centreY, minimise + half, centreY],
-          maximise: {
-            x: maximise - half,
-            y: centreY - half,
-            width: 2 * half,
-            height: 2 * half,
-          },
-          close: [
-            [close - half, centreY - half, close + half, centreY + half],
-            [close - half, centreY + half, close + half, centreY - half],
-          ],
-          strokeWidth: unit,
-        },
+        captions: captionGlyphs(bar, unit, edge),
         separator,
       };
     }
+    case "windows-browser":
+      return {
+        ...empty,
+        address: windowsAddressBar(bar, unit, edge),
+        captions: captionGlyphs(bar, unit, edge),
+        separator,
+      };
     case "minimal":
       return {
         ...empty,
@@ -394,20 +426,23 @@ export const ADDRESS_FONT_SIZE = 13;
 
 /**
  * The lock and the address inside the pill: centred together for the
- * measured `textWidth`. Text too long for the pill is cut off by the text box
- * (which ends at the pill's padding), not moved.
+ * measured `textWidth`, or from the left with `align` "left". Text too long
+ * for the pill is cut off by the text box (which ends at the pill's padding),
+ * not moved.
  */
 export function addressContents(
   pill: Box,
   textWidth: number,
   unit: number,
+  align: "center" | "left" = "center",
 ): { lock: LockGlyph; text: TextBox } {
   const lockWidth = 9 * unit;
   const gap = 6 * unit;
   const padding = 12 * unit;
   const room = Math.max(0, pill.width - 2 * padding - lockWidth - gap);
   const total = lockWidth + gap + Math.min(Math.max(0, textWidth), room);
-  const start = pill.x + (pill.width - total) / 2;
+  const start =
+    align === "left" ? pill.x + padding : pill.x + (pill.width - total) / 2;
   const textX = start + lockWidth + gap;
   return {
     lock: lockGlyph(start, pill.y + pill.height / 2, unit),

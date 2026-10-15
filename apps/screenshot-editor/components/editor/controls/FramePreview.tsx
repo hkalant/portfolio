@@ -27,6 +27,20 @@ function Lights({ size = 3 }: { size?: number }) {
   );
 }
 
+/** Windows minimise, maximise and close. */
+function Captions() {
+  return (
+    <>
+      <span className="h-px w-[4px] bg-current" />
+      <span className="size-[4px] border border-current" />
+      <span className="relative size-[4px]">
+        <span className="absolute top-1/2 left-0 h-px w-full rotate-45 bg-current" />
+        <span className="absolute top-1/2 left-0 h-px w-full -rotate-45 bg-current" />
+      </span>
+    </>
+  );
+}
+
 /** A screenshot stand-in: a light page with two lines of "text". */
 function Screen({ className }: { className?: string }) {
   return (
@@ -78,18 +92,26 @@ function Bar({
           />
         </div>
       );
+    case "windows-browser":
+      return (
+        <div
+          className="flex h-[11px] items-center gap-[4px] px-[3px]"
+          style={{ ...style, color: palette.text }}
+        >
+          <span
+            className="h-[5px] flex-1 rounded-full"
+            style={{ backgroundColor: palette.pill }}
+          />
+          <Captions />
+        </div>
+      );
     case "windows":
       return (
         <div
           className="flex h-[8px] items-center justify-end gap-[4px] px-[3px]"
           style={{ ...style, color: palette.text }}
         >
-          <span className="h-px w-[4px] bg-current" />
-          <span className="size-[4px] border border-current" />
-          <span className="relative size-[4px]">
-            <span className="absolute top-1/2 left-0 h-px w-full rotate-45 bg-current" />
-            <span className="absolute top-1/2 left-0 h-px w-full -rotate-45 bg-current" />
-          </span>
+          <Captions />
         </div>
       );
     case "minimal":

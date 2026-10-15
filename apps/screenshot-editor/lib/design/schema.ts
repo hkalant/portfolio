@@ -105,6 +105,7 @@ export const FRAME_KINDS = [
   "macos",
   "browser",
   "windows",
+  "windows-browser",
   "minimal",
   "glass",
 ] as const;

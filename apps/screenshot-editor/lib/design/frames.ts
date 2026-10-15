@@ -5,8 +5,9 @@ export { FRAME_KINDS };
 export const FRAME_LABELS: Record<FrameKind, string> = {
   none: "None",
   macos: "macOS",
-  browser: "Browser",
+  browser: "macOS browser",
   windows: "Windows",
+  "windows-browser": "Windows browser",
   minimal: "Minimal",
   glass: "Glass",
 };
@@ -22,7 +23,10 @@ export const FRAME_OPTIONS: readonly FrameKind[] = FRAME_KINDS.filter(
 /** Frames with a title bar that shows `frame.title`. */
 export const FRAMES_WITH_TITLE: readonly FrameKind[] = ["macos", "windows"];
 /** Frames with an address bar that shows `frame.url`. */
-export const FRAMES_WITH_URL: readonly FrameKind[] = ["browser"];
+export const FRAMES_WITH_URL: readonly FrameKind[] = [
+  "browser",
+  "windows-browser",
+];
 
 // Sizes at unit 1, in design px: a 1000 px wide screenshot.
 const BASE: Record<FrameKind, { chromeTop: number; ring: number }> = {
@@ -30,6 +34,7 @@ const BASE: Record<FrameKind, { chromeTop: number; ring: number }> = {
   macos: { chromeTop: 34, ring: 0 },
   browser: { chromeTop: 48, ring: 0 },
   windows: { chromeTop: 34, ring: 0 },
+  "windows-browser": { chromeTop: 48, ring: 0 },
   minimal: { chromeTop: 22, ring: 0 },
   glass: { chromeTop: 0, ring: 10 },
 };
