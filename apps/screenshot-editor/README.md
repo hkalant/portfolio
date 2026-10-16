@@ -19,6 +19,8 @@ This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 
 ### Keyboard shortcuts
 
+The keyboard button in the top bar, next to the info button, lists these.
+
 | Keys                                                      | Action                                                           |
 | --------------------------------------------------------- | ---------------------------------------------------------------- |
 | ⌘V / Ctrl+V                                               | Paste a screenshot                                               |
@@ -30,6 +32,7 @@ This is milestone 2 of the plan in [`docs/screenshot-editor-plan.md`](../../docs
 | Delete or Backspace (with the canvas focused: click it)   | Remove the screenshot (undoable)                                 |
 | Arrow keys (Shift for 10 px)                              | Move the screenshot, with the canvas focused, on a fixed size    |
 | Shift while drawing an arrow or line, or dragging its end | Keep it to 45° steps (straight across, up and down, or diagonal) |
+| Esc                                                       | Deselect, then put the drawing tool down                         |
 
 ## Scripts
 
