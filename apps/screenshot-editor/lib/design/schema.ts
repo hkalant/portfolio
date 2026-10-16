@@ -148,7 +148,8 @@ export const annotationColorSchema = z.enum(ANNOTATION_COLORS);
 
 /**
  * A "highlight" is a see-through rectangle with no border; a
- * "blur" box blurs the screenshot under it instead of drawing a shape.
+ * "blur" box blurs the screenshot under it instead of drawing a shape, and a
+ * "magnify" box shows the screenshot under it enlarged.
  */
 export const SHAPE_KINDS = [
   "rect",
@@ -156,6 +157,7 @@ export const SHAPE_KINDS = [
   "circle",
   "highlight",
   "blur",
+  "magnify",
 ] as const;
 /** Arrow looks; the first is the default. */
 export const ARROW_STYLES = ["solid", "chevron", "halo", "refined"] as const;
@@ -201,6 +203,8 @@ export const shapeAnnotationSchema = z.object({
   rounded: z.boolean().optional(),
   /** How strongly a blur box blurs, 0 to 1. Other shapes have none. */
   intensity: z.number().min(0).max(1).optional(),
+  /** How much a magnifier enlarges. Other shapes have none. */
+  zoom: z.number().min(1).max(8).optional(),
 });
 
 export const arrowAnnotationSchema = z.object({

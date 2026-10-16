@@ -41,6 +41,7 @@ import {
 } from "@/lib/design/arrowShape";
 import { blurArea, DEFAULT_BLUR_INTENSITY } from "@/lib/design/blur";
 import { hexToRgba } from "@/lib/design/colors";
+import { DEFAULT_MAGNIFY_ZOOM, magnifyArea } from "@/lib/design/magnify";
 import type { Rect as LayoutRect } from "@/lib/design/layout";
 import type {
   Annotation,
@@ -220,8 +221,8 @@ function ShapeBody({
   /** An outline is pressed only by its border, so steps and shapes can go inside. */
   borderOnly?: boolean;
 }) {
-  if (shape.shape === "blur")
-    // While being drawn: just where the blur will go.
+  if (shape.shape === "blur" || shape.shape === "magnify")
+    // While being drawn: just where the blur or magnifier will go.
     return (
       <Rect
         width={width}
@@ -341,6 +342,79 @@ function BlurBody({
           listening={false}
         />
       )}
+    </>
+  );
+}
+
+/**
+ * A magnifier: the screenshot under it, enlarged, in a rounded white frame
+ * with a soft shadow. Its first child is the box itself (pressable all
+ * over), which a resize stretches.
+ */
+function MagnifyBody({
+  shape,
+  source,
+  aspect,
+  unit,
+}: {
+  shape: ShapeAnnotation;
+  source: LoadedImage;
+  /** The screenshot's height over its width. */
+  aspect: number;
+  unit: number;
+}) {
+  const width = shape.width * unit;
+  const height = shape.height * unit;
+  const zoom = shape.zoom ?? DEFAULT_MAGNIFY_ZOOM;
+  const area = magnifyArea(shape, zoom, aspect);
+  const sourceWidth =
+    source.source instanceof HTMLImageElement
+      ? source.source.naturalWidth
+      : source.source.width;
+  // Source pixels per image width.
+  const perUnit = sourceWidth;
+  const corner = Math.min(SHAPE_CORNER * unit, width / 2, height / 2);
+  const border = Math.min(SHAPE_STROKE * unit * 0.75, width / 8, height / 8);
+  return (
+    <>
+      <Rect
+        width={width}
+        height={height}
+        cornerRadius={corner}
+        fill="#ffffff"
+        shadowColor="#000000"
+        shadowOpacity={0.3}
+        shadowBlur={0.02 * unit}
+        shadowOffsetY={0.005 * unit}
+      />
+      <Group
+        listening={false}
+        clipFunc={(context) => {
+          context.beginPath();
+          context.roundRect(0, 0, width, height, corner);
+          context.closePath();
+        }}
+      >
+        <KonvaImage
+          image={source.source}
+          width={width}
+          height={height}
+          crop={{
+            x: area.x * perUnit,
+            y: area.y * perUnit,
+            width: area.width * perUnit,
+            height: area.height * perUnit,
+          }}
+        />
+      </Group>
+      <Rect
+        width={width}
+        height={height}
+        cornerRadius={corner}
+        stroke="#ffffff"
+        strokeWidth={border}
+        listening={false}
+      />
     </>
   );
 }
@@ -928,6 +1002,13 @@ export function AnnotationsNode({
                 unit={unit}
                 zoom={zoom}
               />
+            ) : annotation.shape === "magnify" ? (
+              <MagnifyBody
+                shape={annotation}
+                source={source}
+                aspect={image.height / image.width}
+                unit={unit}
+              />
             ) : (
               <ShapeBody
                 shape={annotation}
@@ -956,7 +1037,8 @@ export function AnnotationsNode({
                 tool === "rounded" ||
                 tool === "circle" ||
                 tool === "highlight" ||
-                tool === "blur"
+                tool === "blur" ||
+                tool === "magnify"
                   ? tool
                   : "rect",
               color,

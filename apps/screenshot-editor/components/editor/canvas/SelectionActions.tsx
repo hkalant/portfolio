@@ -18,6 +18,7 @@ const SHAPE_NAMES: Record<ShapeKind, string> = {
   circle: "circle",
   highlight: "highlight",
   blur: "blur",
+  magnify: "magnifier",
 };
 
 type Props = {

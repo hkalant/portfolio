@@ -608,6 +608,23 @@ describe("editor store: annotations", () => {
     expect(annotations()[2]).not.toHaveProperty("intensity");
   });
 
+  it("draws magnifiers with the last zoom, and changes a magnifier's zoom", () => {
+    state().addShape("magnify", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    const [magnifier] = annotations();
+    expect(magnifier).toMatchObject({ shape: "magnify", zoom: 2 });
+    later();
+    state().setMagnifyZoom(magnifier.id, 3);
+    state().setMagnifyZoom(magnifier.id, 9);
+    expect(annotations()[0]).toMatchObject({ zoom: 4 });
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ zoom: 2 });
+    state().addShape("magnify", { x: 0.5, y: 0.1, width: 0.2, height: 0.1 });
+    expect(annotations()[1]).toMatchObject({ zoom: 4 });
+    // Other shapes have no zoom.
+    state().addShape("blur", { x: 0.5, y: 0.4, width: 0.2, height: 0.1 });
+    expect(annotations()[2]).not.toHaveProperty("zoom");
+  });
+
   it("rounds a highlight's corners, and new highlights match", () => {
     state().addShape("highlight", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
     const [highlight] = annotations();

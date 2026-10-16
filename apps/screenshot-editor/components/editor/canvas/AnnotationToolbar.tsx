@@ -7,6 +7,7 @@ import {
   MoveUpRight,
   RotateCcw,
   Trash2,
+  ZoomIn,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import {
@@ -15,6 +16,7 @@ import {
   MAX_STEP_NUMBER,
   parseStepNumber,
 } from "@/lib/design/annotations";
+import { MAX_MAGNIFY_ZOOM, MIN_MAGNIFY_ZOOM } from "@/lib/design/magnify";
 import { LINE_ENDS, type StepAnnotation } from "@/lib/design/schema";
 import {
   selectSelectedAnnotation,
@@ -242,6 +244,35 @@ function BlurStrength() {
   );
 }
 
+/** How much the selected magnifier enlarges, and new ones after it. */
+function MagnifyZoom() {
+  const selected = useEditorStore(selectSelectedAnnotation);
+  const zoom = useEditorStore((state) => state.magnifyZoom);
+  const setMagnifyZoom = useEditorStore((state) => state.setMagnifyZoom);
+  const sealHistory = useEditorStore((state) => state.sealHistory);
+  const magnifier =
+    selected?.kind === "shape" && selected.shape === "magnify"
+      ? selected
+      : null;
+  const value = magnifier?.zoom ?? zoom;
+  return (
+    <div className="flex shrink-0 items-center gap-2 px-2 text-xs text-muted-foreground">
+      <span aria-hidden>Zoom</span>
+      <Slider
+        className="w-28"
+        thumbLabel="Magnifier zoom"
+        min={MIN_MAGNIFY_ZOOM}
+        max={MAX_MAGNIFY_ZOOM}
+        step={0.25}
+        value={[value]}
+        onValueChange={([next]) => setMagnifyZoom(magnifier?.id ?? null, next)}
+        onValueCommit={() => sealHistory()}
+      />
+      <span className="w-8 text-foreground tabular-nums">{value}×</span>
+    </div>
+  );
+}
+
 /** The line tool; its button shows the end new lines get. */
 function LineTool() {
   const tool = useEditorStore((state) => state.annotationTool);
@@ -309,12 +340,17 @@ export function AnnotationToolbar() {
   const blurMode =
     tool === "blur" ||
     (selected?.kind === "shape" && selected.shape === "blur");
+  // Magnifiers have a zoom instead of a colour or a fill.
+  const magnifyMode =
+    tool === "magnify" ||
+    (selected?.kind === "shape" && selected.shape === "magnify");
   // Highlights are always a border and a light fill.
   const showCorners =
     tool === "highlight" ||
     (selected?.kind === "shape" && selected.shape === "highlight");
   const showFill =
     !blurMode &&
+    !magnifyMode &&
     (shapeTool ||
       (selected?.kind === "shape" && selected.shape !== "highlight"));
 
@@ -369,6 +405,14 @@ export function AnnotationToolbar() {
       >
         <BlurIcon />
       </ToolButton>
+      <ToolButton
+        label="Magnifier"
+        hint="Drag over an area to show it enlarged"
+        pressed={tool === "magnify"}
+        onClick={() => toggleTool("magnify")}
+      >
+        <ZoomIn aria-hidden />
+      </ToolButton>
       {showCorners && (
         <>
           <Divider />
@@ -411,6 +455,11 @@ export function AnnotationToolbar() {
         <>
           <Divider />
           <BlurStrength />
+        </>
+      ) : magnifyMode ? (
+        <>
+          <Divider />
+          <MagnifyZoom />
         </>
       ) : (
         <>

@@ -16,6 +16,7 @@ import {
 } from "@/lib/design/annotations";
 import { MAX_ARROW_BEND } from "@/lib/design/arrowShape";
 import { DEFAULT_BLUR_INTENSITY } from "@/lib/design/blur";
+import { clampMagnifyZoom, DEFAULT_MAGNIFY_ZOOM } from "@/lib/design/magnify";
 import { isHexColor } from "@/lib/design/colors";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { isFrameKind } from "@/lib/design/frames";
@@ -122,6 +123,8 @@ export type EditorState = {
   lineEnd: LineEnd;
   /** How strongly new blur boxes blur, 0 to 1. */
   blurIntensity: number;
+  /** How much new magnifiers enlarge. */
+  magnifyZoom: number;
   selectedAnnotationId: string | null;
 
   undo: () => void;
@@ -195,6 +198,8 @@ export type EditorState = {
   resizeShape: (id: string, box: Box) => void;
   /** Changes a blur box's strength (0 to 1); new blur boxes then match it. */
   setBlurIntensity: (id: string | null, intensity: number) => void;
+  /** Changes a magnifier's zoom; new magnifiers then match it. */
+  setMagnifyZoom: (id: string | null, zoom: number) => void;
   /** Resizes a step about its new centre. New steps then take its size. */
   resizeStep: (id: string, centre: Point, size: number) => void;
   setStepNumber: (id: string, number: number) => void;
@@ -364,6 +369,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     arrowStyle: ARROW_STYLES[0],
     lineEnd: LINE_ENDS[0],
     blurIntensity: DEFAULT_BLUR_INTENSITY,
+    magnifyZoom: DEFAULT_MAGNIFY_ZOOM,
     selectedAnnotationId: null,
 
     undo: () =>
@@ -868,6 +874,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
                 color: get().annotationColor,
                 filled: get().shapeFilled,
                 ...(shape === "blur" ? { intensity: get().blurIntensity } : {}),
+                ...(shape === "magnify" ? { zoom: get().magnifyZoom } : {}),
                 ...(shape === "highlight"
                   ? { rounded: get().highlightRounded }
                   : {}),
@@ -1033,6 +1040,24 @@ export const useEditorStore = create<EditorState>()((set, get) => {
               : { ...annotation, intensity: to },
           ),
         `annotation-blur-${id}`,
+      );
+    },
+
+    setMagnifyZoom: (id, zoom) => {
+      if (!finite(zoom)) return;
+      const to = clampMagnifyZoom(zoom);
+      set(() => ({ magnifyZoom: to }));
+      if (!id) return;
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind !== "shape" ||
+            annotation.shape !== "magnify" ||
+            annotation.zoom === to
+              ? null
+              : { ...annotation, zoom: to },
+          ),
+        `annotation-magnify-${id}`,
       );
     },
 
