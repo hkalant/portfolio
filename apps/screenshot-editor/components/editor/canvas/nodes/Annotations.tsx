@@ -6,6 +6,7 @@ import {
   Ellipse,
   Group,
   Image as KonvaImage,
+  Line,
   Rect,
   Shape,
   Text,
@@ -24,6 +25,7 @@ import {
   fitBox,
   inArea,
   isDrag,
+  isSquareShape,
   snapEnd,
   SHAPE_CORNER,
   HIGHLIGHT_FILL_OPACITY,
@@ -41,7 +43,14 @@ import {
 } from "@/lib/design/arrowShape";
 import { blurArea, DEFAULT_BLUR_INTENSITY } from "@/lib/design/blur";
 import { hexToRgba } from "@/lib/design/colors";
-import { DEFAULT_MAGNIFY_ZOOM, magnifyArea } from "@/lib/design/magnify";
+import {
+  DEFAULT_MAGNIFY_LENS,
+  DEFAULT_MAGNIFY_ZOOM,
+  insetConnector,
+  MAGNIFY_BORDER,
+  MAGNIFY_BORDER_COLOR,
+  magnifyArea,
+} from "@/lib/design/magnify";
 import type { Rect as LayoutRect } from "@/lib/design/layout";
 import type {
   Annotation,
@@ -49,7 +58,9 @@ import type {
   ArrowAnnotation,
   ArrowStyle,
   LineEnd,
+  MagnifyLens,
   ShapeAnnotation,
+  ShapeKind,
   StepAnnotation,
 } from "@/lib/design/schema";
 import { EXPORT_HIDDEN } from "@/lib/export/exportImage";
@@ -346,10 +357,67 @@ function BlurBody({
   );
 }
 
+/** Traces a magnifier's outline in a box from (0, 0). */
+function traceLens(
+  context: { beginPath(): void; closePath(): void } & Pick<
+    CanvasRenderingContext2D,
+    "ellipse" | "roundRect"
+  >,
+  lens: MagnifyLens,
+  width: number,
+  height: number,
+  corner: number,
+) {
+  context.beginPath();
+  if (lens === "circle")
+    context.ellipse(
+      width / 2,
+      height / 2,
+      width / 2,
+      height / 2,
+      0,
+      0,
+      Math.PI * 2,
+    );
+  else context.roundRect(0, 0, width, height, lens === "rounded" ? corner : 0);
+  context.closePath();
+}
+
+/** A magnifier's outline from its box's top-left corner, as a Konva shape. */
+function LensOutline({
+  lens,
+  width,
+  height,
+  corner,
+  ...paint
+}: {
+  lens: MagnifyLens;
+  width: number;
+  height: number;
+  corner: number;
+} & Konva.ShapeConfig) {
+  return lens === "circle" ? (
+    <Ellipse
+      x={width / 2}
+      y={height / 2}
+      radiusX={width / 2}
+      radiusY={height / 2}
+      {...paint}
+    />
+  ) : (
+    <Rect
+      width={width}
+      height={height}
+      cornerRadius={lens === "rounded" ? corner : 0}
+      {...paint}
+    />
+  );
+}
+
 /**
- * A magnifier: the screenshot under it, enlarged, in a rounded white frame
- * with a soft shadow. Its first child is the box itself (pressable all
- * over), which a resize stretches.
+ * A magnifier: part of the screenshot, enlarged, in a grey frame with a
+ * soft shadow. Its first child is the box itself (pressable all over), which
+ * a resize stretches.
  */
 function MagnifyBody({
   shape,
@@ -365,22 +433,27 @@ function MagnifyBody({
 }) {
   const width = shape.width * unit;
   const height = shape.height * unit;
-  const zoom = shape.zoom ?? DEFAULT_MAGNIFY_ZOOM;
-  const area = magnifyArea(shape, zoom, aspect);
-  const sourceWidth =
+  const lens = shape.lens ?? DEFAULT_MAGNIFY_LENS;
+  const area = magnifyArea(
+    shape,
+    shape.zoom ?? DEFAULT_MAGNIFY_ZOOM,
+    aspect,
+    shape.from,
+  );
+  // Source pixels per image width.
+  const perUnit =
     source.source instanceof HTMLImageElement
       ? source.source.naturalWidth
       : source.source.width;
-  // Source pixels per image width.
-  const perUnit = sourceWidth;
   const corner = Math.min(SHAPE_CORNER * unit, width / 2, height / 2);
-  const border = Math.min(SHAPE_STROKE * unit * 0.75, width / 8, height / 8);
+  const border = Math.min(MAGNIFY_BORDER * unit, width / 8, height / 8);
   return (
     <>
-      <Rect
+      <LensOutline
+        lens={lens}
         width={width}
         height={height}
-        cornerRadius={corner}
+        corner={corner}
         fill="#ffffff"
         shadowColor="#000000"
         shadowOpacity={0.3}
@@ -389,11 +462,7 @@ function MagnifyBody({
       />
       <Group
         listening={false}
-        clipFunc={(context) => {
-          context.beginPath();
-          context.roundRect(0, 0, width, height, corner);
-          context.closePath();
-        }}
+        clipFunc={(context) => traceLens(context, lens, width, height, corner)}
       >
         <KonvaImage
           image={source.source}
@@ -407,14 +476,80 @@ function MagnifyBody({
           }}
         />
       </Group>
-      <Rect
+      <LensOutline
+        lens={lens}
         width={width}
         height={height}
-        cornerRadius={corner}
-        stroke="#ffffff"
+        corner={corner}
+        stroke={MAGNIFY_BORDER_COLOR}
         strokeWidth={border}
         listening={false}
       />
+    </>
+  );
+}
+
+/**
+ * Where an inset magnifier looks: an outline round the area it enlarges,
+ * and a line from there to the magnifier. Drawn under the magnifiers.
+ */
+function InsetSource({
+  shape,
+  aspect,
+  unit,
+  zoom,
+  ...groupProps
+}: {
+  shape: ShapeAnnotation;
+  aspect: number;
+  unit: number;
+  zoom: number;
+} & Konva.ContainerConfig) {
+  const lens = shape.lens ?? DEFAULT_MAGNIFY_LENS;
+  const area = magnifyArea(
+    shape,
+    shape.zoom ?? DEFAULT_MAGNIFY_ZOOM,
+    aspect,
+    shape.from,
+  );
+  const line = insetConnector(area, shape, lens);
+  const width = area.width * unit;
+  const height = area.height * unit;
+  const corner = Math.min(
+    (SHAPE_CORNER * unit) / (shape.zoom ?? DEFAULT_MAGNIFY_ZOOM),
+    width / 2,
+    height / 2,
+  );
+  const border = Math.min(MAGNIFY_BORDER * unit, width / 6, height / 6);
+  return (
+    <>
+      {line && (
+        <Line
+          points={line.flatMap((point) => [point.x * unit, point.y * unit])}
+          stroke={MAGNIFY_BORDER_COLOR}
+          strokeWidth={border * 0.6}
+          lineCap="round"
+          listening={false}
+        />
+      )}
+      <Group
+        name={ANNOTATION_NAME}
+        x={area.x * unit}
+        y={area.y * unit}
+        {...groupProps}
+      >
+        <LensOutline
+          lens={lens}
+          width={width}
+          height={height}
+          corner={corner}
+          stroke={MAGNIFY_BORDER_COLOR}
+          strokeWidth={border}
+          hitStrokeWidth={Math.max(border, MIN_HIT / zoom)}
+          // Transparent, but pressable inside to move it.
+          fill="rgba(0, 0, 0, 0)"
+        />
+      </Group>
     </>
   );
 }
@@ -535,6 +670,7 @@ export function AnnotationsNode({
   const highlightRounded = useEditorStore((state) => state.highlightRounded);
   const arrowStyle = useEditorStore((state) => state.arrowStyle);
   const lineEnd = useEditorStore((state) => state.lineEnd);
+  const magnifyLens = useEditorStore((state) => state.magnifyLens);
   const fontReady = useFrameFont();
   const rootRef = useRef<Konva.Group>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -570,6 +706,9 @@ export function AnnotationsNode({
     };
     let start: Point | null = null;
     let end: Point | null = null;
+    // Round magnifiers are drawn square, like circles.
+    const boxKind = (kind: ShapeKind): ShapeKind =>
+      kind === "magnify" && magnifyLens === "circle" ? "circle" : kind;
     // Arrows and lines keep to 45 degree steps while Shift is held.
     const lineEnd = (from: Point, to: Point, shift: boolean) =>
       shift ? snapEnd(from, to, area) : clampToArea(to, area);
@@ -590,8 +729,8 @@ export function AnnotationsNode({
       }
       const box =
         end && isDrag(start, end)
-          ? dragBox(start, end, tool, area)
-          : clickBox(start, tool, area);
+          ? dragBox(start, end, boxKind(tool), area)
+          : clickBox(start, boxKind(tool), area);
       start = end = null;
       setDraft(null);
       store().addShape(tool, box);
@@ -637,7 +776,7 @@ export function AnnotationsNode({
       if (!end || !isDrag(start, end)) return;
       if (tool === "arrow" || tool === "line")
         setArrowDraft({ start, end: lineEnd(start, end, event.evt.shiftKey) });
-      else setDraft(dragBox(start, end, tool, area));
+      else setDraft(dragBox(start, end, boxKind(tool), area));
     };
 
     stage.on("pointerdown.annotate", onDown);
@@ -654,7 +793,7 @@ export function AnnotationsNode({
       cancel();
       setCursor(root, "");
     };
-  }, [tool, unit, area]);
+  }, [tool, unit, area, magnifyLens]);
 
   // The selection box follows the selected annotation's node (a step's
   // node is replaced when the font loads).
@@ -753,7 +892,7 @@ export function AnnotationsNode({
             height: annotation.height,
           },
           area,
-          annotation.shape === "circle",
+          isSquareShape(annotation),
         );
         to = { x: box.x, y: box.y };
       }
@@ -804,7 +943,7 @@ export function AnnotationsNode({
           height: (size.height * node.scaleY()) / unit,
         },
         area,
-        shape.shape === "circle",
+        isSquareShape(shape),
       );
       // Set here too: if the box ends where it began, nothing re-renders it.
       placeShape(
@@ -948,10 +1087,71 @@ export function AnnotationsNode({
   const selectedArrow = selected?.kind === "arrow" ? selected : null;
   // Steps and circles keep their proportions, from the corners.
   const roundSelection =
-    selected?.kind === "step" || selectedShape?.shape === "circle";
+    selected?.kind === "step" ||
+    (selectedShape !== null && isSquareShape(selectedShape));
+
+  // An inset's outline round the area it enlarges is dragged on its own.
+  const aspect = image.height / image.width;
+  const sourceProps = (shape: ShapeAnnotation) => ({
+    draggable: true,
+    onPointerDown: (event: KonvaEventObject<PointerEvent>) => {
+      if (event.evt.button !== undefined && event.evt.button !== 0) return;
+      useEditorStore.getState().selectAnnotation(shape.id);
+    },
+    onDragStart: (event: KonvaEventObject<DragEvent>) => {
+      event.cancelBubble = true;
+      useEditorStore.getState().selectAnnotation(shape.id);
+      startMoving();
+      setCursor(event.target, "grabbing");
+    },
+    onDragMove: (event: KonvaEventObject<DragEvent>) => {
+      event.cancelBubble = true;
+      const node = event.target;
+      // Its size doesn't depend on where it is.
+      const { width, height } = magnifyArea(
+        shape,
+        shape.zoom ?? DEFAULT_MAGNIFY_ZOOM,
+        aspect,
+      );
+      // Kept on the screenshot.
+      const x = Math.min(1 - width, Math.max(0, node.x() / unit));
+      const y = Math.min(aspect - height, Math.max(0, node.y() / unit));
+      node.position({ x: x * unit, y: y * unit });
+      useEditorStore.getState().moveMagnifySource(shape.id, {
+        x: x + width / 2,
+        y: y + height / 2,
+      });
+    },
+    onDragEnd: (event: KonvaEventObject<DragEvent>) => {
+      event.cancelBubble = true;
+      stopMoving(shape.id);
+      setCursor(event.target, "grab");
+    },
+    onMouseEnter: (event: KonvaEventObject<MouseEvent>) => {
+      setCursor(event.target, "grab");
+    },
+    onMouseLeave: (event: KonvaEventObject<MouseEvent>) => {
+      if (!moving.current) setCursor(event.target, restCursor);
+    },
+  });
 
   return (
     <Group ref={rootRef} x={image.x} y={image.y}>
+      {annotations.map(
+        (annotation) =>
+          annotation.kind === "shape" &&
+          annotation.shape === "magnify" &&
+          annotation.from && (
+            <InsetSource
+              key={`${annotation.id}-from`}
+              shape={annotation}
+              aspect={aspect}
+              unit={unit}
+              zoom={zoom}
+              {...sourceProps(annotation)}
+            />
+          ),
+      )}
       {annotations.map((annotation) =>
         annotation.kind === "arrow" ? (
           <Group

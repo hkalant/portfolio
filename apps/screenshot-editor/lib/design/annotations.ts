@@ -277,3 +277,13 @@ export function newAnnotationId(): string {
 export function isShape(annotation: Annotation): annotation is ShapeAnnotation {
   return annotation.kind === "shape";
 }
+
+/** Whether a shape's box stays square: circles, and round magnifiers. */
+export function isSquareShape(
+  shape: Pick<ShapeAnnotation, "shape" | "lens">,
+): boolean {
+  return (
+    shape.shape === "circle" ||
+    (shape.shape === "magnify" && shape.lens === "circle")
+  );
+}

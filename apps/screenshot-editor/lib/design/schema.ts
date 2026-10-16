@@ -159,6 +159,8 @@ export const SHAPE_KINDS = [
   "blur",
   "magnify",
 ] as const;
+/** The shapes a magnifier can be. */
+export const MAGNIFY_LENSES = ["circle", "rect", "rounded"] as const;
 /** Arrow looks; the first is the default. */
 export const ARROW_STYLES = ["solid", "chevron", "halo", "refined"] as const;
 /**
@@ -205,6 +207,13 @@ export const shapeAnnotationSchema = z.object({
   intensity: z.number().min(0).max(1).optional(),
   /** How much a magnifier enlarges. Other shapes have none. */
   zoom: z.number().min(1).max(8).optional(),
+  /** A magnifier's shape. Magnifiers saved before there were shapes are rounded. */
+  lens: z.enum(MAGNIFY_LENSES).optional(),
+  /**
+   * The centre of the area an inset magnifier enlarges. Without it a
+   * magnifier enlarges what is under its own centre.
+   */
+  from: z.object({ x: imagePosition, y: imagePosition }).optional(),
 });
 
 export const arrowAnnotationSchema = z.object({
@@ -280,6 +289,7 @@ export type ShotLayer = z.infer<typeof shotLayerSchema>;
 export type ShotStyle = Omit<ShotLayer, "id" | "kind" | "imageId">;
 export type AnnotationColor = (typeof ANNOTATION_COLORS)[number];
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
+export type MagnifyLens = (typeof MAGNIFY_LENSES)[number];
 export type StepAnnotation = z.infer<typeof stepAnnotationSchema>;
 export type ShapeAnnotation = z.infer<typeof shapeAnnotationSchema>;
 export type ArrowStyle = (typeof ARROW_STYLES)[number];

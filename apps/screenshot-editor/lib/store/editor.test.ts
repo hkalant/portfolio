@@ -625,6 +625,48 @@ describe("editor store: annotations", () => {
     expect(annotations()[2]).not.toHaveProperty("zoom");
   });
 
+  it("reshapes magnifiers, keeping round ones square", () => {
+    state().addShape("magnify", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    const [magnifier] = annotations();
+    expect(magnifier).toMatchObject({ lens: "rounded" });
+    state().selectAnnotation(magnifier.id);
+    state().setMagnifyLens("circle");
+    expect(annotations()[0]).toMatchObject({
+      lens: "circle",
+      x: 0.15,
+      width: 0.1,
+      height: 0.1,
+    });
+    state().selectAnnotation(null);
+    state().addShape("magnify", { x: 0.5, y: 0.1, width: 0.1, height: 0.1 });
+    expect(annotations()[1]).toMatchObject({ lens: "circle" });
+  });
+
+  it("draws inset magnifiers beside the area they enlarge, and moves that area", () => {
+    state().setMagnifyInset(true);
+    state().addShape("magnify", { x: 0.1, y: 0.1, width: 0.1, height: 0.05 });
+    const [inset] = annotations();
+    expect(inset).toMatchObject({
+      from: { x: 0.15, y: 0.125 },
+      width: 0.2,
+      height: 0.1,
+    });
+    expect(inset.x).toBeGreaterThan(0.2);
+    later();
+    state().moveMagnifySource(inset.id, { x: 0.3, y: 0.2 });
+    expect(annotations()[0]).toMatchObject({ from: { x: 0.3, y: 0.2 } });
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ from: { x: 0.15, y: 0.125 } });
+    // Back over the area it enlarges.
+    state().selectAnnotation(inset.id);
+    state().setMagnifyInset(false);
+    const placed = annotations()[0];
+    expect(placed).not.toHaveProperty("from");
+    expect(placed.kind === "shape" && placed.x + placed.width / 2).toBeCloseTo(
+      0.15,
+    );
+  });
+
   it("rounds a highlight's corners, and new highlights match", () => {
     state().addShape("highlight", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
     const [highlight] = annotations();

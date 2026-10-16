@@ -7,6 +7,7 @@ import {
   fitArrow,
   fitBox,
   isAnnotationColor,
+  isSquareShape,
   MAX_STEP_NUMBER,
   newAnnotationId,
   roundBox,
@@ -16,7 +17,12 @@ import {
 } from "@/lib/design/annotations";
 import { MAX_ARROW_BEND } from "@/lib/design/arrowShape";
 import { DEFAULT_BLUR_INTENSITY } from "@/lib/design/blur";
-import { clampMagnifyZoom, DEFAULT_MAGNIFY_ZOOM } from "@/lib/design/magnify";
+import {
+  clampMagnifyZoom,
+  DEFAULT_MAGNIFY_LENS,
+  DEFAULT_MAGNIFY_ZOOM,
+  insetBox,
+} from "@/lib/design/magnify";
 import { isHexColor } from "@/lib/design/colors";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { isFrameKind } from "@/lib/design/frames";
@@ -51,6 +57,7 @@ import {
   type Design,
   type FrameSpec,
   type ShadowSpec,
+  type MagnifyLens,
   type ShapeKind,
   type ShotLayer,
 } from "@/lib/design/schema";
@@ -125,6 +132,10 @@ export type EditorState = {
   blurIntensity: number;
   /** How much new magnifiers enlarge. */
   magnifyZoom: number;
+  /** The shape new magnifiers get. */
+  magnifyLens: MagnifyLens;
+  /** Whether new magnifiers are insets, away from the area they enlarge. */
+  magnifyInset: boolean;
   selectedAnnotationId: string | null;
 
   undo: () => void;
@@ -200,6 +211,15 @@ export type EditorState = {
   setBlurIntensity: (id: string | null, intensity: number) => void;
   /** Changes a magnifier's zoom; new magnifiers then match it. */
   setMagnifyZoom: (id: string | null, zoom: number) => void;
+  /** Reshapes the selected magnifier; new magnifiers then match it. */
+  setMagnifyLens: (lens: MagnifyLens) => void;
+  /**
+   * Turns the selected magnifier into an inset beside the area it enlarges,
+   * or back over it; new magnifiers then match it.
+   */
+  setMagnifyInset: (inset: boolean) => void;
+  /** Moves the area an inset magnifier enlarges. */
+  moveMagnifySource: (id: string, point: Point) => void;
   /** Resizes a step about its new centre. New steps then take its size. */
   resizeStep: (id: string, centre: Point, size: number) => void;
   setStepNumber: (id: string, number: number) => void;
@@ -228,6 +248,45 @@ function updateShot(design: Design, patch: Partial<ShotLayer>): Design {
 }
 
 const shotOf = (design: Design) => design.layers[0];
+
+/** Canvas px per image width, or null without a screenshot. */
+function imageUnit(state: EditorState): number | null {
+  const image = selectActiveImage(state);
+  return image ? computeLayout(image, state.design).shot.image.width : null;
+}
+
+/** Where annotations can go (the whole canvas), in image widths. */
+function annotationArea(state: EditorState): Box | null {
+  const image = selectActiveImage(state);
+  if (!image) return null;
+  const { canvas, shot } = computeLayout(image, state.design);
+  return canvasArea(canvas, {
+    ...shot.image,
+    x: shot.x + shot.image.x,
+    y: shot.y + shot.image.y,
+  });
+}
+
+/** Room enough for anything, before there is a screenshot to measure. */
+const FAR: Box = { x: -100, y: -100, width: 200, height: 200 };
+
+/**
+ * The settings a new magnifier for a drawn `box` gets. An inset's box is
+ * the area it enlarges; the magnifier goes beside it.
+ */
+function newMagnifier(state: EditorState, box: Box) {
+  const zoom = state.magnifyZoom;
+  const lens = state.magnifyLens;
+  if (!state.magnifyInset) return { zoom, lens };
+  const area = annotationArea(state) ?? FAR;
+  const square = lens === "circle";
+  return {
+    zoom,
+    lens,
+    ...roundBox(fitBox(insetBox(box, zoom, area), area, square)),
+    from: roundPoint({ x: box.x + box.width / 2, y: box.y + box.height / 2 }),
+  };
+}
 
 /** From an arrow's tail to its tip, rounded like the positions. */
 const arrowDelta = (from: Point, to: Point) => ({
@@ -370,6 +429,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     lineEnd: LINE_ENDS[0],
     blurIntensity: DEFAULT_BLUR_INTENSITY,
     magnifyZoom: DEFAULT_MAGNIFY_ZOOM,
+    magnifyLens: DEFAULT_MAGNIFY_LENS,
+    magnifyInset: false,
     selectedAnnotationId: null,
 
     undo: () =>
@@ -825,6 +886,12 @@ export const useEditorStore = create<EditorState>()((set, get) => {
               annotation.shape === "highlight" && {
                 highlightRounded: annotation.rounded ?? false,
               }),
+            ...(annotation.kind === "shape" &&
+              annotation.shape === "magnify" && {
+                magnifyZoom: annotation.zoom ?? DEFAULT_MAGNIFY_ZOOM,
+                magnifyLens: annotation.lens ?? DEFAULT_MAGNIFY_LENS,
+                magnifyInset: annotation.from !== undefined,
+              }),
           }),
         };
       }),
@@ -874,7 +941,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
                 color: get().annotationColor,
                 filled: get().shapeFilled,
                 ...(shape === "blur" ? { intensity: get().blurIntensity } : {}),
-                ...(shape === "magnify" ? { zoom: get().magnifyZoom } : {}),
+                ...(shape === "magnify" ? newMagnifier(get(), box) : {}),
                 ...(shape === "highlight"
                   ? { rounded: get().highlightRounded }
                   : {}),
@@ -986,15 +1053,9 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     nudgeAnnotation: (id, dx, dy) => {
       if (!finite(dx) || !finite(dy)) return;
       const state = get();
-      const image = selectActiveImage(state);
-      if (!image) return;
-      const { canvas, shot } = computeLayout(image, state.design);
-      const unit = shot.image.width;
-      const area = canvasArea(canvas, {
-        ...shot.image,
-        x: shot.x + shot.image.x,
-        y: shot.y + shot.image.y,
-      });
+      const unit = imageUnit(state);
+      const area = annotationArea(state);
+      if (!unit || !area) return;
       commit(
         (design) =>
           updateAnnotation(design, id, (annotation) => {
@@ -1014,7 +1075,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
                   : fitBox(
                       { ...annotation, ...moved },
                       area,
-                      annotation.shape === "circle",
+                      isSquareShape(annotation),
                     );
             const rounded = roundPoint(to);
             return rounded.x === annotation.x && rounded.y === annotation.y
@@ -1058,6 +1119,106 @@ export const useEditorStore = create<EditorState>()((set, get) => {
               : { ...annotation, zoom: to },
           ),
         `annotation-magnify-${id}`,
+      );
+    },
+
+    setMagnifyLens: (lens) => {
+      set(() => ({ magnifyLens: lens }));
+      const id = get().selectedAnnotationId;
+      if (!id) return;
+      commit((design) =>
+        updateAnnotation(design, id, (annotation) => {
+          if (
+            annotation.kind !== "shape" ||
+            annotation.shape !== "magnify" ||
+            (annotation.lens ?? DEFAULT_MAGNIFY_LENS) === lens
+          )
+            return null;
+          if (lens !== "circle") return { ...annotation, lens };
+          // A circle's box is square, about the same centre.
+          const side = Math.min(annotation.width, annotation.height);
+          return {
+            ...annotation,
+            lens,
+            ...roundBox({
+              x: annotation.x + (annotation.width - side) / 2,
+              y: annotation.y + (annotation.height - side) / 2,
+              width: side,
+              height: side,
+            }),
+          };
+        }),
+      );
+    },
+
+    setMagnifyInset: (inset) => {
+      set(() => ({ magnifyInset: inset }));
+      const id = get().selectedAnnotationId;
+      if (!id) return;
+      const area = annotationArea(get()) ?? FAR;
+      commit((design) =>
+        updateAnnotation(design, id, (annotation) => {
+          if (
+            annotation.kind !== "shape" ||
+            annotation.shape !== "magnify" ||
+            (annotation.from !== undefined) === inset
+          )
+            return null;
+          const zoom = annotation.zoom ?? DEFAULT_MAGNIFY_ZOOM;
+          const square = isSquareShape(annotation);
+          if (inset) {
+            // It keeps enlarging what it covers, from beside it.
+            const from = {
+              x: annotation.x + annotation.width / 2,
+              y: annotation.y + annotation.height / 2,
+            };
+            const source = {
+              x: from.x - annotation.width / zoom / 2,
+              y: from.y - annotation.height / zoom / 2,
+              width: annotation.width / zoom,
+              height: annotation.height / zoom,
+            };
+            return {
+              ...annotation,
+              ...roundBox(fitBox(insetBox(source, zoom, area), area, square)),
+              from: roundPoint(from),
+            };
+          }
+          // Back over the area it enlarges.
+          const { from, ...rest } = annotation;
+          if (!from) return null;
+          return {
+            ...rest,
+            ...roundBox(
+              fitBox(
+                {
+                  x: from.x - annotation.width / 2,
+                  y: from.y - annotation.height / 2,
+                  width: annotation.width,
+                  height: annotation.height,
+                },
+                area,
+                square,
+              ),
+            ),
+          };
+        }),
+      );
+    },
+
+    moveMagnifySource: (id, point) => {
+      if (!finite(point.x) || !finite(point.y)) return;
+      const to = roundPoint(point);
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind !== "shape" ||
+            !annotation.from ||
+            (annotation.from.x === to.x && annotation.from.y === to.y)
+              ? null
+              : { ...annotation, from: to },
+          ),
+        `annotation-from-${id}`,
       );
     },
 

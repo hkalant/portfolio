@@ -5,6 +5,7 @@ import {
   Highlighter,
   MousePointer2,
   MoveUpRight,
+  PictureInPicture2,
   RotateCcw,
   Trash2,
   ZoomIn,
@@ -16,8 +17,16 @@ import {
   MAX_STEP_NUMBER,
   parseStepNumber,
 } from "@/lib/design/annotations";
-import { MAX_MAGNIFY_ZOOM, MIN_MAGNIFY_ZOOM } from "@/lib/design/magnify";
-import { LINE_ENDS, type StepAnnotation } from "@/lib/design/schema";
+import {
+  DEFAULT_MAGNIFY_LENS,
+  MAX_MAGNIFY_ZOOM,
+  MIN_MAGNIFY_ZOOM,
+} from "@/lib/design/magnify";
+import {
+  LINE_ENDS,
+  type MagnifyLens,
+  type StepAnnotation,
+} from "@/lib/design/schema";
 import {
   selectSelectedAnnotation,
   useEditorStore,
@@ -273,6 +282,59 @@ function MagnifyZoom() {
   );
 }
 
+const LENSES: readonly { lens: MagnifyLens; label: string; icon: ReactNode }[] =
+  [
+    { lens: "circle", label: "Round magnifier", icon: <Circle aria-hidden /> },
+    { lens: "rect", label: "Square-cornered magnifier", icon: <SquareIcon /> },
+    { lens: "rounded", label: "Rounded magnifier", icon: <RoundedIcon /> },
+  ];
+
+/** The selected magnifier's shape and whether it is an inset, or new ones'. */
+function MagnifyOptions() {
+  const selected = useEditorStore(selectSelectedAnnotation);
+  const lens = useEditorStore((state) => state.magnifyLens);
+  const inset = useEditorStore((state) => state.magnifyInset);
+  const setLens = useEditorStore((state) => state.setMagnifyLens);
+  const setInset = useEditorStore((state) => state.setMagnifyInset);
+  const magnifier =
+    selected?.kind === "shape" && selected.shape === "magnify"
+      ? selected
+      : null;
+  const shown = magnifier ? (magnifier.lens ?? DEFAULT_MAGNIFY_LENS) : lens;
+  const isInset = magnifier ? magnifier.from !== undefined : inset;
+  return (
+    <>
+      {LENSES.map((item) => (
+        <ToolButton
+          key={item.lens}
+          label={item.label}
+          pressed={shown === item.lens}
+          onClick={() => setLens(item.lens)}
+        >
+          {item.icon}
+        </ToolButton>
+      ))}
+      <Divider />
+      <ToolButton
+        label="Magnify in place"
+        hint="Covers the area it enlarges"
+        pressed={!isInset}
+        onClick={() => setInset(false)}
+      >
+        <ZoomIn aria-hidden />
+      </ToolButton>
+      <ToolButton
+        label="Magnify as an inset"
+        hint="Drag over an area: the enlarged copy goes beside it"
+        pressed={isInset}
+        onClick={() => setInset(true)}
+      >
+        <PictureInPicture2 aria-hidden />
+      </ToolButton>
+    </>
+  );
+}
+
 /** The line tool; its button shows the end new lines get. */
 function LineTool() {
   const tool = useEditorStore((state) => state.annotationTool);
@@ -460,6 +522,8 @@ export function AnnotationToolbar() {
         <>
           <Divider />
           <MagnifyZoom />
+          <Divider />
+          <MagnifyOptions />
         </>
       ) : (
         <>
