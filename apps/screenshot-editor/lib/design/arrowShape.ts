@@ -345,8 +345,9 @@ function lineShape(end: LineEnd, samples: Sample[], unit: number): ArrowShape {
 
 /** The weight of the bold styles' lines: lighter on short arrows. */
 function boldWidth(length: number, unit: number) {
-  const short = Math.min(1, length / (0.06 * unit));
-  return 0.0085 * unit * (0.6 + 0.4 * short);
+  const short = Math.min(1, length / (0.1 * unit));
+  // Never more than a fifth of the arrow, so short ones stay arrows.
+  return Math.min(0.017 * unit * (0.6 + 0.4 * short), length * 0.2);
 }
 
 /** The two ends of an open V whose point is `vertex`, pointing along `d`. */
@@ -371,7 +372,7 @@ function openArrow(
   unit: number,
 ): ArrowShape {
   const length = samples[samples.length - 1].s;
-  const wing = Math.min(3 * width, length * 0.6);
+  const wing = Math.min(2.6 * width, length * 0.6);
   // The direction at the tip, and the vertex pulled back so the round
   // join ends on the tip.
   const d = unitVector(pointAt(samples, length - wing / 2), tip);
@@ -421,8 +422,8 @@ export function arrowShape(
     // A heavy round-capped line with an open V head, one stroke weight;
     // "dotted" starts with a dot and a gap.
     const width = boldWidth(length, unit);
-    const r = width * 0.7;
-    const gap = width * 0.55;
+    const r = width * 0.6;
+    const gap = width * 0.45;
     // Where the line starts: after the dot, its gap and the line's round cap.
     const start =
       style === "dotted" ? Math.min(2 * r + gap + width / 2, length * 0.45) : 0;
