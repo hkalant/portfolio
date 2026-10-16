@@ -19,6 +19,7 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
         apple
           ? { keys: [mod, shift, "Z"], action: "Redo" }
           : { keys: [mod, "Y"], action: "Redo" },
+        { keys: [mod, "/"], action: "Show keyboard shortcuts" },
       ],
     },
     {

@@ -74,6 +74,16 @@ describe("matchShortcut", () => {
     expect(zoom("-", { ctrlKey: true }, true)).toBeNull();
   });
 
+  it("shows the shortcuts list with ⌘/Ctrl and slash", () => {
+    expect(matchShortcut(key("/", { metaKey: true }), true)).toEqual({
+      type: "shortcuts",
+    });
+    expect(matchShortcut(key("/", { ctrlKey: true }), false)).toEqual({
+      type: "shortcuts",
+    });
+    expect(matchShortcut(key("/"), false)).toBeNull();
+  });
+
   it("nudges with arrows, 10 px with Shift", () => {
     expect(matchShortcut(key("ArrowLeft"), false)).toEqual({
       type: "nudge",

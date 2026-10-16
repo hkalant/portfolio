@@ -214,8 +214,8 @@ test.describe("broken images", () => {
   });
 });
 
-test("the info button lists the tutorials", async ({ page }) => {
-  await page.getByRole("button", { name: "Help" }).click();
+test("the More menu lists the tutorials", async ({ page }) => {
+  await page.getByRole("button", { name: "More" }).click();
   const tutorials = page.getByRole("navigation", { name: "Tutorials" });
   await expect(
     tutorials.getByRole("link", { name: "Watch the video tutorial" }),
@@ -225,11 +225,24 @@ test("the info button lists the tutorials", async ({ page }) => {
   await expect(page).toHaveURL(/\/editor\/$/);
 });
 
-test("the keyboard button lists the shortcuts", async ({ page }) => {
+test("the More menu lists the shortcuts", async ({ page }) => {
+  await page.getByRole("button", { name: "More" }).click();
   await page.getByRole("button", { name: "Keyboard shortcuts" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText("Undo", { exact: true })).toBeVisible();
   await expect(dialog.getByText("Export", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Back" }).click();
+  await expect(
+    dialog.getByRole("button", { name: "Keyboard shortcuts" }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+});
+
+test("⌘/Ctrl + / opens and closes the shortcuts", async ({ page }) => {
+  const dialog = page.getByRole("dialog");
+  await page.keyboard.press("ControlOrMeta+Slash");
+  await expect(dialog.getByText("Undo", { exact: true })).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+Slash");
   await expect(dialog).toHaveCount(0);
 });
