@@ -353,31 +353,34 @@ test("an outline keeps its border width when zoomed out and resized", async ({
 
   // Yellow pixels across the left border, in the preview: as wide as the
   // border at this zoom (0.004 of the image width), not wider.
-  const yellow = await stage(page).evaluate(
-    (element, { x, y }) => {
-      const canvas = element.querySelector("canvas");
-      const context = canvas?.getContext("2d");
-      if (!canvas || !context) return 0;
-      const ratio = canvas.width / element.getBoundingClientRect().width;
-      const data = context.getImageData(
-        Math.round((x - 12) * ratio),
-        Math.round(y * ratio),
-        Math.round(24 * ratio),
-        1,
-      ).data;
-      let count = 0;
-      for (let index = 0; index < data.length; index += 4)
-        if (data[index + 1] > 100) count += 1;
-      // In screen pixels.
-      return count / ratio;
-    },
-    {
-      x: (PADDING + 0.25 * big.width) * scale,
-      y: (PADDING + 0.6 * big.height) * scale,
-    },
-  );
+  const countYellow = () =>
+    stage(page).evaluate(
+      (element, { x, y }) => {
+        const canvas = element.querySelector("canvas");
+        const context = canvas?.getContext("2d");
+        if (!canvas || !context) return 0;
+        const ratio = canvas.width / element.getBoundingClientRect().width;
+        const data = context.getImageData(
+          Math.round((x - 12) * ratio),
+          Math.round(y * ratio),
+          Math.round(24 * ratio),
+          1,
+        ).data;
+        let count = 0;
+        for (let index = 0; index < data.length; index += 4)
+          if (data[index + 1] > 100) count += 1;
+        // In screen pixels.
+        return count / ratio;
+      },
+      {
+        x: (PADDING + 0.25 * big.width) * scale,
+        y: (PADDING + 0.6 * big.height) * scale,
+      },
+    );
   const width = 0.004 * big.width * scale;
-  expect(yellow).toBeGreaterThanOrEqual(1);
+  // Once the canvas has redrawn the resized rectangle.
+  await expect.poll(countYellow).toBeGreaterThanOrEqual(1);
+  const yellow = await countYellow();
   expect(yellow).toBeLessThanOrEqual(Math.ceil(width) + 1);
 
   // The export has the resized rectangle with its edge near 0.75 (the

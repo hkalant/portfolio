@@ -13,8 +13,7 @@ import { CANVAS_FOCUS_ATTRIBUTE } from "@/lib/hooks/useShortcuts";
 import { useEditorStore } from "@/lib/store/editor";
 import { clamp } from "@/lib/utils";
 import {
-  endArrowHover,
-  keepArrowHover,
+  setOverArrowMenu,
   useArrowHover,
   useSelectionFrame,
 } from "./nodes/Annotations";
@@ -83,6 +82,10 @@ function StylePreview({
   );
 }
 
+// A menu removed under the mouse gets no pointerleave. Defined once, so React
+// only calls it when the menu comes and goes.
+const leaveOnRemove = () => () => setOverArrowMenu(false);
+
 type Props = {
   /** The stage's size on screen: the menu stays over the canvas. */
   width: number;
@@ -126,8 +129,9 @@ export function ArrowStyleMenu({ width, height }: Props) {
     <div
       role="radiogroup"
       aria-label={line ? "Line end" : "Arrow style"}
-      onPointerEnter={keepArrowHover}
-      onPointerLeave={() => endArrowHover()}
+      ref={leaveOnRemove}
+      onPointerEnter={() => setOverArrowMenu(true)}
+      onPointerLeave={() => setOverArrowMenu(false)}
       className="absolute flex items-center rounded-full glass p-1"
       style={{ left, top }}
     >

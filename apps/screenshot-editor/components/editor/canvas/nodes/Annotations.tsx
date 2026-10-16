@@ -91,17 +91,27 @@ export const useArrowHover = create<{ frame: SelectionFrame | null }>()(() => ({
   frame: null,
 }));
 let hoverTimer: ReturnType<typeof setTimeout> | undefined;
+// The mouse is over the menu. Safari can report leaving the arrow after
+// entering the menu, so leaving the arrow then must not hide it.
+let overMenu = false;
 export function keepArrowHover() {
   clearTimeout(hoverTimer);
 }
+/** The mouse entered (true) or left (false) the style menu. */
+export function setOverArrowMenu(over: boolean) {
+  overMenu = over;
+  if (over) keepArrowHover();
+  else endArrowHover();
+}
 export function endArrowHover(delay = 300) {
   clearTimeout(hoverTimer);
-  if (delay === 0) useArrowHover.setState({ frame: null });
-  else
-    hoverTimer = setTimeout(
-      () => useArrowHover.setState({ frame: null }),
-      delay,
-    );
+  if (delay === 0) {
+    overMenu = false;
+    useArrowHover.setState({ frame: null });
+  } else
+    hoverTimer = setTimeout(() => {
+      if (!overMenu) useArrowHover.setState({ frame: null });
+    }, delay);
 }
 
 function setFrame(frame: SelectionFrame | null) {
