@@ -115,7 +115,7 @@ export function HelpMenu() {
           <CircleInfoIcon />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-2">
+      <PopoverContent align="end" className="w-64 p-2.5">
         <TutorialLinks onPick={close} />
       </PopoverContent>
     </Popover>

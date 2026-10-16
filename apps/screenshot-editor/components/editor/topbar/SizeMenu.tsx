@@ -250,7 +250,7 @@ export function SizeMenu() {
         )}
         <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-2">
+      <PopoverContent align="start" className="w-80 p-2.5">
         <SizeOptions onPick={() => setOpen(false)} />
       </PopoverContent>
     </Popover>

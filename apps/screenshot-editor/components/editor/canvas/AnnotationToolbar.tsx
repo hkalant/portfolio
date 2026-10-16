@@ -257,9 +257,10 @@ function ToolMenu<T extends AnnotationTool>({
       <PopoverContent
         align="start"
         // The menu's icons in line with the tool's: the toolbar icon is 8px
-        // into its button, a menu icon 14px into the menu.
-        alignOffset={-6}
-        className="w-auto p-1"
+        // into its button, a menu icon 20px into the menu. The 10px padding
+        // keeps the rows' 12px corners concentric with the menu's 22px.
+        alignOffset={-12}
+        className="w-auto p-2.5"
         role="menu"
         aria-label={menuLabel}
       >

@@ -57,7 +57,7 @@ export function MoreMenu() {
         </Button>
       </PopoverTrigger>
       {view === "menu" ? (
-        <PopoverContent align="end" className="w-64 p-2">
+        <PopoverContent align="end" className="w-64 p-2.5">
           <button
             type="button"
             className={itemClass}

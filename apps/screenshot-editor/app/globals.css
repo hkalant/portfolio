@@ -138,7 +138,8 @@
   /* One shape language: panes (bars, panels, popovers, the canvas surround)
      use xl; full-width controls and the items inside panes (tiles, menu
      rows) use md, with sm for what nests inside those; buttons sized to
-     their label are pills. */
+     their label are pills. Inside a pane, padding + inner radius = outer
+     radius, so the curves stay parallel (22px pane, 10px padding, 12px rows). */
   /* brookes.ac.uk sets text in the operating system's sans-serif. */
   --font-sans:
     BlinkMacSystemFont, -apple-system, "Segoe UI", Roboto, Oxygen, Ubuntu,
