@@ -1,7 +1,13 @@
 "use client";
 
 import { LoaderCircle } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { computePreviewScale } from "@/lib/design/layout";
 import { atZoomLimit, maxZoom, minZoom, stepZoom } from "@/lib/design/zoom";
 import { planExport } from "@/lib/export/exportImage";
@@ -10,6 +16,7 @@ import { CANVAS_FOCUS_ATTRIBUTE } from "@/lib/hooks/useShortcuts";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { useDesignLayout } from "@/lib/store/hooks";
 import { cn } from "@/lib/utils";
+import { setZoomHandler, type ZoomCommand } from "@/lib/zoomCommands";
 import { EmptyState } from "../EmptyState";
 import { AnnotationToolbar } from "./AnnotationToolbar";
 import { DesignStage } from "./DesignStage";
@@ -110,6 +117,16 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
       };
     setZoom(next);
   };
+
+  // The zoom shortcuts work like the buttons, while there is a design.
+  const onZoomKey = useEffectEvent((command: ZoomCommand) => {
+    if (command === "reset") changeZoom(null);
+    else changeZoom(stepZoom(scale, command, limits));
+  });
+  const hasDesign = Boolean(image && layout);
+  useEffect(() => {
+    if (hasDesign) return setZoomHandler(onZoomKey);
+  }, [hasDesign]);
 
   if (!image || !layout) {
     return (

@@ -50,6 +50,30 @@ describe("matchShortcut", () => {
     expect(matchShortcut(key("v", mod), false)).toBeNull(); // paste is handled by the paste event
   });
 
+  it("zooms with ⌘/Ctrl and plus, minus or zero", () => {
+    const zoom = (value: string, mods: Partial<KeyInput>, apple: boolean) =>
+      matchShortcut(key(value, mods), apple);
+    expect(zoom("=", { metaKey: true }, true)).toEqual({
+      type: "zoom",
+      direction: "in",
+    });
+    expect(zoom("+", { ctrlKey: true, shiftKey: true }, false)).toEqual({
+      type: "zoom",
+      direction: "in",
+    });
+    expect(zoom("-", { ctrlKey: true }, false)).toEqual({
+      type: "zoom",
+      direction: "out",
+    });
+    expect(zoom("0", { metaKey: true }, true)).toEqual({
+      type: "zoom",
+      direction: "reset",
+    });
+    // Without the modifier, or with the other one, the keys do nothing.
+    expect(zoom("=", {}, true)).toBeNull();
+    expect(zoom("-", { ctrlKey: true }, true)).toBeNull();
+  });
+
   it("nudges with arrows, 10 px with Shift", () => {
     expect(matchShortcut(key("ArrowLeft"), false)).toEqual({
       type: "nudge",

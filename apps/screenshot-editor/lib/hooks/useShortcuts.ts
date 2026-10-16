@@ -10,6 +10,7 @@ import {
   type ShortcutContext,
 } from "@/lib/shortcuts";
 import { selectSelectedAnnotation, useEditorStore } from "@/lib/store/editor";
+import { runZoom } from "@/lib/zoomCommands";
 
 /** Marks the focusable element around the design stage (arrow keys nudge there). */
 export const CANVAS_FOCUS_ATTRIBUTE = "data-design-canvas";
@@ -33,7 +34,7 @@ function focusContext(event: KeyboardEvent): ShortcutContext {
   };
 }
 
-/** Undo, redo, export, copy, open, delete, escape and nudge from the keyboard. */
+/** Undo, redo, export, copy, open, delete, escape, nudge and zoom from the keyboard. */
 export function useShortcuts({ onOpen }: { onOpen: () => void }) {
   const open = useEffectEvent(onOpen);
 
@@ -74,6 +75,10 @@ export function useShortcuts({ onOpen }: { onOpen: () => void }) {
           else if (state.annotationTool !== "select")
             state.setAnnotationTool("select");
           else return;
+          break;
+        case "zoom":
+          // Without a design on screen the browser zooms the page as usual.
+          if (!runZoom(command.direction)) return;
           break;
         case "nudge": {
           const selected = selectSelectedAnnotation(state);
