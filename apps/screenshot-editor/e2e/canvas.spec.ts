@@ -473,6 +473,9 @@ test("zooms the canvas from the keyboard", async ({ page }) => {
   const percent = async () =>
     Number((await level.textContent())!.trim().replace("%", ""));
   const fit = await percent();
+  // Desktop Safari runs at 2x, so compare with the starting ratio, not 1.
+  const ratio = () => page.evaluate(() => window.devicePixelRatio);
+  const startRatio = await ratio();
   // Playwright's ControlOrMeta is ⌘ on a Mac and Ctrl elsewhere.
   await page.keyboard.press("ControlOrMeta+Equal");
   await expect.poll(percent).toBeGreaterThan(fit);
@@ -484,7 +487,7 @@ test("zooms the canvas from the keyboard", async ({ page }) => {
   await page.keyboard.press("ControlOrMeta+0");
   await expect.poll(percent).toBe(fit);
   // The browser's own page zoom is left alone.
-  expect(await page.evaluate(() => window.devicePixelRatio)).toBe(1);
+  expect(await ratio()).toBe(startRatio);
 });
 
 test("zooms the canvas in, out and back to fit", async ({ page }) => {
