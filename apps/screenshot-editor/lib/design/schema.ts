@@ -158,7 +158,7 @@ export const SHAPE_KINDS = [
   "blur",
 ] as const;
 /** Arrow looks; the first is the default. */
-export const ARROW_STYLES = ["tapered", "chevron", "halo", "refined"] as const;
+export const ARROW_STYLES = ["solid", "chevron", "halo", "refined"] as const;
 /**
  * Line ends; the first is the default. A line is stored as an arrow whose
  * style is one of these, so it moves, stretches and bends the same way.
@@ -213,8 +213,14 @@ export const arrowAnnotationSchema = z.object({
   dx: z.number().min(-200).max(200),
   dy: z.number().min(-200).max(200),
   color: annotationColorSchema,
-  /** A head, or a line end for lines. Arrows saved before there were styles get the default. */
-  style: z.enum([...ARROW_STYLES, ...LINE_ENDS]).default("tapered"),
+  /**
+   * A head, or a line end for lines. Arrows saved before there were styles
+   * get the default; the retired tapered style becomes solid.
+   */
+  style: z.preprocess(
+    (style) => (style === "tapered" ? "solid" : style),
+    z.enum([...ARROW_STYLES, ...LINE_ENDS]).default("solid"),
+  ),
   /** How far the middle is pulled to the left of straight, as a share of the length. */
   bend: z.number().min(-0.5).max(0.5).default(0),
 });

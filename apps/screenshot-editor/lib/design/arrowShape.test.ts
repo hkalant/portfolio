@@ -56,7 +56,7 @@ describe("arrow shapes", () => {
   });
 
   it("are nothing for a zero-length arrow", () => {
-    expect(arrowShape("tapered", tail, tail, 0, 1200)).toBeNull();
+    expect(arrowShape("solid", tail, tail, 0, 1200)).toBeNull();
     expect(arrowShape("chevron", tail, tip, 0, 0)).toBeNull();
   });
 

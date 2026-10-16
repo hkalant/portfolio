@@ -561,7 +561,7 @@ describe("editor store: annotations", () => {
   it("styles and bends arrows, and new arrows take the last style", () => {
     state().addArrow({ x: 0.1, y: 0.1 }, { x: 0.4, y: 0.3 });
     const [arrow] = annotations();
-    expect(arrow).toMatchObject({ style: "tapered", bend: 0 });
+    expect(arrow).toMatchObject({ style: "solid", bend: 0 });
     state().setArrowStyle(arrow.id, "halo");
     expect(annotations()[0]).toMatchObject({ style: "halo" });
     state().addArrow({ x: 0.5, y: 0.1 }, { x: 0.6, y: 0.3 });
@@ -584,11 +584,11 @@ describe("editor store: annotations", () => {
     state().addArrow({ x: 0.5, y: 0.4 }, { x: 0.6, y: 0.5 });
     expect(annotations()[1]).toMatchObject({ style: "bar" });
     // Arrows keep their own default.
-    expect(annotations()[2]).toMatchObject({ style: "tapered" });
+    expect(annotations()[2]).toMatchObject({ style: "solid" });
     state().setArrowStyle(line.id, "halo");
     state().setArrowStyle(annotations()[2].id, "dot");
     expect(annotations()[0]).toMatchObject({ style: "bar" });
-    expect(annotations()[2]).toMatchObject({ style: "tapered" });
+    expect(annotations()[2]).toMatchObject({ style: "solid" });
   });
 
   it("draws blur boxes with the last strength, and changes a box's strength", () => {

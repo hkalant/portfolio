@@ -19,7 +19,7 @@ import {
 } from "./nodes/Annotations";
 
 export const ARROW_STYLE_NAMES: Record<ArrowStyle, string> = {
-  tapered: "Tapered",
+  solid: "Solid",
   chevron: "Open",
   halo: "Outlined",
   refined: "Classic",

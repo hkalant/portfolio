@@ -569,14 +569,14 @@ test("an arrow's style is picked from the menu below it, and its middle bends it
   await drag(page, [0.2, 0.5], [0.8, 0.5]);
   await nextFrame(page);
 
-  // Hovering the arrow shows its styles, tapered first.
+  // Hovering the arrow shows its styles, solid first.
   const menu = page.getByRole("radiogroup", { name: "Arrow style" });
   await expect(menu).toHaveCount(0);
   const middle = await onImage(page, 0.5, 0.5);
   await page.mouse.move(middle.x, middle.y);
   await expect(menu).toBeVisible();
   await expect(
-    menu.getByRole("radio", { name: "Tapered arrow" }),
+    menu.getByRole("radio", { name: "Solid arrow" }),
   ).toHaveAttribute("aria-checked", "true");
   await menu.getByRole("radio", { name: "Outlined arrow" }).click();
   await expect(

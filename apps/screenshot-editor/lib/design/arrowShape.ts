@@ -22,7 +22,7 @@ export type PathCommand =
   | { op: "Z" };
 
 export type ArrowShape = {
-  /** A filled outline (tapered, halo, refined; a line's dot or round end), or null. */
+  /** A filled outline (solid, halo, refined; a line's dot or round end), or null. */
   fill: PathCommand[] | null;
   /** A stroked path (the open chevron, lines), or null. Painted under the fill. */
   stroke: { path: PathCommand[]; width: number; cap: CanvasLineCap } | null;
@@ -402,51 +402,17 @@ export function arrowShape(
     };
   }
 
-  if (style === "tapered") {
-    // One swept shape: a thin round tail widening into a broad, swept-back
-    // head, with the step circles' soft shadow.
-    const full = 0.031 * unit;
-    const head = Math.min(
-      full * Math.min(1, 0.3 + (0.7 * length) / (4 * full)),
-      length * 0.56,
-    );
-    const k = Math.pow(head / full, 0.6);
-    const headHalf = head * 0.6;
-    const neckHalf = Math.min(0.0052 * unit * k, headHalf * 0.4);
-    const shape = filledArrow(samples, tip, {
-      head,
-      headHalf,
-      sweep: head * 0.3,
-      neckHalf,
-      tailHalf: Math.min(0.002 * unit * k, neckHalf * 0.5),
-      taper: 0.75,
-      tipRadius: headHalf * 0.08,
-      barbRadius: headHalf * 0.14,
-      neckRadius: neckHalf * 0.6,
-    });
-    return {
-      ...shape,
-      stroke: null,
-      halo: 0,
-      shadow: {
-        blur: 0.015 * unit * Math.max(k, 0.5),
-        offsetY: 0.004 * unit * Math.max(k, 0.5),
-        opacity: 0.28,
-      },
-      bounds: boundsOf(shape.outline, 0),
-    };
-  }
-
-  if (style === "halo") {
-    // A solid arrow with a white outline and a soft shadow, legible on
-    // anything.
+  if (style === "halo" || style === "solid") {
+    // A solid arrow with a soft shadow; the halo style adds a white outline,
+    // legible on anything.
     const full = 0.03 * unit;
     const k = Math.min(1, Math.max(0.5, Math.sqrt(length / (4 * full))));
     const kw = Math.sqrt(k);
     const head = Math.max(Math.min(full * k, length * 0.62), 0.011 * unit);
     const headHalf = head * 0.52;
     const neckHalf = Math.min(0.0034 * unit * kw, headHalf * 0.42);
-    const halo = Math.min(0.0024 * unit * kw, headHalf * 0.4);
+    const halo =
+      style === "halo" ? Math.min(0.0024 * unit * kw, headHalf * 0.4) : 0;
     const shape = filledArrow(samples, tip, {
       head,
       headHalf,
