@@ -138,6 +138,93 @@ export const shotLayerSchema = z.object({
   frame: frameSpecSchema,
 });
 
+// Annotations drawn on the screenshot. Positions and sizes are in "image
+// widths": 1 is the screenshot's width, so they follow it when it moves or
+// is resized. x runs 0 to 1 across, y 0 to height / width down.
+
+/** The only colours steps, shapes and arrows may use (the Oxford Brookes palette). */
+export const ANNOTATION_COLORS = ["#424a52", "#d10373", "#f9c909"] as const;
+export const annotationColorSchema = z.enum(ANNOTATION_COLORS);
+
+/**
+ * A "highlight" is a see-through rectangle with no border; a
+ * "blur" box blurs the screenshot under it instead of drawing a shape.
+ */
+export const SHAPE_KINDS = [
+  "rect",
+  "rounded",
+  "circle",
+  "highlight",
+  "blur",
+] as const;
+/** Arrow looks; the first is the default. */
+export const ARROW_STYLES = ["tapered", "chevron", "halo", "refined"] as const;
+/**
+ * Line ends; the first is the default. A line is stored as an arrow whose
+ * style is one of these, so it moves, stretches and bends the same way.
+ */
+export const LINE_ENDS = ["flat", "dot", "round", "bar"] as const;
+export const MAX_STEP_NUMBER = 999;
+/** How far a step can be resized, as a multiple of its standard size. */
+export const MIN_STEP_SIZE = 0.5;
+export const MAX_STEP_SIZE = 4;
+
+const imageUnit = z.number().min(0).max(100);
+/** Positions can be left of or above the screenshot, on the background. */
+const imagePosition = z.number().min(-100).max(100);
+
+export const stepAnnotationSchema = z.object({
+  id: z.string().min(1),
+  kind: z.literal("step"),
+  /** The circle's centre. */
+  x: imagePosition,
+  y: imagePosition,
+  number: z.number().int().min(1).max(MAX_STEP_NUMBER),
+  color: annotationColorSchema,
+  /** Times the standard size. Designs saved before steps could be resized get 1. */
+  size: z.number().min(MIN_STEP_SIZE).max(MAX_STEP_SIZE).default(1),
+});
+
+export const shapeAnnotationSchema = z.object({
+  id: z.string().min(1),
+  kind: z.literal("shape"),
+  shape: z.enum(SHAPE_KINDS),
+  /** Top-left corner of the shape's box. A circle's box is square. */
+  x: imagePosition,
+  y: imagePosition,
+  width: imageUnit.positive(),
+  height: imageUnit.positive(),
+  color: annotationColorSchema,
+  /** Filled with the colour, or a transparent shape with a coloured border. */
+  filled: z.boolean(),
+  /** Whether a highlight has rounded corners. Other shapes have none. */
+  rounded: z.boolean().optional(),
+  /** How strongly a blur box blurs, 0 to 1. Other shapes have none. */
+  intensity: z.number().min(0).max(1).optional(),
+});
+
+export const arrowAnnotationSchema = z.object({
+  id: z.string().min(1),
+  kind: z.literal("arrow"),
+  /** The tail. */
+  x: imagePosition,
+  y: imagePosition,
+  /** From the tail to the tip of the head. */
+  dx: z.number().min(-200).max(200),
+  dy: z.number().min(-200).max(200),
+  color: annotationColorSchema,
+  /** A head, or a line end for lines. Arrows saved before there were styles get the default. */
+  style: z.enum([...ARROW_STYLES, ...LINE_ENDS]).default("tapered"),
+  /** How far the middle is pulled to the left of straight, as a share of the length. */
+  bend: z.number().min(-0.5).max(0.5).default(0),
+});
+
+export const annotationSchema = z.discriminatedUnion("kind", [
+  stepAnnotationSchema,
+  shapeAnnotationSchema,
+  arrowAnnotationSchema,
+]);
+
 export const designSchema = z.object({
   version: z.literal(2),
   canvas: canvasSpecSchema,
@@ -145,6 +232,10 @@ export const designSchema = z.object({
   backgroundFx: backgroundFxSchema,
   // Exactly one screenshot layer until later milestones add more kinds.
   layers: z.tuple([shotLayerSchema]),
+  // Designs saved before annotations existed get none.
+  annotations: z.array(annotationSchema).max(500).default([]),
+  /** The number the next step gets. */
+  nextStep: z.number().int().min(1).max(MAX_STEP_NUMBER).default(1),
 });
 
 /** The milestone 1 design, kept so older saved designs can be migrated. */
@@ -177,5 +268,15 @@ export type FrameKind = (typeof FRAME_KINDS)[number];
 export type FrameSpec = z.infer<typeof frameSpecSchema>;
 export type ShotLayer = z.infer<typeof shotLayerSchema>;
 export type ShotStyle = Omit<ShotLayer, "id" | "kind" | "imageId">;
+export type AnnotationColor = (typeof ANNOTATION_COLORS)[number];
+export type ShapeKind = (typeof SHAPE_KINDS)[number];
+export type StepAnnotation = z.infer<typeof stepAnnotationSchema>;
+export type ShapeAnnotation = z.infer<typeof shapeAnnotationSchema>;
+export type ArrowStyle = (typeof ARROW_STYLES)[number];
+export type LineEnd = (typeof LINE_ENDS)[number];
+export const isLineEnd = (style: string): style is LineEnd =>
+  (LINE_ENDS as readonly string[]).includes(style);
+export type ArrowAnnotation = z.infer<typeof arrowAnnotationSchema>;
+export type Annotation = z.infer<typeof annotationSchema>;
 export type Design = z.infer<typeof designSchema>;
 export type DesignV1 = z.infer<typeof designV1Schema>;

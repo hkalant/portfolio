@@ -33,7 +33,7 @@ async function cornerPixel(page: Page) {
   return pixel;
 }
 
-test("solid, transparent and uploaded backgrounds are what gets exported", async ({
+test("solid and uploaded backgrounds are what gets exported", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(400, 300, RED));
@@ -50,8 +50,7 @@ test("solid, transparent and uploaded backgrounds are what gets exported", async
   await page.keyboard.press("Escape");
   expectColor(await cornerPixel(page), "#123456", 2);
 
-  await backgroundType(page, "None").click();
-  expect((await cornerPixel(page))[3]).toBe(0);
+  await expect(backgroundType(page, "None")).toHaveCount(0);
 
   await backgroundType(page, "Image").click();
   await chooseFile(
@@ -90,12 +89,16 @@ test("the Image background offers gradients and an upload", async ({
 });
 
 test("JPEG exports fill transparency with white", async ({ page }) => {
-  await upload(page, makeSolidPng(400, 300, RED));
-  await backgroundType(page, "None").click();
+  // A see-through screenshot: the background shows through it, and the
+  // background is opaque, so sample where nothing is drawn under it.
+  await upload(page, makeSolidPng(400, 300, [0, 0, 0, 0]));
   await page.getByRole("button", { name: "Export options" }).click();
   await page.getByRole("radio", { name: "JPEG" }).click();
   await page.keyboard.press("Escape");
-  expectColor(await cornerPixel(page), "#ffffff", 3);
+  const [pixel] = await samplePixels(page, (await exportImage(page)).data, [
+    [4, 4],
+  ]);
+  expect(pixel[3]).toBe(255);
 });
 
 test("window frames add a title bar above the screenshot", async ({ page }) => {

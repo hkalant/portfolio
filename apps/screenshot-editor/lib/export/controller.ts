@@ -28,7 +28,7 @@ export function registerExportStage(
 
 export const EXPORT_FAILED = "Export failed. Try a smaller size or scale.";
 export const COPY_FAILED = "Couldn't copy the image. Use Export instead.";
-export const COPIED = "Copied to clipboard";
+export const COPIED = "Copied!";
 
 // Copy buttons show their own "Copied" tooltip; the notice is the fallback
 // when none is mounted.

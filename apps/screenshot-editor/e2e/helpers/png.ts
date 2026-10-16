@@ -98,3 +98,26 @@ export const isRed = ([r, g, b]: Rgba) => r > 200 && g < 60 && b < 60;
 /** Relative luminance-ish brightness, 0..255. */
 export const brightness = ([r, g, b]: Rgba) =>
   0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+/** A PNG of upright stripes, `stripe` px wide, alternating two colours. */
+export function makeStripedPng(
+  width: number,
+  height: number,
+  stripe: number,
+  first: Rgba,
+  second: Rgba,
+): Buffer {
+  const solid = makeSolidPng(width, height, first);
+  const row = Buffer.alloc(1 + width * 4);
+  for (let x = 0; x < width; x += 1)
+    row.set(Math.floor(x / stripe) % 2 ? second : first, 1 + x * 4);
+  const raw = Buffer.concat(Array.from({ length: height }, () => row));
+  // Same header as the solid PNG, new pixels.
+  const header = solid.subarray(8, 8 + 25);
+  return Buffer.concat([
+    solid.subarray(0, 8),
+    header,
+    chunk("IDAT", deflateSync(raw)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}

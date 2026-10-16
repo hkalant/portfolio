@@ -8,6 +8,7 @@ export type ShortcutCommand =
   | { type: "copy" }
   | { type: "open" }
   | { type: "delete" }
+  | { type: "escape" }
   | { type: "nudge"; dx: number; dy: number };
 
 export type KeyInput = Pick<
@@ -46,6 +47,7 @@ export function matchShortcut(
   if (event.metaKey || event.ctrlKey) return null;
 
   if (key === "delete" || key === "backspace") return { type: "delete" };
+  if (key === "escape" && !event.shiftKey) return { type: "escape" };
   const arrow = ARROWS[key];
   if (arrow) {
     const step = event.shiftKey ? 10 : 1;

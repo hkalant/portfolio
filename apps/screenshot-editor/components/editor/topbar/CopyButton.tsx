@@ -12,8 +12,11 @@ const subscribe = () => () => {};
 /** How long the "Copied" tooltip stays up. */
 const COPIED_MS = 1800;
 
-/** Copies the design as a PNG. Hidden where browsers can't put images on the clipboard. */
-export function CopyButton() {
+/**
+ * Copies the design as a PNG. Hidden where browsers can't put images on the
+ * clipboard. `compact` shows the icon alone, for the phone bar.
+ */
+export function CopyButton({ compact = false }: { compact?: boolean }) {
   const image = useEditorStore(selectActiveImage);
   // As for Export: copying waits for the restore (runCopy ignores it until then).
   const busy = useEditorStore((state) => state.loading || state.restoring);
@@ -34,7 +37,7 @@ export function CopyButton() {
     <div className="relative">
       <Button
         variant="outline"
-        size="icon"
+        size={compact ? "icon" : "sm"}
         // Straight from the click: the clipboard write must start in the gesture.
         onClick={runCopy}
         disabled={!image || busy}
@@ -45,6 +48,7 @@ export function CopyButton() {
         title={copied ? undefined : "Copy image"}
       >
         <Copy aria-hidden />
+        {!compact && <span className="hidden lg:inline">Copy image</span>}
       </Button>
       <div role="status" className="contents">
         {copied > 0 && (

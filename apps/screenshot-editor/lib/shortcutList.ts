@@ -1,0 +1,35 @@
+// The shortcuts the keyboard menu lists. Keep in step with lib/shortcuts.ts.
+
+export type ShortcutEntry = { keys: string[]; action: string };
+export type ShortcutGroup = { title: string; items: ShortcutEntry[] };
+
+/** Every shortcut, with ⌘ and ⌥ names on Apple devices and Ctrl elsewhere. */
+export function shortcutGroups(apple: boolean): ShortcutGroup[] {
+  const mod = apple ? "⌘" : "Ctrl";
+  const shift = apple ? "⇧" : "Shift";
+  return [
+    {
+      title: "General",
+      items: [
+        { keys: [mod, "O"], action: "Open an image" },
+        { keys: [mod, "V"], action: "Paste an image" },
+        { keys: [mod, "C"], action: "Copy image" },
+        { keys: [mod, "S"], action: "Export" },
+        { keys: [mod, "Z"], action: "Undo" },
+        apple
+          ? { keys: [mod, shift, "Z"], action: "Redo" }
+          : { keys: [mod, "Y"], action: "Redo" },
+      ],
+    },
+    {
+      title: "Canvas",
+      items: [
+        { keys: ["Delete"], action: "Delete the selection or screenshot" },
+        { keys: ["Esc"], action: "Deselect, then put the tool down" },
+        { keys: ["←↑↓→"], action: "Move the selection by 1 px" },
+        { keys: [shift, "←↑↓→"], action: "Move the selection by 10 px" },
+        { keys: [shift, "Drag"], action: "Straight arrows and lines (45°)" },
+      ],
+    },
+  ];
+}

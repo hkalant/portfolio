@@ -22,12 +22,13 @@ export function MobileBar({ onReplace }: Props) {
       <Link
         href="/"
         aria-label="Screenshot Editor home"
-        className="flex h-10 shrink-0 items-center rounded-md px-2 text-sm font-semibold whitespace-nowrap outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        // Shortened before any button is pushed off a narrow screen.
+        className="flex h-10 min-w-0 items-center rounded-md px-2 text-sm font-semibold whitespace-nowrap outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
-        Screenshot Editor
+        <span className="truncate">Screenshot Editor</span>
       </Link>
       <HistoryButtons />
-      <div className="min-w-0 flex-1" />
+      <div className="flex-1" />
       {image && (
         <Button
           variant="outline"
@@ -40,7 +41,7 @@ export function MobileBar({ onReplace }: Props) {
           <ImageUp aria-hidden />
         </Button>
       )}
-      <CopyButton />
+      <CopyButton compact />
       <ExportMenu compact />
       <HelpMenu />
     </header>

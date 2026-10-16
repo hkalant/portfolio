@@ -408,9 +408,222 @@ describe("editor store: interface state", () => {
   });
 
   it("sanitises export options", () => {
-    state().setExportOptions({ format: "webp", scale: 3 });
-    expect(state().exportOptions).toMatchObject({ format: "webp", scale: 3 });
+    state().setExportOptions({ format: "webp", scale: 1 });
+    expect(state().exportOptions).toMatchObject({ format: "webp", scale: 1 });
     state().setExportOptions({ scale: 7 as never, quality: 0.1 });
     expect(state().exportOptions).toMatchObject({ scale: 2, quality: 0.5 });
+  });
+});
+
+describe("editor store: annotations", () => {
+  const annotations = () => state().design.annotations;
+
+  beforeEach(() => {
+    state().setImage(fakeImage("shot", 1000, 500));
+  });
+
+  it("numbers steps in order and can start again from 1", () => {
+    state().addStep({ x: 0.1, y: 0.1 });
+    state().addStep({ x: 0.2, y: 0.1 });
+    expect(annotations().map((a) => a.kind === "step" && a.number)).toEqual([
+      1, 2,
+    ]);
+    expect(state().design.nextStep).toBe(3);
+    state().resetStepCount();
+    state().addStep({ x: 0.3, y: 0.1 });
+    expect(annotations().at(-1)).toMatchObject({ kind: "step", number: 1 });
+  });
+
+  it("keeps a selection with any tool, and a new annotation clears it", () => {
+    state().setAnnotationTool("step");
+    state().addStep({ x: 0.1, y: 0.1 });
+    const first = annotations()[0].id;
+    state().selectAnnotation(first);
+    expect(state().selectedAnnotationId).toBe(first);
+    expect(state().annotationTool).toBe("step");
+    state().addStep({ x: 0.5, y: 0.2 });
+    expect(state().selectedAnnotationId).toBeNull();
+    state().selectAnnotation(first);
+    state().addShape("rect", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    expect(state().selectedAnnotationId).toBeNull();
+    state().selectAnnotation(first);
+    state().removeAnnotation(first);
+    expect(annotations().map((a) => a.id)).not.toContain(first);
+    expect(state().selectedAnnotationId).toBeNull();
+  });
+
+  it("resizes steps within limits, and new steps take the last size", () => {
+    state().addStep({ x: 0.1, y: 0.1 });
+    state().addStep({ x: 0.3, y: 0.1 });
+    const [first] = annotations();
+    expect(first).toMatchObject({ kind: "step", size: 1 });
+    state().resizeStep(first.id, { x: 0.12, y: 0.1 }, 2);
+    expect(annotations().find((a) => a.id === first.id)).toMatchObject({
+      x: 0.12,
+      size: 2,
+    });
+    state().addStep({ x: 0.5, y: 0.1 });
+    expect(annotations().at(-1)).toMatchObject({ kind: "step", size: 2 });
+    state().resizeStep(first.id, { x: 0.12, y: 0.1 }, 100);
+    expect(annotations().find((a) => a.id === first.id)).toMatchObject({
+      size: 4,
+    });
+    state().undo();
+    expect(annotations().find((a) => a.id === first.id)).toMatchObject({
+      size: 2,
+    });
+  });
+
+  it("uses the chosen colour, and only the three allowed ones", () => {
+    state().setAnnotationColor("#f9c909");
+    state().addStep({ x: 0.1, y: 0.1 });
+    state().setAnnotationColor("#ff0000");
+    expect(state().annotationColor).toBe("#f9c909");
+    expect(annotations()[0].color).toBe("#f9c909");
+  });
+
+  it("adds filled or outline shapes, and changes the selected one", () => {
+    state().setShapeFilled(true);
+    state().addShape("rounded", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    const [shape] = annotations();
+    expect(shape).toMatchObject({
+      kind: "shape",
+      shape: "rounded",
+      filled: true,
+    });
+    state().selectAnnotation(shape.id);
+    state().setShapeFilled(false);
+    state().setAnnotationColor("#424a52");
+    expect(annotations()[0]).toMatchObject({ filled: false, color: "#424a52" });
+  });
+
+  it("sets a step's number and counts on from the highest", () => {
+    state().addStep({ x: 0.1, y: 0.1 });
+    const [step] = annotations();
+    state().setStepNumber(step.id, 7);
+    expect(annotations()[0]).toMatchObject({ number: 7 });
+    expect(state().design.nextStep).toBe(8);
+    state().setStepNumber(step.id, 0);
+    state().setStepNumber(step.id, 2.5);
+    expect(annotations()[0]).toMatchObject({ number: 7 });
+  });
+
+  it("moves, nudges and removes annotations, with undo", () => {
+    state().addStep({ x: 0.1, y: 0.1 });
+    const [step] = annotations();
+    later();
+    state().moveAnnotation(step.id, { x: 0.5, y: 0.25 });
+    expect(annotations()[0]).toMatchObject({ x: 0.5, y: 0.25 });
+    later();
+    // The screenshot is 1000 x 500 design px, drawn 1 : 1 on the canvas here.
+    // Past the screenshot onto the background, but not off the canvas.
+    state().nudgeAnnotation(step.id, 2000, 0);
+    expect(annotations()[0].x).toBeGreaterThan(1);
+    expect(annotations()[0].x).toBeLessThan(1.1);
+    state().selectAnnotation(step.id);
+    state().removeAnnotation(step.id);
+    expect(annotations()).toEqual([]);
+    expect(state().selectedAnnotationId).toBeNull();
+    state().undo();
+    expect(annotations()).toHaveLength(1);
+  });
+
+  it("adds arrows, moves their ends and keeps them on the canvas", () => {
+    state().setAnnotationColor("#424a52");
+    state().addArrow({ x: 0.1, y: 0.1 }, { x: 0.4, y: 0.3 });
+    // A zero-length arrow is no arrow.
+    state().addArrow({ x: 0.2, y: 0.2 }, { x: 0.2, y: 0.2 });
+    expect(annotations()).toHaveLength(1);
+    const [arrow] = annotations();
+    expect(arrow).toMatchObject({
+      kind: "arrow",
+      x: 0.1,
+      y: 0.1,
+      dx: 0.3,
+      dy: 0.2,
+      color: "#424a52",
+    });
+    later();
+    state().setArrowEnds(arrow.id, { x: 0.1, y: 0.1 }, { x: 0.5, y: 0.1 });
+    expect(annotations()[0]).toMatchObject({ dx: 0.4, dy: 0 });
+    later();
+    // The canvas is the 1000 x 500 screenshot plus padding: the whole arrow
+    // stops at its right edge.
+    state().nudgeAnnotation(arrow.id, 5000, 0);
+    const moved = annotations()[0];
+    expect(moved.kind === "arrow" && moved.x + moved.dx).toBeLessThan(1.2);
+    expect(moved.x).toBeGreaterThan(0.6);
+    state().undo();
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ x: 0.1, dx: 0.3, dy: 0.2 });
+  });
+
+  it("styles and bends arrows, and new arrows take the last style", () => {
+    state().addArrow({ x: 0.1, y: 0.1 }, { x: 0.4, y: 0.3 });
+    const [arrow] = annotations();
+    expect(arrow).toMatchObject({ style: "tapered", bend: 0 });
+    state().setArrowStyle(arrow.id, "halo");
+    expect(annotations()[0]).toMatchObject({ style: "halo" });
+    state().addArrow({ x: 0.5, y: 0.1 }, { x: 0.6, y: 0.3 });
+    expect(annotations()[1]).toMatchObject({ style: "halo" });
+    later();
+    state().setArrowBend(arrow.id, 0.3);
+    state().setArrowBend(arrow.id, 0.9);
+    expect(annotations()[0]).toMatchObject({ bend: 0.5 });
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ bend: 0 });
+  });
+
+  it("draws lines with the last end picked, never turning them into arrows", () => {
+    state().addArrow({ x: 0.1, y: 0.1 }, { x: 0.4, y: 0.3 }, true);
+    const [line] = annotations();
+    expect(line).toMatchObject({ kind: "arrow", style: "flat", bend: 0 });
+    state().setArrowStyle(line.id, "bar");
+    expect(annotations()[0]).toMatchObject({ style: "bar" });
+    state().addArrow({ x: 0.5, y: 0.1 }, { x: 0.6, y: 0.3 }, true);
+    state().addArrow({ x: 0.5, y: 0.4 }, { x: 0.6, y: 0.5 });
+    expect(annotations()[1]).toMatchObject({ style: "bar" });
+    // Arrows keep their own default.
+    expect(annotations()[2]).toMatchObject({ style: "tapered" });
+    state().setArrowStyle(line.id, "halo");
+    state().setArrowStyle(annotations()[2].id, "dot");
+    expect(annotations()[0]).toMatchObject({ style: "bar" });
+    expect(annotations()[2]).toMatchObject({ style: "tapered" });
+  });
+
+  it("draws blur boxes with the last strength, and changes a box's strength", () => {
+    state().addShape("blur", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    const [blur] = annotations();
+    expect(blur).toMatchObject({ shape: "blur", intensity: 0.5 });
+    later();
+    state().setBlurIntensity(blur.id, 0.8);
+    state().setBlurIntensity(blur.id, 1.7);
+    expect(annotations()[0]).toMatchObject({ intensity: 1 });
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ intensity: 0.5 });
+    state().addShape("blur", { x: 0.5, y: 0.1, width: 0.2, height: 0.1 });
+    expect(annotations()[1]).toMatchObject({ intensity: 1 });
+    // Other shapes have no strength.
+    state().addShape("rect", { x: 0.5, y: 0.4, width: 0.2, height: 0.1 });
+    expect(annotations()[2]).not.toHaveProperty("intensity");
+  });
+
+  it("rounds a highlight's corners, and new highlights match", () => {
+    state().addShape("highlight", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    const [highlight] = annotations();
+    expect(highlight).toMatchObject({ shape: "highlight", rounded: false });
+    state().selectAnnotation(highlight.id);
+    state().setHighlightRounded(true);
+    expect(annotations()[0]).toMatchObject({ rounded: true });
+    state().selectAnnotation(null);
+    state().addShape("highlight", { x: 0.5, y: 0.1, width: 0.2, height: 0.1 });
+    expect(annotations()[1]).toMatchObject({ rounded: true });
+  });
+
+  it("starts a new screenshot without the old one's annotations", () => {
+    state().addStep({ x: 0.1, y: 0.1 });
+    state().setImage(fakeImage("other"));
+    expect(annotations()).toEqual([]);
+    expect(state().design.nextStep).toBe(1);
   });
 });

@@ -224,3 +224,12 @@ test("the info button lists the tutorials", async ({ page }) => {
   await expect(tutorials).toHaveCount(0);
   await expect(page).toHaveURL(/\/editor\/$/);
 });
+
+test("the keyboard button lists the shortcuts", async ({ page }) => {
+  await page.getByRole("button", { name: "Keyboard shortcuts" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("Undo", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Export", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+});

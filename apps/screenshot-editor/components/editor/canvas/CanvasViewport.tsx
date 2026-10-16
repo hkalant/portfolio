@@ -11,9 +11,12 @@ import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { useDesignLayout } from "@/lib/store/hooks";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "../EmptyState";
+import { AnnotationToolbar } from "./AnnotationToolbar";
 import { DesignStage } from "./DesignStage";
 import { ZoomControls } from "./ZoomControls";
 
+// Room kept free at the top of the workspace for the annotation toolbar.
+const TOOLBAR_SPACE = 52;
 // Room kept free at the bottom of the workspace for the zoom controls.
 const CONTROLS_SPACE = 44;
 // Below this workspace height the zoom controls would cover the canvas.
@@ -68,7 +71,10 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
   const margin = size.width < 480 ? 16 : 32;
   const fit = layout
     ? computePreviewScale(
-        { width: size.width, height: size.height - bottomSpace },
+        {
+          width: size.width,
+          height: size.height - bottomSpace - TOOLBAR_SPACE,
+        },
         layout.canvas,
         margin,
       )
@@ -127,8 +133,8 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
         // Scrolls when zoomed in past the workspace.
         <div
           ref={scrollRef}
-          className="absolute inset-x-0 top-0 overflow-auto"
-          style={{ bottom: bottomSpace }}
+          className="absolute inset-x-0 overflow-auto"
+          style={{ top: TOOLBAR_SPACE, bottom: bottomSpace }}
           data-testid="canvas-scroller"
         >
           <div
@@ -137,7 +143,7 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
           >
             <div
               {...{ [CANVAS_FOCUS_ATTRIBUTE]: "" }}
-              tabIndex={layout.draggable ? 0 : -1}
+              tabIndex={0}
               aria-label={
                 layout.draggable
                   ? "Design canvas. Drag the screenshot or use the arrow keys to move it."
@@ -155,6 +161,9 @@ export function CanvasViewport({ onUpload, onSample }: Props) {
           </div>
         </div>
       )}
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center px-3 pt-2 *:pointer-events-auto">
+        <AnnotationToolbar />
+      </div>
       <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 px-3 pb-2">
         {showControls && (
           <ZoomControls

@@ -16,6 +16,9 @@ import {
 import { BackgroundNode } from "./nodes/Background";
 import { GuidesNode } from "./nodes/Guides";
 import { ShotNode } from "./nodes/Shot";
+import { ArrowStyleMenu } from "./ArrowStyleMenu";
+import { SelectionActions } from "./SelectionActions";
+import { ShotHandle } from "./ShotHandle";
 
 type Props = {
   image: LoadedImage;
@@ -66,42 +69,44 @@ export function DesignStage({ image, layout, scale }: Props) {
   }, [pixelRatio, bitmapRatio]);
 
   return (
-    <div
-      role="img"
-      aria-label="Design preview"
-      data-testid="design-stage"
-      data-width={layout.canvas.width}
-      data-height={layout.canvas.height}
-      className="shadow-[0_1px_2px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.08)]"
-      // A touch on a draggable shot moves it instead of panning the page.
-      style={{
-        width,
-        height,
-        touchAction: layout.draggable ? "none" : undefined,
-      }}
-    >
-      <Stage
-        key={pixelRatio}
-        ref={stageRef}
-        width={width}
-        height={height}
-        scaleX={scale}
-        scaleY={scale}
-        // Only a draggable shot needs pointer events.
-        listening={layout.draggable}
+    // The move handle and delete button sit beside the image role, which
+    // would hide them from screen readers.
+    <div className="relative" style={{ width, height }}>
+      <div
+        role="img"
+        aria-label="Design preview"
+        data-testid="design-stage"
+        data-width={layout.canvas.width}
+        data-height={layout.canvas.height}
+        className="shadow-[0_1px_2px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.08)]"
+        // A touch moves the shot or an annotation, or draws, instead of
+        // panning the page.
+        style={{ width, height, touchAction: "none" }}
       >
-        <Layer ref={layerRef} listening={layout.draggable}>
-          <BackgroundNode
-            canvas={layout.canvas}
-            background={background}
-            fx={fx}
-            screenshot={image}
-            backgroundImage={backgroundImage}
-          />
-          <ShotNode image={image} shot={shot} layout={layout} zoom={scale} />
-          <GuidesNode canvas={layout.canvas} zoom={scale} />
-        </Layer>
-      </Stage>
+        <Stage
+          key={pixelRatio}
+          ref={stageRef}
+          width={width}
+          height={height}
+          scaleX={scale}
+          scaleY={scale}
+        >
+          <Layer ref={layerRef}>
+            <BackgroundNode
+              canvas={layout.canvas}
+              background={background}
+              fx={fx}
+              screenshot={image}
+              backgroundImage={backgroundImage}
+            />
+            <ShotNode image={image} shot={shot} layout={layout} zoom={scale} />
+            <GuidesNode canvas={layout.canvas} zoom={scale} />
+          </Layer>
+        </Stage>
+      </div>
+      <ShotHandle layout={layout} scale={scale} width={width} height={height} />
+      <SelectionActions width={width} height={height} />
+      <ArrowStyleMenu width={width} height={height} />
     </div>
   );
 }

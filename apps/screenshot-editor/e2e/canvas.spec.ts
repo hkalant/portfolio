@@ -323,18 +323,18 @@ test("exports JPEG and WebP at other scales and remembers the choice", async ({
     return;
   }
   await webp.click();
-  await page.getByRole("radio", { name: "3×" }).click();
+  await page.getByRole("radio", { name: "1×" }).click();
   await page.keyboard.press("Escape");
   const webpFile = await exportImage(page);
-  expect(webpFile.name).toBe("fixture-3x.webp");
+  expect(webpFile.name).toBe("fixture-1x.webp");
   expect(isWebp(webpFile.data)).toBe(true);
   expect(await imageSize(page, webpFile.data)).toEqual({
-    width: 4032,
-    height: 2682,
+    width: 1344,
+    height: 894,
   });
 
   await page.reload();
-  await expect(exportButton(page)).toHaveText("Export WebP 3×");
+  await expect(exportButton(page)).toHaveText("Export WebP 1×");
 });
 
 test("very large exports are capped to what the browser allows", async ({
@@ -352,8 +352,9 @@ test("very large exports are capped to what the browser allows", async ({
   await page.keyboard.press("Escape");
   await expectDesignSize(page, 4000, 4000);
   await page.getByRole("button", { name: "Export options" }).click();
-  await page.getByRole("radio", { name: "3×" }).click();
-  // 12,000 px a side is over the 16,777,216 px area limit: 4096 x 4096 instead.
+  await expect(page.getByRole("radio", { name: "3×" })).toHaveCount(0);
+  await page.getByRole("radio", { name: "2×" }).click();
+  // 8,000 px a side is over the 16,777,216 px area limit: 4096 x 4096 instead.
   await expect(page.getByTestId("export-size")).toContainText("4096 × 4096 px");
   await expect(page.getByTestId("size-readout")).toContainText("largest size");
 });
@@ -408,7 +409,7 @@ test("copies the design to the clipboard as a PNG", async ({
   await copyButton.click();
   // Shown as a tooltip under the button, not as a notice.
   const tooltip = page.getByTestId("copied-tooltip");
-  await expect(tooltip).toHaveText("Copied to clipboard");
+  await expect(tooltip).toHaveText("Copied!");
   await expect(page.getByTestId("notice")).toHaveCount(0);
   const [button, tip] = [
     (await copyButton.boundingBox())!,
@@ -431,7 +432,7 @@ test("copies the design to the clipboard as a PNG", async ({
 
   // The keyboard shortcut does the same when no text is selected.
   await page.keyboard.press("ControlOrMeta+c");
-  await expect(tooltip).toHaveText("Copied to clipboard");
+  await expect(tooltip).toHaveText("Copied!");
 });
 
 test("leaving the editor and coming back keeps the design and its history", async ({

@@ -1,7 +1,8 @@
 import type Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Group, Image as KonvaImage, Rect } from "react-konva";
+import { canvasArea } from "@/lib/design/annotations";
 import { hexToRgba } from "@/lib/design/colors";
 import type { DesignLayout } from "@/lib/design/layout";
 import type { ShadowSpec, ShotLayer } from "@/lib/design/schema";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/render/frame";
 import { NO_GUIDES, snapDrag } from "@/lib/render/snap";
 import { useEditorStore } from "@/lib/store/editor";
+import { AnnotationsNode } from "./Annotations";
 import { ChromeNode } from "./Chrome";
 import { useGuides } from "./Guides";
 
@@ -50,12 +52,30 @@ function setCursor(event: KonvaEventObject<unknown>, cursor: string) {
  */
 export function ShotNode({ image, shot, layout, zoom }: Props) {
   const box = layout.shot;
-  const { draggable } = layout;
+  // While a step or shape tool is on, presses draw instead of moving the shot.
+  const selecting = useEditorStore(
+    (state) => state.annotationTool === "select",
+  );
+  const draggable = layout.draggable && selecting;
   const setPosition = useEditorStore((state) => state.setPosition);
   const sealHistory = useEditorStore((state) => state.sealHistory);
   const beginGesture = useEditorStore((state) => state.beginGesture);
   const groupRef = useRef<Konva.Group>(null);
   const dragging = useRef(false);
+  // Annotations can go anywhere on the canvas, the background included.
+  const canvasWidth = layout.canvas.width;
+  const canvasHeight = layout.canvas.height;
+  const imageX = box.x + box.image.x;
+  const imageY = box.y + box.image.y;
+  const imageWidth = box.image.width;
+  const area = useMemo(
+    () =>
+      canvasArea(
+        { width: canvasWidth, height: canvasHeight },
+        { x: imageX, y: imageY, width: imageWidth, height: 0 },
+      ),
+    [canvasWidth, canvasHeight, imageX, imageY, imageWidth],
+  );
 
   // Leave no guide or grab cursor behind when the shot stops being draggable.
   useEffect(() => {
@@ -84,6 +104,8 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
     ? {
         draggable: true,
         onDragStart: (event: KonvaEventObject<DragEvent>) => {
+          // An annotation's drag is its own.
+          if (event.target !== event.currentTarget) return;
           dragging.current = true;
           // The whole drag is one undo step, however slow.
           beginGesture();
@@ -91,13 +113,16 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
         },
         onDragMove,
         onDragEnd: (event: KonvaEventObject<DragEvent>) => {
+          if (event.target !== event.currentTarget) return;
           dragging.current = false;
           useGuides.setState(NO_GUIDES);
           sealHistory();
           setCursor(event, "grab");
         },
-        onMouseEnter: (event: KonvaEventObject<MouseEvent>) =>
-          setCursor(event, dragging.current ? "grabbing" : "grab"),
+        onMouseEnter: (event: KonvaEventObject<MouseEvent>) => {
+          if (event.target.findAncestor(".annotation", true)) return;
+          setCursor(event, dragging.current ? "grabbing" : "grab");
+        },
         onMouseLeave: (event: KonvaEventObject<MouseEvent>) => {
           if (!dragging.current) setCursor(event, "");
         },
@@ -211,11 +236,17 @@ export function ShotNode({ image, shot, layout, zoom }: Props) {
       offsetX={box.width / 2}
       offsetY={box.height / 2}
       rotation={box.rotation}
-      listening={draggable}
       {...dragProps}
     >
       {body}
       {borderNode}
+      <AnnotationsNode
+        image={box.image}
+        source={image}
+        area={area}
+        zoom={zoom}
+        shotDraggable={draggable}
+      />
     </Group>
   );
 }

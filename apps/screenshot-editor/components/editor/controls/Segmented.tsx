@@ -12,6 +12,8 @@ type Props<T extends string> = {
   onChange: (value: T) => void;
   /** Hide the visible label when a section heading already names the group. */
   hideLabel?: boolean;
+  /** The highlight glides to the option under the mouse. */
+  glide?: boolean;
 };
 
 export function Segmented<T extends string>({
@@ -20,12 +22,14 @@ export function Segmented<T extends string>({
   options,
   onChange,
   hideLabel = false,
+  glide = false,
 }: Props<T>) {
   return (
     <div className="space-y-2.5">
       {!hideLabel && <div className="text-sm font-medium">{label}</div>}
       <ToggleGroup
         type="single"
+        glide={glide}
         aria-label={label}
         value={value}
         // Radix reports "" when the active option is clicked again; keep the current one.

@@ -1,4 +1,21 @@
 import { create } from "zustand";
+import {
+  canvasArea,
+  clampStepSize,
+  clampToArea,
+  DEFAULT_ANNOTATION_COLOR,
+  fitArrow,
+  fitBox,
+  isAnnotationColor,
+  MAX_STEP_NUMBER,
+  newAnnotationId,
+  roundBox,
+  roundPoint,
+  type Box,
+  type Point,
+} from "@/lib/design/annotations";
+import { MAX_ARROW_BEND } from "@/lib/design/arrowShape";
+import { DEFAULT_BLUR_INTENSITY } from "@/lib/design/blur";
 import { isHexColor } from "@/lib/design/colors";
 import { createDefaultDesign, defaultShotStyle } from "@/lib/design/defaults";
 import { isFrameKind } from "@/lib/design/frames";
@@ -21,12 +38,20 @@ import {
   SHOT_SCALE,
 } from "@/lib/design/limits";
 import { referencedImageIds } from "@/lib/design/refs";
-import type {
-  Background,
-  Design,
-  FrameSpec,
-  ShadowSpec,
-  ShotLayer,
+import {
+  ARROW_STYLES,
+  isLineEnd,
+  LINE_ENDS,
+  type Annotation,
+  type AnnotationColor,
+  type ArrowStyle,
+  type LineEnd,
+  type Background,
+  type Design,
+  type FrameSpec,
+  type ShadowSpec,
+  type ShapeKind,
+  type ShotLayer,
 } from "@/lib/design/schema";
 import { isShadowPresetId, SHADOW_PRESETS } from "@/lib/design/shadows";
 import { CUSTOM_SIZE, getSizePreset } from "@/lib/design/sizes";
@@ -40,6 +65,8 @@ import type { LoadedImage } from "@/lib/image/load";
 import { clamp } from "@/lib/utils";
 
 export type PanelId = "background" | "style";
+/** What a press on the canvas does: select and move, add a step, or draw a shape or an arrow. */
+export type AnnotationTool = "select" | "step" | ShapeKind | "arrow" | "line";
 /** The mobile layout also has a Size tab; null means its panel is closed. */
 export type MobilePanelId = PanelId | "size";
 
@@ -81,6 +108,21 @@ export type EditorState = {
   exporting: boolean;
   notice: Notice | null;
   exportOptions: ExportOptions;
+
+  annotationTool: AnnotationTool;
+  /** The colour new steps and shapes get. */
+  annotationColor: AnnotationColor;
+  /** Whether new shapes are filled, or transparent with a border. */
+  shapeFilled: boolean;
+  /** Whether new highlights have rounded corners. */
+  highlightRounded: boolean;
+  /** The look new arrows get. */
+  arrowStyle: ArrowStyle;
+  /** The end new lines get. */
+  lineEnd: LineEnd;
+  /** How strongly new blur boxes blur, 0 to 1. */
+  blurIntensity: number;
+  selectedAnnotationId: string | null;
 
   undo: () => void;
   redo: () => void;
@@ -125,6 +167,41 @@ export type EditorState = {
   setFrame: (patch: FramePatch) => void;
   resetStyle: () => void;
 
+  setAnnotationTool: (tool: AnnotationTool) => void;
+  /** Also recolours the selected annotation. */
+  setAnnotationColor: (color: string) => void;
+  /** Also changes the selected shape. */
+  setShapeFilled: (filled: boolean) => void;
+  /** Also changes the selected highlight. */
+  setHighlightRounded: (rounded: boolean) => void;
+  selectAnnotation: (id: string | null) => void;
+  /** Adds a step numbered `nextStep` at a point on the screenshot. */
+  addStep: (point: Point) => void;
+  addShape: (shape: ShapeKind, box: Box) => void;
+  /** Adds an arrow from its tail to the tip of its head, or a line from its plain end to its styled end. */
+  addArrow: (start: Point, end: Point, line?: boolean) => void;
+  /** Moves an arrow's ends. */
+  setArrowEnds: (id: string, start: Point, end: Point) => void;
+  /**
+   * Restyles an arrow (or a line's end); new arrows (or lines) then take the
+   * style too. An arrow never becomes a line, or a line an arrow.
+   */
+  setArrowStyle: (id: string | null, style: ArrowStyle | LineEnd) => void;
+  /** Bends an arrow's middle to one side (see MAX_ARROW_BEND). */
+  setArrowBend: (id: string, bend: number) => void;
+  moveAnnotation: (id: string, point: Point) => void;
+  /** Moves an annotation by canvas pixels, keeping it on the screenshot. */
+  nudgeAnnotation: (id: string, dx: number, dy: number) => void;
+  resizeShape: (id: string, box: Box) => void;
+  /** Changes a blur box's strength (0 to 1); new blur boxes then match it. */
+  setBlurIntensity: (id: string | null, intensity: number) => void;
+  /** Resizes a step about its new centre. New steps then take its size. */
+  resizeStep: (id: string, centre: Point, size: number) => void;
+  setStepNumber: (id: string, number: number) => void;
+  removeAnnotation: (id: string) => void;
+  /** The next step is numbered 1 again. */
+  resetStepCount: () => void;
+
   /** Replaces the design (an autosave restore). Clears the history. */
   loadDesign: (design: Design, images: LoadedImage[]) => void;
 
@@ -146,6 +223,37 @@ function updateShot(design: Design, patch: Partial<ShotLayer>): Design {
 }
 
 const shotOf = (design: Design) => design.layers[0];
+
+/** From an arrow's tail to its tip, rounded like the positions. */
+const arrowDelta = (from: Point, to: Point) => ({
+  dx: Math.round((to.x - from.x) * 10000) / 10000,
+  dy: Math.round((to.y - from.y) * 10000) / 10000,
+});
+
+/** Adding an annotation leaves the old selection behind. */
+const NO_SELECTION = { selectedAnnotationId: null };
+
+/** A new screenshot starts without the old one's annotations. */
+const withoutAnnotations = (design: Design): Design =>
+  design.annotations.length === 0 && design.nextStep === 1
+    ? design
+    : { ...design, annotations: [], nextStep: 1 };
+
+function updateAnnotation(
+  design: Design,
+  id: string,
+  update: (annotation: Annotation) => Annotation | null,
+): Design | null {
+  let changed = false;
+  const annotations = design.annotations.map((annotation) => {
+    if (annotation.id !== id) return annotation;
+    const next = update(annotation);
+    if (!next) return annotation;
+    changed = true;
+    return next;
+  });
+  return changed ? { ...design, annotations } : null;
+}
 
 const round = (value: number, places: number) => {
   const factor = 10 ** places;
@@ -211,10 +319,14 @@ function commitDesign(
 
 export const useEditorStore = create<EditorState>()((set, get) => {
   /** For actions that only change the design. A null recipe result changes nothing. */
-  const commit = (recipe: (design: Design) => Design | null, key?: string) =>
+  const commit = (
+    recipe: (design: Design) => Design | null,
+    key?: string,
+    extra?: Partial<EditorState>,
+  ) =>
     set((state) => {
       const next = recipe(state.design);
-      return next ? commitDesign(state, next, key) : state;
+      return next ? commitDesign(state, next, key, extra) : state;
     });
 
   const commitShot = (
@@ -245,6 +357,14 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     exporting: false,
     notice: null,
     exportOptions: { ...DEFAULT_EXPORT_OPTIONS },
+    annotationTool: "select",
+    annotationColor: DEFAULT_ANNOTATION_COLOR,
+    shapeFilled: false,
+    highlightRounded: false,
+    arrowStyle: ARROW_STYLES[0],
+    lineEnd: LINE_ENDS[0],
+    blurIntensity: DEFAULT_BLUR_INTENSITY,
+    selectedAnnotationId: null,
 
     undo: () =>
       set((state) => {
@@ -285,13 +405,25 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       set((state) =>
         commitDesign(
           state,
-          updateShot(state.design, { imageId: image.id }),
+          updateShot(withoutAnnotations(state.design), { imageId: image.id }),
           undefined,
-          { images: { ...state.images, [image.id]: image }, notice: null },
+          {
+            images: { ...state.images, [image.id]: image },
+            notice: null,
+            selectedAnnotationId: null,
+          },
         ),
       ),
 
-    clearImage: () => commitShot(() => ({ imageId: null })),
+    clearImage: () =>
+      set((state) =>
+        commitDesign(
+          state,
+          updateShot(withoutAnnotations(state.design), { imageId: null }),
+          undefined,
+          { selectedAnnotationId: null },
+        ),
+      ),
 
     pruneImages: () => {
       const { images, design, past, future } = get();
@@ -625,6 +757,370 @@ export const useEditorStore = create<EditorState>()((set, get) => {
 
     resetStyle: () => commitShot(() => defaultShotStyle()),
 
+    setAnnotationTool: (tool) =>
+      set(() => ({ annotationTool: tool, selectedAnnotationId: null })),
+
+    setAnnotationColor: (color) => {
+      if (!isAnnotationColor(color)) return;
+      set(() => ({ annotationColor: color }));
+      const id = get().selectedAnnotationId;
+      if (id)
+        commit((design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.color === color ? null : { ...annotation, color },
+          ),
+        );
+    },
+
+    setHighlightRounded: (rounded) => {
+      set(() => ({ highlightRounded: rounded }));
+      const id = get().selectedAnnotationId;
+      if (id)
+        commit((design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind !== "shape" ||
+            annotation.shape !== "highlight" ||
+            (annotation.rounded ?? false) === rounded
+              ? null
+              : { ...annotation, rounded },
+          ),
+        );
+    },
+
+    setShapeFilled: (filled) => {
+      set(() => ({ shapeFilled: filled }));
+      const id = get().selectedAnnotationId;
+      if (id)
+        commit((design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind !== "shape" || annotation.filled === filled
+              ? null
+              : { ...annotation, filled },
+          ),
+        );
+    },
+
+    selectAnnotation: (id) =>
+      set((state) => {
+        if (state.selectedAnnotationId === id) return state;
+        const annotation = id
+          ? state.design.annotations.find((item) => item.id === id)
+          : undefined;
+        if (id && !annotation) return state;
+        // The toolbar shows the selected annotation's colour and fill.
+        return {
+          selectedAnnotationId: id,
+          ...(annotation && {
+            annotationColor: annotation.color,
+            ...(annotation.kind === "shape" && {
+              shapeFilled: annotation.filled,
+            }),
+            ...(annotation.kind === "shape" &&
+              annotation.shape === "highlight" && {
+                highlightRounded: annotation.rounded ?? false,
+              }),
+          }),
+        };
+      }),
+
+    addStep: (point) =>
+      commit(
+        (design) => {
+          if (!finite(point.x) || !finite(point.y)) return null;
+          const number = Math.min(design.nextStep, MAX_STEP_NUMBER);
+          return {
+            ...design,
+            annotations: [
+              ...design.annotations,
+              {
+                id: newAnnotationId(),
+                kind: "step",
+                ...roundPoint(point),
+                number,
+                color: get().annotationColor,
+                // The size of the last step: resizing one sets it for the rest.
+                size:
+                  design.annotations.findLast((item) => item.kind === "step")
+                    ?.size ?? 1,
+              },
+            ],
+            nextStep: Math.min(number + 1, MAX_STEP_NUMBER),
+          };
+        },
+        undefined,
+        NO_SELECTION,
+      ),
+
+    addShape: (shape, box) =>
+      commit(
+        (design) => {
+          if (![box.x, box.y, box.width, box.height].every(finite)) return null;
+          if (box.width <= 0 || box.height <= 0) return null;
+          return {
+            ...design,
+            annotations: [
+              ...design.annotations,
+              {
+                id: newAnnotationId(),
+                kind: "shape",
+                shape,
+                ...roundBox(box),
+                color: get().annotationColor,
+                filled: get().shapeFilled,
+                ...(shape === "blur" ? { intensity: get().blurIntensity } : {}),
+                ...(shape === "highlight"
+                  ? { rounded: get().highlightRounded }
+                  : {}),
+              },
+            ],
+          };
+        },
+        undefined,
+        NO_SELECTION,
+      ),
+
+    addArrow: (start, end, line = false) => {
+      if (![start.x, start.y, end.x, end.y].every(finite)) return;
+      const from = roundPoint(start);
+      const to = roundPoint(end);
+      if (from.x === to.x && from.y === to.y) return;
+      commit(
+        (design) => ({
+          ...design,
+          annotations: [
+            ...design.annotations,
+            {
+              id: newAnnotationId(),
+              kind: "arrow",
+              ...from,
+              ...arrowDelta(from, to),
+              color: get().annotationColor,
+              style: line ? get().lineEnd : get().arrowStyle,
+              bend: 0,
+            },
+          ],
+        }),
+        undefined,
+        NO_SELECTION,
+      );
+    },
+
+    setArrowEnds: (id, start, end) => {
+      if (![start.x, start.y, end.x, end.y].every(finite)) return;
+      const from = roundPoint(start);
+      const to = roundPoint(end);
+      // An arrow always points somewhere.
+      if (from.x === to.x && from.y === to.y) return;
+      const delta = arrowDelta(from, to);
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind !== "arrow" ||
+            (annotation.x === from.x &&
+              annotation.y === from.y &&
+              annotation.dx === delta.dx &&
+              annotation.dy === delta.dy)
+              ? null
+              : { ...annotation, ...from, ...delta },
+          ),
+        `annotation-resize-${id}`,
+      );
+    },
+
+    setArrowStyle: (id, style) => {
+      const line = isLineEnd(style);
+      if (line) set(() => ({ lineEnd: style }));
+      else if ((ARROW_STYLES as readonly string[]).includes(style))
+        set(() => ({ arrowStyle: style as ArrowStyle }));
+      else return;
+      if (!id) return;
+      commit((design) =>
+        updateAnnotation(design, id, (annotation) =>
+          annotation.kind !== "arrow" ||
+          annotation.style === style ||
+          isLineEnd(annotation.style) !== line
+            ? null
+            : { ...annotation, style },
+        ),
+      );
+    },
+
+    setArrowBend: (id, bend) => {
+      if (!finite(bend)) return;
+      const to =
+        Math.round(
+          Math.max(-MAX_ARROW_BEND, Math.min(MAX_ARROW_BEND, bend)) * 1000,
+        ) / 1000;
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind !== "arrow" || annotation.bend === to
+              ? null
+              : { ...annotation, bend: to },
+          ),
+        `annotation-bend-${id}`,
+      );
+    },
+
+    moveAnnotation: (id, point) => {
+      if (!finite(point.x) || !finite(point.y)) return;
+      const to = roundPoint(point);
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.x === to.x && annotation.y === to.y
+              ? null
+              : { ...annotation, ...to },
+          ),
+        `annotation-move-${id}`,
+      );
+    },
+
+    nudgeAnnotation: (id, dx, dy) => {
+      if (!finite(dx) || !finite(dy)) return;
+      const state = get();
+      const image = selectActiveImage(state);
+      if (!image) return;
+      const { canvas, shot } = computeLayout(image, state.design);
+      const unit = shot.image.width;
+      const area = canvasArea(canvas, {
+        ...shot.image,
+        x: shot.x + shot.image.x,
+        y: shot.y + shot.image.y,
+      });
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) => {
+            const moved = {
+              x: annotation.x + dx / unit,
+              y: annotation.y + dy / unit,
+            };
+            const to =
+              annotation.kind === "step"
+                ? clampToArea(moved, area)
+                : annotation.kind === "arrow"
+                  ? fitArrow(
+                      moved,
+                      { x: annotation.dx, y: annotation.dy },
+                      area,
+                    )
+                  : fitBox(
+                      { ...annotation, ...moved },
+                      area,
+                      annotation.shape === "circle",
+                    );
+            const rounded = roundPoint(to);
+            return rounded.x === annotation.x && rounded.y === annotation.y
+              ? null
+              : { ...annotation, x: rounded.x, y: rounded.y };
+          }),
+        `annotation-move-${id}`,
+      );
+    },
+
+    setBlurIntensity: (id, intensity) => {
+      if (!finite(intensity)) return;
+      const to = Math.round(Math.min(1, Math.max(0, intensity)) * 100) / 100;
+      set(() => ({ blurIntensity: to }));
+      if (!id) return;
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind !== "shape" ||
+            annotation.shape !== "blur" ||
+            annotation.intensity === to
+              ? null
+              : { ...annotation, intensity: to },
+          ),
+        `annotation-blur-${id}`,
+      );
+    },
+
+    resizeShape: (id, box) => {
+      if (![box.x, box.y, box.width, box.height].every(finite)) return;
+      commit(
+        (design) =>
+          updateAnnotation(design, id, (annotation) =>
+            annotation.kind === "shape"
+              ? { ...annotation, ...roundBox(box) }
+              : null,
+          ),
+        `annotation-resize-${id}`,
+      );
+    },
+
+    resizeStep: (id, centre, size) => {
+      if (!finite(centre.x) || !finite(centre.y) || !finite(size)) return;
+      const to = { ...roundPoint(centre), size: clampStepSize(size) };
+      commit((design) => {
+        const step = design.annotations.find((item) => item.id === id);
+        if (
+          step?.kind !== "step" ||
+          (step.x === to.x && step.y === to.y && step.size === to.size)
+        )
+          return null;
+        // Moved to the end of the list, so new steps take its size.
+        return {
+          ...design,
+          annotations: [
+            ...design.annotations.filter((item) => item.id !== id),
+            { ...step, ...to },
+          ],
+        };
+      }, `annotation-resize-${id}`);
+    },
+
+    setStepNumber: (id, number) => {
+      if (!Number.isInteger(number) || number < 1 || number > MAX_STEP_NUMBER)
+        return;
+      commit((design) => {
+        const next = updateAnnotation(design, id, (annotation) =>
+          annotation.kind === "step" && annotation.number !== number
+            ? { ...annotation, number }
+            : null,
+        );
+        if (!next) return null;
+        // Carry on counting from the highest step.
+        const highest = Math.max(
+          ...next.annotations.map((item) =>
+            item.kind === "step" ? item.number : 0,
+          ),
+        );
+        return {
+          ...next,
+          nextStep: Math.min(
+            Math.max(next.nextStep, highest + 1),
+            MAX_STEP_NUMBER,
+          ),
+        };
+      }, `step-number-${id}`);
+    },
+
+    removeAnnotation: (id) =>
+      set((state) => {
+        const annotations = state.design.annotations.filter(
+          (annotation) => annotation.id !== id,
+        );
+        if (annotations.length === state.design.annotations.length)
+          return state;
+        return commitDesign(
+          state,
+          { ...state.design, annotations },
+          undefined,
+          {
+            selectedAnnotationId:
+              state.selectedAnnotationId === id
+                ? null
+                : state.selectedAnnotationId,
+          },
+        );
+      }),
+
+    resetStepCount: () =>
+      commit((design) =>
+        design.nextStep === 1 ? null : { ...design, nextStep: 1 },
+      ),
+
     loadDesign: (design, images) =>
       set((state) => {
         // A new copy of an image already held replaces it: free the old one.
@@ -638,6 +1134,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
           future: [],
           revision: state.revision + 1,
           mergeKey: null,
+          selectedAnnotationId: null,
           images: {
             ...state.images,
             ...Object.fromEntries(images.map((image) => [image.id, image])),
@@ -703,6 +1200,17 @@ export const selectLastBackgroundUpload = (
     if (image) return image;
   }
   return null;
+};
+
+/** The selected annotation, if it is still in the design (undo can remove it). */
+export const selectSelectedAnnotation = (
+  state: EditorState,
+): Annotation | null => {
+  const id = state.selectedAnnotationId;
+  return id
+    ? (state.design.annotations.find((annotation) => annotation.id === id) ??
+        null)
+    : null;
 };
 
 export const selectCanUndo = (state: EditorState) => state.past.length > 0;
