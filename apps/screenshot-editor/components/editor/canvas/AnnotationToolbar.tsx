@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ChevronDown,
   Circle,
   Highlighter,
   MousePointer2,
@@ -33,6 +34,11 @@ import {
   type AnnotationTool,
 } from "@/lib/store/editor";
 import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 
 const buttonClass =
@@ -184,12 +190,10 @@ function StepNumberField({ step }: { step: StepAnnotation }) {
 
 const STRAIGHT_HINT = "hold Shift for 45° steps";
 
-const SHAPE_TOOLS: readonly {
-  tool: AnnotationTool;
-  label: string;
-  icon: ReactNode;
-  hint?: string;
-}[] = [
+type ShapeTool = "rect" | "rounded" | "circle" | "highlight";
+
+/** The shapes, behind one button. */
+const SHAPES: readonly { tool: ShapeTool; label: string; icon: ReactNode }[] = [
   { tool: "rect", label: "Rectangle", icon: <SquareIcon /> },
   { tool: "rounded", label: "Rounded rectangle", icon: <RoundedIcon /> },
   { tool: "circle", label: "Circle", icon: <Circle aria-hidden /> },
@@ -198,6 +202,82 @@ const SHAPE_TOOLS: readonly {
     label: "Highlight",
     icon: <Highlighter aria-hidden />,
   },
+];
+
+const isShapeTool = (tool: AnnotationTool): tool is ShapeTool =>
+  SHAPES.some((shape) => shape.tool === tool);
+
+/**
+ * One button for the shapes: it draws the last shape picked, and its arrow
+ * opens the others.
+ */
+function ShapeTools() {
+  const tool = useEditorStore((state) => state.annotationTool);
+  const setTool = useEditorStore((state) => state.setAnnotationTool);
+  const [last, setLast] = useState<ShapeTool>("rect");
+  const [open, setOpen] = useState(false);
+  const current = isShapeTool(tool) ? tool : last;
+  const shape = SHAPES.find((item) => item.tool === current) ?? SHAPES[0];
+  const pick = (next: ShapeTool) => {
+    setLast(next);
+    setTool(next);
+    setOpen(false);
+  };
+  return (
+    <div className="flex shrink-0 items-center">
+      <ToolButton
+        label={shape.label}
+        pressed={isShapeTool(tool)}
+        onClick={() => {
+          setLast(current);
+          setTool(tool === current ? "select" : current);
+        }}
+      >
+        {shape.icon}
+      </ToolButton>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label="Choose shape"
+            title="Choose shape"
+            aria-haspopup="menu"
+            className="-ml-1 flex h-8 w-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring [&_svg]:size-3"
+          >
+            <ChevronDown aria-hidden />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="w-auto p-1"
+          role="menu"
+          aria-label="Shapes"
+        >
+          {SHAPES.map((item) => (
+            <button
+              key={item.tool}
+              type="button"
+              role="menuitemradio"
+              aria-checked={item.tool === current}
+              onClick={() => pick(item.tool)}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors outline-none hover:bg-accent focus-visible:bg-accent aria-checked:font-medium [&_svg]:size-4"
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+const SHAPE_TOOLS: readonly {
+  tool: AnnotationTool;
+  label: string;
+  icon: ReactNode;
+  hint?: string;
+}[] = [
   {
     tool: "arrow",
     label: "Arrow",
@@ -448,6 +528,7 @@ export function AnnotationToolbar() {
         <RotateCcw aria-hidden />
       </ToolButton>
       <Divider />
+      <ShapeTools />
       {SHAPE_TOOLS.map((shape) => (
         <ToolButton
           key={shape.tool}

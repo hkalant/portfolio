@@ -32,6 +32,15 @@ const toolbar = (page: Page) => page.getByRole("toolbar", { name: "Annotate" });
 const tool = (page: Page, name: string | RegExp) =>
   toolbar(page).getByRole("button", { name, exact: typeof name === "string" });
 
+/** Picks a shape from the shape button's menu. */
+async function pickShape(page: Page, name: string) {
+  await tool(page, "Choose shape").click();
+  await page
+    .getByRole("menu", { name: "Shapes" })
+    .getByRole("menuitemradio", { name, exact: true })
+    .click();
+}
+
 /** Screen coordinates of a point given as fractions of the screenshot. */
 async function onImage(page: Page, fx: number, fy: number) {
   const box = await stage(page).boundingBox();
@@ -135,17 +144,17 @@ test("shapes are drawn filled or as an outline in the chosen colour", async ({
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
 
-  await tool(page, "Rectangle").click();
+  await pickShape(page, "Rectangle");
   await tool(page, "Filled shape").click();
   await toolbar(page).getByRole("radio", { name: "Pink" }).click();
   await drag(page, [0.1, 0.1], [0.4, 0.4]);
 
-  await tool(page, "Rounded rectangle").click();
+  await pickShape(page, "Rounded rectangle");
   await tool(page, "Outline shape").click();
   await toolbar(page).getByRole("radio", { name: "Yellow" }).click();
   await drag(page, [0.55, 0.1], [0.9, 0.4]);
 
-  await tool(page, "Circle").click();
+  await pickShape(page, "Circle");
   await tool(page, "Filled shape").click();
   await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
   await drag(page, [0.2, 0.6], [0.35, 0.8]);
@@ -171,7 +180,7 @@ test("Escape puts the tool down and undo removes an annotation", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
-  await tool(page, "Rectangle").click();
+  await pickShape(page, "Rectangle");
   await tool(page, "Filled shape").click();
   await drag(page, [0.3, 0.3], [0.7, 0.7]);
   const [drawn] = await pixelsOnImage(page, [[0.5, 0.5]]);
@@ -203,7 +212,7 @@ test("annotations move with any tool on, and pressing one never adds another", a
     "true",
   );
 
-  await tool(page, "Rectangle").click();
+  await pickShape(page, "Rectangle");
   await tool(page, "Filled shape").click();
   await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
   await drag(page, [0.1, 0.6], [0.3, 0.9]);
@@ -231,7 +240,7 @@ test("a step goes inside an outline shape, which moves by its border", async ({
   page,
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
-  await tool(page, "Rectangle").click();
+  await pickShape(page, "Rectangle");
   await tool(page, "Outline shape").click();
   await toolbar(page).getByRole("radio", { name: "Yellow" }).click();
   await drag(page, [0.2, 0.2], [0.8, 0.8]);
@@ -278,7 +287,7 @@ test("the button by a selected annotation deletes it, as does Delete", async ({
     0,
   );
 
-  await tool(page, "Circle").click();
+  await pickShape(page, "Circle");
   await tool(page, "Filled shape").click();
   await drag(page, [0.6, 0.5], [0.75, 0.7]);
   await nextFrame(page);
@@ -324,7 +333,7 @@ test("an outline keeps its border width when zoomed out and resized", async ({
     y: box.y + (PADDING + fy * big.height) * scale,
   });
 
-  await tool(page, "Rectangle").click();
+  await pickShape(page, "Rectangle");
   await tool(page, "Outline shape").click();
   await toolbar(page).getByRole("radio", { name: "Yellow" }).click();
   let from = at(0.25, 0.25);
@@ -408,7 +417,7 @@ test("steps and shapes can go on the background, off the screenshot", async ({
   await page.mouse.click(point.x, point.y);
   await expect(tool(page, "Add step 2")).toBeVisible();
 
-  await tool(page, "Rectangle").click();
+  await pickShape(page, "Rectangle");
   await tool(page, "Filled shape").click();
   // From the background below the screenshot onto it.
   await drag(page, [0.3, 1.15], [0.6, 0.8]);
@@ -742,7 +751,7 @@ test("a highlight is a see-through fill in its colour, square or rounded", async
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
   await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
-  await tool(page, "Highlight").click();
+  await pickShape(page, "Highlight");
   // Always just a fill: no choice between filled and outline.
   await expect(tool(page, "Filled shape")).toHaveCount(0);
   await drag(page, [0.3, 0.3], [0.7, 0.7]);
@@ -793,7 +802,7 @@ test("the drawing cursor comes back when the annotation under it is removed", as
   page,
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
-  await tool(page, "Highlight").click();
+  await pickShape(page, "Highlight");
   await drag(page, [0.3, 0.3], [0.6, 0.6]);
   await nextFrame(page);
   const cursor = () =>
