@@ -160,6 +160,26 @@ describe("migrateDesign", () => {
     });
   });
 
+  it("gives arrows in retired styles the styles that replaced them", () => {
+    const arrow = (style: string) => ({
+      id: style,
+      kind: "arrow",
+      x: 0.1,
+      y: 0.1,
+      dx: 0.2,
+      dy: 0.1,
+      color: "#d10373",
+      style,
+    });
+    const design = migrateDesign({
+      ...createDefaultDesign(),
+      annotations: [arrow("tapered"), arrow("chevron"), arrow("dotted")],
+    });
+    expect(
+      design?.annotations.map((item) => item.kind === "arrow" && item.style),
+    ).toEqual(["solid", "bold", "dotted"]);
+  });
+
   it("returns null for anything invalid", () => {
     expect(migrateDesign(null)).toBeNull();
     expect(migrateDesign({ version: 3 })).toBeNull();

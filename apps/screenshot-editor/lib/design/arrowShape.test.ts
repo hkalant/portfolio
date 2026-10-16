@@ -57,7 +57,24 @@ describe("arrow shapes", () => {
 
   it("are nothing for a zero-length arrow", () => {
     expect(arrowShape("solid", tail, tail, 0, 1200)).toBeNull();
-    expect(arrowShape("chevron", tail, tip, 0, 0)).toBeNull();
+    expect(arrowShape("bold", tail, tip, 0, 0)).toBeNull();
+  });
+
+  it("repeat chevrons along the arrow, more on longer ones", () => {
+    const count = (to: { x: number; y: number }) =>
+      arrowShape("chevrons", tail, to, 0, 1200)!.stroke!.path.filter(
+        (command) => command.op === "M",
+      ).length;
+    expect(count({ x: 140, y: 300 })).toBeGreaterThanOrEqual(1);
+    expect(count(tip)).toBeGreaterThan(count({ x: 250, y: 300 }));
+  });
+
+  it("start the dotted style with a dot, apart from its line", () => {
+    const shape = arrowShape("dotted", tail, tip, 0, 1200)!;
+    const dot = shape.fill?.[1];
+    expect(dot?.op === "arc" && dot.x - dot.r).toBeCloseTo(tail.x);
+    const line = shape.stroke!.path[0];
+    expect(line.op === "M" && line.x).toBeGreaterThan(tail.x + 15);
   });
 
   it("bend only across the middle, evenly", () => {

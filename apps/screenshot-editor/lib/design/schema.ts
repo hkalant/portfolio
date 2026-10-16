@@ -162,7 +162,14 @@ export const SHAPE_KINDS = [
 /** The shapes a magnifier can be. */
 export const MAGNIFY_LENSES = ["circle", "rect", "rounded"] as const;
 /** Arrow looks; the first is the default. */
-export const ARROW_STYLES = ["solid", "chevron", "halo", "refined"] as const;
+export const ARROW_STYLES = [
+  "solid",
+  "bold",
+  "halo",
+  "refined",
+  "dotted",
+  "chevrons",
+] as const;
 /**
  * Line ends; the first is the default. A line is stored as an arrow whose
  * style is one of these, so it moves, stretches and bends the same way.
@@ -228,10 +235,12 @@ export const arrowAnnotationSchema = z.object({
   color: annotationColorSchema,
   /**
    * A head, or a line end for lines. Arrows saved before there were styles
-   * get the default; the retired tapered style becomes solid.
+   * get the default; the retired tapered style becomes solid, and the
+   * retired open style becomes bold.
    */
   style: z.preprocess(
-    (style) => (style === "tapered" ? "solid" : style),
+    (style) =>
+      style === "tapered" ? "solid" : style === "chevron" ? "bold" : style,
     z.enum([...ARROW_STYLES, ...LINE_ENDS]).default("solid"),
   ),
   /** How far the middle is pulled to the left of straight, as a share of the length. */

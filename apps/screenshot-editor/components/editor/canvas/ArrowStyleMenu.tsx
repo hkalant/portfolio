@@ -20,9 +20,11 @@ import {
 
 export const ARROW_STYLE_NAMES: Record<ArrowStyle, string> = {
   solid: "Solid",
-  chevron: "Open",
+  bold: "Bold",
   halo: "Outlined",
   refined: "Classic",
+  dotted: "Dotted",
+  chevrons: "Chevron",
 };
 
 export const LINE_END_NAMES: Record<LineEnd, string> = {
