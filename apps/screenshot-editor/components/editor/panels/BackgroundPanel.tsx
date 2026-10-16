@@ -100,6 +100,7 @@ function GradientSwatches({ presetId }: { presetId: string | null }) {
       swatches={GRADIENT_SWATCHES}
       selectedId={presetId}
       onSelect={applyGradientPreset}
+      columns={5}
     />
   );
 }

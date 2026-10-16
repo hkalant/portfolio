@@ -57,7 +57,7 @@ export function SwatchGrid({
         className={cn(
           "grid",
           COLUMNS[columns],
-          shape === "dot" ? "gap-1.5" : "gap-2",
+          shape === "dot" ? "gap-1.5" : "gap-3",
         )}
       >
         {swatches.map((swatch) => {
@@ -75,7 +75,12 @@ export function SwatchGrid({
                 shape === "dot"
                   ? "aspect-square rounded-full border border-black/10 dark:border-white/15"
                   : cn(aspect, "rounded-lg"),
-                selected && "ring-2 ring-foreground",
+                // Dots keep a bold ring; tiles get a thin one set apart from
+                // the swatch, so the choice reads without a heavy border.
+                selected &&
+                  (shape === "dot"
+                    ? "ring-2 ring-foreground"
+                    : "ring-[1.5px] ring-foreground ring-offset-[3px]"),
               )}
               style={swatch.style}
             />

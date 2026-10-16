@@ -77,7 +77,7 @@ export default function Editor() {
         <main
           className={cn(
             "relative min-h-0 min-w-0 flex-1",
-            !desktop && "bg-workspace",
+            desktop ? "canvas-surround" : "bg-workspace",
           )}
           aria-label="Canvas"
         >
