@@ -127,6 +127,10 @@
   --radius-md: var(--radius);
   --radius-lg: 16px;
   --radius-xl: 22px;
+  /* One shape language: panes (bars, panels, popovers, the canvas surround)
+     use xl; full-width controls and the items inside panes (tiles, menu
+     rows) use md, with sm for what nests inside those; buttons sized to
+     their label are pills. */
   /* brookes.ac.uk sets text in the operating system's sans-serif. */
   --font-sans:
     BlinkMacSystemFont, -apple-system, "Segoe UI", Roboto, Oxygen, Ubuntu,
@@ -147,7 +151,7 @@
   background-color: var(--workspace);
   background-image: radial-gradient(var(--surround-dot) 1px, transparent 1px);
   background-size: 16px 16px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-xl);
   box-shadow: inset 0 0 0 1px var(--glass-line);
 }
 

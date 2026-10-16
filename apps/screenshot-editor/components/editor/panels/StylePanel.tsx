@@ -88,7 +88,11 @@ export function StylePanel() {
         />
       </Section>
 
-      <Button variant="outline" className="w-full" onClick={resetStyle}>
+      <Button
+        variant="outline"
+        className="w-full rounded-md"
+        onClick={resetStyle}
+      >
         Reset style
       </Button>
     </div>

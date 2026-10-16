@@ -255,7 +255,7 @@ function ImageControls({
       <Button
         variant="outline"
         size="sm"
-        className="w-full"
+        className="w-full rounded-md"
         onClick={() => inputRef.current?.click()}
       >
         <ImageUp aria-hidden />

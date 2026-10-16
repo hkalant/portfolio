@@ -37,7 +37,7 @@ export function AlignGrid({ label, onAlign, isActive }: Props) {
       <div
         role="group"
         aria-labelledby={labelId}
-        className="grid grid-cols-3 gap-0.5 rounded-lg bg-muted p-0.5"
+        className="grid grid-cols-3 gap-0.5 rounded-md bg-muted p-0.5"
       >
         {ROWS.map((row) =>
           COLUMNS.map((column) => {
@@ -50,7 +50,7 @@ export function AlignGrid({ label, onAlign, isActive }: Props) {
                 aria-label={name}
                 title={name}
                 onClick={() => onAlign(column.h, row.v)}
-                className="group flex size-7 items-center justify-center rounded-md transition-colors outline-none hover:bg-background focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="group flex size-7 items-center justify-center rounded-[10px] transition-colors outline-none hover:bg-background focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <span
                   aria-hidden

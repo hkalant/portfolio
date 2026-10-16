@@ -270,7 +270,7 @@ function ToolMenu<T extends AnnotationTool>({
             role="menuitemradio"
             aria-checked={item.tool === current.tool}
             onClick={() => pick(item.tool)}
-            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors outline-none hover:bg-accent focus-visible:bg-accent aria-checked:font-medium [&_svg]:size-4"
+            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors outline-none hover:bg-accent focus-visible:bg-accent aria-checked:font-medium [&_svg]:size-4"
           >
             {item.icon}
             {item.label}

@@ -163,7 +163,7 @@ export function ExportMenu({ compact = false }: { compact?: boolean }) {
         </PopoverTrigger>
         <PopoverContent align="end" className="space-y-4">
           <ExportOptionsForm />
-          <ExportButton className="w-full" />
+          <ExportButton className="w-full rounded-md" />
         </PopoverContent>
       </Popover>
     );
