@@ -46,6 +46,11 @@
   /* The chosen option in a segmented control. */
   --selected: var(--obu-charcoal);
   --selected-foreground: #ffffff;
+  /* The active tool in the annotation toolbar: a soft brand-yellow tint. */
+  --tool-active: rgb(249 201 9 / 30%);
+  --tool-active-edge: rgb(214 170 0 / 45%);
+  /* The sheet the design sits on, lifted off the surround. */
+  --sheet-shadow: 0 8px 30px rgb(0 0 0 / 8%);
   --workspace: #f2f2f3;
   --surround-dot: rgb(66 74 82 / 14%);
   --radius: 12px;
@@ -88,6 +93,9 @@
   --success: var(--obu-green-20);
   --selected: #ffffff;
   --selected-foreground: var(--obu-charcoal);
+  --tool-active: rgb(249 201 9 / 22%);
+  --tool-active-edge: rgb(249 201 9 / 45%);
+  --sheet-shadow: 0 8px 30px rgb(0 0 0 / 35%);
   --workspace: #30363c;
   --surround-dot: rgb(255 255 255 / 9%);
   --ambient:
@@ -164,7 +172,7 @@
   box-shadow:
     inset 0 1px 0 var(--glass-edge),
     0 0 0 1px var(--glass-line),
-    0 8px 32px var(--glass-shadow);
+    var(--glass-drop, 0 8px 32px var(--glass-shadow));
 
   /* Solid panes for people who ask for less transparency or more contrast. */
   @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {

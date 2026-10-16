@@ -43,7 +43,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 
 const buttonClass =
-  "flex size-8 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-selected aria-pressed:text-selected-foreground [&_svg]:size-4";
+  "flex size-8 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-(--tool-active) aria-pressed:shadow-[inset_0_0_0_1px_var(--tool-active-edge)] [&_svg]:size-4";
 
 function ToolButton({
   label,
@@ -93,7 +93,7 @@ function StepIcon({ number }: { number: number }) {
         textAnchor="middle"
         fontSize={text.length > 1 ? 7 : 9}
         fontWeight="700"
-        className="fill-background group-aria-pressed:fill-selected"
+        className="fill-background"
       >
         {text}
       </text>
@@ -523,7 +523,8 @@ export function AnnotationToolbar() {
     <div
       role="toolbar"
       aria-label="Annotate"
-      className="flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full glass p-1"
+      // A floating dock: more room and a deeper shadow than the other panes.
+      className="flex max-w-full items-center gap-1 overflow-x-auto rounded-full glass p-1.5 [--glass-drop:0_12px_36px_var(--glass-shadow),0_2px_8px_var(--glass-shadow)]"
     >
       <ToolButton
         label="Select and move"
