@@ -653,6 +653,8 @@ test("a line's end is picked from the menu below it", async ({ page }) => {
   ]);
   expectColor(bar, "#424a52", 30);
   expect(isRed(start)).toBe(true);
+  // Exporting moved the mouse to the Export button, so the menu has gone.
+  await page.mouse.move(at.x, at.y);
   await ends.getByRole("radio", { name: "Dot end" }).click();
   const [dot, barGone] = await pixelsOnImage(page, [
     [0.8, 0.5 - 3 / IMAGE.height],
