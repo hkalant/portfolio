@@ -32,14 +32,25 @@ const toolbar = (page: Page) => page.getByRole("toolbar", { name: "Annotate" });
 const tool = (page: Page, name: string | RegExp) =>
   toolbar(page).getByRole("button", { name, exact: typeof name === "string" });
 
-/** Picks a shape from the shape button's menu. */
-async function pickShape(page: Page, name: string) {
-  await tool(page, "Choose shape").click();
+/** Picks a tool from the menu of a toolbar button that groups tools. */
+async function pickFromMenu(
+  page: Page,
+  button: string,
+  menu: string,
+  name: string,
+) {
+  await tool(page, button).click();
   await page
-    .getByRole("menu", { name: "Shapes" })
+    .getByRole("menu", { name: menu })
     .getByRole("menuitemradio", { name, exact: true })
     .click();
 }
+
+const pickShape = (page: Page, name: string) =>
+  pickFromMenu(page, "Choose shape", "Shapes", name);
+
+const pickArrowTool = (page: Page, name: "Arrow" | "Line") =>
+  pickFromMenu(page, "Choose arrow or line", "Arrows and lines", name);
 
 /** Screen coordinates of a point given as fractions of the screenshot. */
 async function onImage(page: Page, fx: number, fy: number) {
@@ -519,7 +530,7 @@ test("an arrow is drawn by dragging, its ends move, and it can be deleted", asyn
   page,
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
-  await tool(page, "Arrow").click();
+  await pickArrowTool(page, "Arrow");
   await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
   // From (80, 60) to (240, 180) on the screenshot: 200 px along (0.8, 0.6).
   await drag(page, [0.2, 0.2], [0.6, 0.6]);
@@ -573,7 +584,7 @@ test("an arrow's style is picked from the menu below it, and its middle bends it
   page,
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
-  await tool(page, "Arrow").click();
+  await pickArrowTool(page, "Arrow");
   await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
   await drag(page, [0.2, 0.5], [0.8, 0.5]);
   await nextFrame(page);
@@ -632,7 +643,7 @@ test("an arrow's style is picked from the menu below it, and its middle bends it
 test("a line's end is picked from the menu below it", async ({ page }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
   await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
-  await tool(page, "Line").click();
+  await pickArrowTool(page, "Line");
   // Choosing the tool opens no menu.
   const ends = page.getByRole("radiogroup", { name: "Line end" });
   await expect(ends).toHaveCount(0);
@@ -681,7 +692,7 @@ test("holding Shift keeps an arrow or line to 45 degree steps", async ({
 }) => {
   await upload(page, makeSolidPng(IMAGE.width, IMAGE.height, RED));
   await toolbar(page).getByRole("radio", { name: "Charcoal" }).click();
-  await tool(page, "Arrow").click();
+  await pickArrowTool(page, "Arrow");
   // Dragged a little downhill with Shift: it comes out level.
   await page.keyboard.down("Shift");
   await drag(page, [0.2, 0.3], [0.8, 0.36]);
@@ -695,7 +706,7 @@ test("holding Shift keeps an arrow or line to 45 degree steps", async ({
   expect(isRed(slope)).toBe(true);
 
   // A line dragged nearly straight down comes out vertical.
-  await tool(page, "Line").click();
+  await pickArrowTool(page, "Line");
   await page.keyboard.down("Shift");
   await drag(page, [0.5, 0.45], [0.53, 0.9]);
   await page.keyboard.up("Shift");

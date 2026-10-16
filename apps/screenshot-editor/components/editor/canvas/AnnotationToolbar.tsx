@@ -190,35 +190,36 @@ function StepNumberField({ step }: { step: StepAnnotation }) {
 
 const STRAIGHT_HINT = "hold Shift for 45° steps";
 
-type ShapeTool = "rect" | "rounded" | "circle" | "highlight";
-
-/** The shapes, behind one button. */
-const SHAPES: readonly { tool: ShapeTool; label: string; icon: ReactNode }[] = [
-  { tool: "rect", label: "Rectangle", icon: <SquareIcon /> },
-  { tool: "rounded", label: "Rounded rectangle", icon: <RoundedIcon /> },
-  { tool: "circle", label: "Circle", icon: <Circle aria-hidden /> },
-  {
-    tool: "highlight",
-    label: "Highlight",
-    icon: <Highlighter aria-hidden />,
-  },
-];
-
-const isShapeTool = (tool: AnnotationTool): tool is ShapeTool =>
-  SHAPES.some((shape) => shape.tool === tool);
+type ToolItem<T extends AnnotationTool> = {
+  tool: T;
+  label: string;
+  icon: ReactNode;
+  hint?: string;
+};
 
 /**
- * One button for the shapes: it draws the last shape picked, and its arrow
- * opens the others.
+ * One button for a group of tools: it uses the last tool picked, and its
+ * arrow opens a menu of the others.
  */
-function ShapeTools() {
+function ToolMenu<T extends AnnotationTool>({
+  items,
+  menuLabel,
+  chooseLabel,
+}: {
+  items: readonly ToolItem<T>[];
+  /** What the menu is called, such as "Shapes". */
+  menuLabel: string;
+  /** What the arrow is called, such as "Choose shape". */
+  chooseLabel: string;
+}) {
   const tool = useEditorStore((state) => state.annotationTool);
   const setTool = useEditorStore((state) => state.setAnnotationTool);
-  const [last, setLast] = useState<ShapeTool>("rect");
+  const [last, setLast] = useState<T>(items[0].tool);
   const [open, setOpen] = useState(false);
-  const current = isShapeTool(tool) ? tool : last;
-  const shape = SHAPES.find((item) => item.tool === current) ?? SHAPES[0];
-  const pick = (next: ShapeTool) => {
+  const active = items.find((item) => item.tool === tool);
+  const current =
+    active ?? items.find((item) => item.tool === last) ?? items[0];
+  const pick = (next: T) => {
     setLast(next);
     setTool(next);
     setOpen(false);
@@ -226,21 +227,22 @@ function ShapeTools() {
   return (
     <div className="flex shrink-0 items-center">
       <ToolButton
-        label={shape.label}
-        pressed={isShapeTool(tool)}
+        label={current.label}
+        hint={current.hint}
+        pressed={active !== undefined}
         onClick={() => {
-          setLast(current);
-          setTool(tool === current ? "select" : current);
+          setLast(current.tool);
+          setTool(active ? "select" : current.tool);
         }}
       >
-        {shape.icon}
+        {current.icon}
       </ToolButton>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
             type="button"
-            aria-label="Choose shape"
-            title="Choose shape"
+            aria-label={chooseLabel}
+            title={chooseLabel}
             aria-haspopup="menu"
             className="-ml-1 flex h-8 w-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring [&_svg]:size-3"
           >
@@ -251,14 +253,14 @@ function ShapeTools() {
           align="start"
           className="w-auto p-1"
           role="menu"
-          aria-label="Shapes"
+          aria-label={menuLabel}
         >
-          {SHAPES.map((item) => (
+          {items.map((item) => (
             <button
               key={item.tool}
               type="button"
               role="menuitemradio"
-              aria-checked={item.tool === current}
+              aria-checked={item.tool === current.tool}
               onClick={() => pick(item.tool)}
               className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors outline-none hover:bg-accent focus-visible:bg-accent aria-checked:font-medium [&_svg]:size-4"
             >
@@ -272,19 +274,50 @@ function ShapeTools() {
   );
 }
 
-const SHAPE_TOOLS: readonly {
-  tool: AnnotationTool;
-  label: string;
-  icon: ReactNode;
-  hint?: string;
-}[] = [
-  {
-    tool: "arrow",
-    label: "Arrow",
-    icon: <MoveUpRight aria-hidden />,
-    hint: STRAIGHT_HINT,
-  },
-];
+const SHAPES: readonly ToolItem<"rect" | "rounded" | "circle" | "highlight">[] =
+  [
+    { tool: "rect", label: "Rectangle", icon: <SquareIcon /> },
+    { tool: "rounded", label: "Rounded rectangle", icon: <RoundedIcon /> },
+    { tool: "circle", label: "Circle", icon: <Circle aria-hidden /> },
+    {
+      tool: "highlight",
+      label: "Highlight",
+      icon: <Highlighter aria-hidden />,
+    },
+  ];
+
+/** Rectangles, circles and highlights, behind one button. */
+function ShapeTools() {
+  return (
+    <ToolMenu items={SHAPES} menuLabel="Shapes" chooseLabel="Choose shape" />
+  );
+}
+
+/** Arrows and lines, behind one button; the line shows the end new lines get. */
+function ArrowTools() {
+  const lineEnd = useEditorStore((state) => state.lineEnd);
+  const items: readonly ToolItem<"arrow" | "line">[] = [
+    {
+      tool: "arrow",
+      label: "Arrow",
+      icon: <MoveUpRight aria-hidden />,
+      hint: STRAIGHT_HINT,
+    },
+    {
+      tool: "line",
+      label: "Line",
+      icon: <LineIcon end={lineEnd} />,
+      hint: STRAIGHT_HINT,
+    },
+  ];
+  return (
+    <ToolMenu
+      items={items}
+      menuLabel="Arrows and lines"
+      chooseLabel="Choose arrow or line"
+    />
+  );
+}
 
 /** Soft dots fading out: a blur. */
 function BlurIcon() {
@@ -415,23 +448,6 @@ function MagnifyOptions() {
   );
 }
 
-/** The line tool; its button shows the end new lines get. */
-function LineTool() {
-  const tool = useEditorStore((state) => state.annotationTool);
-  const lineEnd = useEditorStore((state) => state.lineEnd);
-  const setTool = useEditorStore((state) => state.setAnnotationTool);
-  return (
-    <ToolButton
-      label="Line"
-      hint={STRAIGHT_HINT}
-      pressed={tool === "line"}
-      onClick={() => setTool(tool === "line" ? "select" : "line")}
-    >
-      <LineIcon end={lineEnd} />
-    </ToolButton>
-  );
-}
-
 /** A line with the chosen end, for the line tool's button. */
 function LineIcon({ end }: { end: (typeof LINE_ENDS)[number] }) {
   return (
@@ -529,18 +545,7 @@ export function AnnotationToolbar() {
       </ToolButton>
       <Divider />
       <ShapeTools />
-      {SHAPE_TOOLS.map((shape) => (
-        <ToolButton
-          key={shape.tool}
-          label={shape.label}
-          hint={shape.hint}
-          pressed={tool === shape.tool}
-          onClick={() => toggleTool(shape.tool)}
-        >
-          {shape.icon}
-        </ToolButton>
-      ))}
-      <LineTool />
+      <ArrowTools />
       <ToolButton
         label="Blur"
         pressed={tool === "blur"}
