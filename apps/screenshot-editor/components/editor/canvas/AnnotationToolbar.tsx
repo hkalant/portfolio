@@ -36,6 +36,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
@@ -225,52 +226,58 @@ function ToolMenu<T extends AnnotationTool>({
     setOpen(false);
   };
   return (
-    <div className="flex shrink-0 items-center">
-      <ToolButton
-        label={current.label}
-        hint={current.hint}
-        pressed={active !== undefined}
-        onClick={() => {
-          setLast(current.tool);
-          setTool(active ? "select" : current.tool);
-        }}
-      >
-        {current.icon}
-      </ToolButton>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            aria-label={chooseLabel}
-            title={chooseLabel}
-            aria-haspopup="menu"
-            className="-ml-1 flex h-8 w-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring [&_svg]:size-3"
+    <Popover open={open} onOpenChange={setOpen}>
+      {/* The menu opens under the tool, not the arrow. */}
+      <PopoverAnchor asChild>
+        <div className="flex shrink-0 items-center">
+          <ToolButton
+            label={current.label}
+            hint={current.hint}
+            pressed={active !== undefined}
+            onClick={() => {
+              setLast(current.tool);
+              setTool(active ? "select" : current.tool);
+            }}
           >
-            <ChevronDown aria-hidden />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          align="start"
-          className="w-auto p-1"
-          role="menu"
-          aria-label={menuLabel}
-        >
-          {items.map((item) => (
+            {current.icon}
+          </ToolButton>
+          <PopoverTrigger asChild>
             <button
-              key={item.tool}
               type="button"
-              role="menuitemradio"
-              aria-checked={item.tool === current.tool}
-              onClick={() => pick(item.tool)}
-              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors outline-none hover:bg-accent focus-visible:bg-accent aria-checked:font-medium [&_svg]:size-4"
+              aria-label={chooseLabel}
+              title={chooseLabel}
+              aria-haspopup="menu"
+              className="-ml-1 flex h-8 w-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring [&_svg]:size-3"
             >
-              {item.icon}
-              {item.label}
+              <ChevronDown aria-hidden />
             </button>
-          ))}
-        </PopoverContent>
-      </Popover>
-    </div>
+          </PopoverTrigger>
+        </div>
+      </PopoverAnchor>
+      <PopoverContent
+        align="start"
+        // The menu's icons in line with the tool's: the toolbar icon is 8px
+        // into its button, a menu icon 14px into the menu.
+        alignOffset={-6}
+        className="w-auto p-1"
+        role="menu"
+        aria-label={menuLabel}
+      >
+        {items.map((item) => (
+          <button
+            key={item.tool}
+            type="button"
+            role="menuitemradio"
+            aria-checked={item.tool === current.tool}
+            onClick={() => pick(item.tool)}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors outline-none hover:bg-accent focus-visible:bg-accent aria-checked:font-medium [&_svg]:size-4"
+          >
+            {item.icon}
+            {item.label}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
   );
 }
 
