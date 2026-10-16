@@ -9,7 +9,8 @@ export type ShortcutCommand =
   | { type: "open" }
   | { type: "delete" }
   | { type: "escape" }
-  | { type: "nudge"; dx: number; dy: number };
+  | { type: "nudge"; dx: number; dy: number }
+  | { type: "zoom"; direction: "in" | "out" | "reset" };
 
 export type KeyInput = Pick<
   KeyboardEvent,
@@ -42,6 +43,11 @@ export function matchShortcut(
     if (key === "s" && !event.shiftKey) return { type: "export" };
     if (key === "c") return { type: "copy" };
     if (key === "o" && !event.shiftKey) return { type: "open" };
+    // "=" is the plus key without Shift; "+" with it, or on the number pad.
+    if (key === "=" || key === "+") return { type: "zoom", direction: "in" };
+    if (key === "-" || key === "_") return { type: "zoom", direction: "out" };
+    if (key === "0" && !event.shiftKey)
+      return { type: "zoom", direction: "reset" };
     return null;
   }
   if (event.metaKey || event.ctrlKey) return null;

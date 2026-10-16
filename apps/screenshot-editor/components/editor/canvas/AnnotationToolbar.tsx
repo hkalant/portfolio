@@ -1,12 +1,15 @@
 "use client";
 
 import {
+  ChevronDown,
   Circle,
   Highlighter,
   MousePointer2,
   MoveUpRight,
+  PictureInPicture2,
   RotateCcw,
   Trash2,
+  ZoomIn,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import {
@@ -15,13 +18,28 @@ import {
   MAX_STEP_NUMBER,
   parseStepNumber,
 } from "@/lib/design/annotations";
-import { LINE_ENDS, type StepAnnotation } from "@/lib/design/schema";
+import {
+  DEFAULT_MAGNIFY_LENS,
+  MAX_MAGNIFY_ZOOM,
+  MIN_MAGNIFY_ZOOM,
+} from "@/lib/design/magnify";
+import {
+  LINE_ENDS,
+  type MagnifyLens,
+  type StepAnnotation,
+} from "@/lib/design/schema";
 import {
   selectSelectedAnnotation,
   useEditorStore,
   type AnnotationTool,
 } from "@/lib/store/editor";
 import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 
 const buttonClass =
@@ -173,27 +191,140 @@ function StepNumberField({ step }: { step: StepAnnotation }) {
 
 const STRAIGHT_HINT = "hold Shift for 45° steps";
 
-const SHAPE_TOOLS: readonly {
-  tool: AnnotationTool;
+type ToolItem<T extends AnnotationTool> = {
+  tool: T;
   label: string;
   icon: ReactNode;
   hint?: string;
-}[] = [
-  { tool: "rect", label: "Rectangle", icon: <SquareIcon /> },
-  { tool: "rounded", label: "Rounded rectangle", icon: <RoundedIcon /> },
-  { tool: "circle", label: "Circle", icon: <Circle aria-hidden /> },
-  {
-    tool: "highlight",
-    label: "Highlight",
-    icon: <Highlighter aria-hidden />,
-  },
-  {
-    tool: "arrow",
-    label: "Arrow",
-    icon: <MoveUpRight aria-hidden />,
-    hint: STRAIGHT_HINT,
-  },
-];
+};
+
+/**
+ * One button for a group of tools: it uses the last tool picked, and its
+ * arrow opens a menu of the others.
+ */
+function ToolMenu<T extends AnnotationTool>({
+  items,
+  menuLabel,
+  chooseLabel,
+}: {
+  items: readonly ToolItem<T>[];
+  /** What the menu is called, such as "Shapes". */
+  menuLabel: string;
+  /** What the arrow is called, such as "Choose shape". */
+  chooseLabel: string;
+}) {
+  const tool = useEditorStore((state) => state.annotationTool);
+  const setTool = useEditorStore((state) => state.setAnnotationTool);
+  const [last, setLast] = useState<T>(items[0].tool);
+  const [open, setOpen] = useState(false);
+  const active = items.find((item) => item.tool === tool);
+  const current =
+    active ?? items.find((item) => item.tool === last) ?? items[0];
+  const pick = (next: T) => {
+    setLast(next);
+    setTool(next);
+    setOpen(false);
+  };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      {/* The menu opens under the tool, not the arrow. */}
+      <PopoverAnchor asChild>
+        <div className="flex shrink-0 items-center">
+          <ToolButton
+            label={current.label}
+            hint={current.hint}
+            pressed={active !== undefined}
+            onClick={() => {
+              setLast(current.tool);
+              setTool(active ? "select" : current.tool);
+            }}
+          >
+            {current.icon}
+          </ToolButton>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={chooseLabel}
+              title={chooseLabel}
+              aria-haspopup="menu"
+              className="-ml-1 flex h-8 w-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring [&_svg]:size-3"
+            >
+              <ChevronDown aria-hidden />
+            </button>
+          </PopoverTrigger>
+        </div>
+      </PopoverAnchor>
+      <PopoverContent
+        align="start"
+        // The menu's icons in line with the tool's: the toolbar icon is 8px
+        // into its button, a menu icon 14px into the menu.
+        alignOffset={-6}
+        className="w-auto p-1"
+        role="menu"
+        aria-label={menuLabel}
+      >
+        {items.map((item) => (
+          <button
+            key={item.tool}
+            type="button"
+            role="menuitemradio"
+            aria-checked={item.tool === current.tool}
+            onClick={() => pick(item.tool)}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors outline-none hover:bg-accent focus-visible:bg-accent aria-checked:font-medium [&_svg]:size-4"
+          >
+            {item.icon}
+            {item.label}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+const SHAPES: readonly ToolItem<"rect" | "rounded" | "circle" | "highlight">[] =
+  [
+    { tool: "rect", label: "Rectangle", icon: <SquareIcon /> },
+    { tool: "rounded", label: "Rounded rectangle", icon: <RoundedIcon /> },
+    { tool: "circle", label: "Circle", icon: <Circle aria-hidden /> },
+    {
+      tool: "highlight",
+      label: "Highlight",
+      icon: <Highlighter aria-hidden />,
+    },
+  ];
+
+/** Rectangles, circles and highlights, behind one button. */
+function ShapeTools() {
+  return (
+    <ToolMenu items={SHAPES} menuLabel="Shapes" chooseLabel="Choose shape" />
+  );
+}
+
+/** Arrows and lines, behind one button; the line shows the end new lines get. */
+function ArrowTools() {
+  const lineEnd = useEditorStore((state) => state.lineEnd);
+  const items: readonly ToolItem<"arrow" | "line">[] = [
+    {
+      tool: "arrow",
+      label: "Arrow",
+      icon: <MoveUpRight aria-hidden />,
+      hint: STRAIGHT_HINT,
+    },
+    {
+      tool: "line",
+      label: "Line",
+      icon: <LineIcon end={lineEnd} />,
+      hint: STRAIGHT_HINT,
+    },
+  ];
+  return (
+    <ToolMenu
+      items={items}
+      menuLabel="Arrows and lines"
+      chooseLabel="Choose arrow or line"
+    />
+  );
+}
 
 /** Soft dots fading out: a blur. */
 function BlurIcon() {
@@ -242,20 +373,85 @@ function BlurStrength() {
   );
 }
 
-/** The line tool; its button shows the end new lines get. */
-function LineTool() {
-  const tool = useEditorStore((state) => state.annotationTool);
-  const lineEnd = useEditorStore((state) => state.lineEnd);
-  const setTool = useEditorStore((state) => state.setAnnotationTool);
+/** How much the selected magnifier enlarges, and new ones after it. */
+function MagnifyZoom() {
+  const selected = useEditorStore(selectSelectedAnnotation);
+  const zoom = useEditorStore((state) => state.magnifyZoom);
+  const setMagnifyZoom = useEditorStore((state) => state.setMagnifyZoom);
+  const sealHistory = useEditorStore((state) => state.sealHistory);
+  const magnifier =
+    selected?.kind === "shape" && selected.shape === "magnify"
+      ? selected
+      : null;
+  const value = magnifier?.zoom ?? zoom;
   return (
-    <ToolButton
-      label="Line"
-      hint={STRAIGHT_HINT}
-      pressed={tool === "line"}
-      onClick={() => setTool(tool === "line" ? "select" : "line")}
-    >
-      <LineIcon end={lineEnd} />
-    </ToolButton>
+    <div className="flex shrink-0 items-center gap-2 px-2 text-xs text-muted-foreground">
+      <span aria-hidden>Zoom</span>
+      <Slider
+        className="w-28"
+        thumbLabel="Magnifier zoom"
+        min={MIN_MAGNIFY_ZOOM}
+        max={MAX_MAGNIFY_ZOOM}
+        step={0.25}
+        value={[value]}
+        onValueChange={([next]) => setMagnifyZoom(magnifier?.id ?? null, next)}
+        onValueCommit={() => sealHistory()}
+      />
+      <span className="w-8 text-foreground tabular-nums">{value}×</span>
+    </div>
+  );
+}
+
+const LENSES: readonly { lens: MagnifyLens; label: string; icon: ReactNode }[] =
+  [
+    { lens: "circle", label: "Round magnifier", icon: <Circle aria-hidden /> },
+    { lens: "rect", label: "Square-cornered magnifier", icon: <SquareIcon /> },
+    { lens: "rounded", label: "Rounded magnifier", icon: <RoundedIcon /> },
+  ];
+
+/** The selected magnifier's shape and whether it is an inset, or new ones'. */
+function MagnifyOptions() {
+  const selected = useEditorStore(selectSelectedAnnotation);
+  const lens = useEditorStore((state) => state.magnifyLens);
+  const inset = useEditorStore((state) => state.magnifyInset);
+  const setLens = useEditorStore((state) => state.setMagnifyLens);
+  const setInset = useEditorStore((state) => state.setMagnifyInset);
+  const magnifier =
+    selected?.kind === "shape" && selected.shape === "magnify"
+      ? selected
+      : null;
+  const shown = magnifier ? (magnifier.lens ?? DEFAULT_MAGNIFY_LENS) : lens;
+  const isInset = magnifier ? magnifier.from !== undefined : inset;
+  return (
+    <>
+      {LENSES.map((item) => (
+        <ToolButton
+          key={item.lens}
+          label={item.label}
+          pressed={shown === item.lens}
+          onClick={() => setLens(item.lens)}
+        >
+          {item.icon}
+        </ToolButton>
+      ))}
+      <Divider />
+      <ToolButton
+        label="Magnify in place"
+        hint="Covers the area it enlarges"
+        pressed={!isInset}
+        onClick={() => setInset(false)}
+      >
+        <ZoomIn aria-hidden />
+      </ToolButton>
+      <ToolButton
+        label="Magnify as an inset"
+        hint="Drag over an area: the enlarged copy goes beside it"
+        pressed={isInset}
+        onClick={() => setInset(true)}
+      >
+        <PictureInPicture2 aria-hidden />
+      </ToolButton>
+    </>
   );
 }
 
@@ -309,12 +505,17 @@ export function AnnotationToolbar() {
   const blurMode =
     tool === "blur" ||
     (selected?.kind === "shape" && selected.shape === "blur");
+  // Magnifiers have a zoom instead of a colour or a fill.
+  const magnifyMode =
+    tool === "magnify" ||
+    (selected?.kind === "shape" && selected.shape === "magnify");
   // Highlights are always a border and a light fill.
   const showCorners =
     tool === "highlight" ||
     (selected?.kind === "shape" && selected.shape === "highlight");
   const showFill =
     !blurMode &&
+    !magnifyMode &&
     (shapeTool ||
       (selected?.kind === "shape" && selected.shape !== "highlight"));
 
@@ -350,24 +551,22 @@ export function AnnotationToolbar() {
         <RotateCcw aria-hidden />
       </ToolButton>
       <Divider />
-      {SHAPE_TOOLS.map((shape) => (
-        <ToolButton
-          key={shape.tool}
-          label={shape.label}
-          hint={shape.hint}
-          pressed={tool === shape.tool}
-          onClick={() => toggleTool(shape.tool)}
-        >
-          {shape.icon}
-        </ToolButton>
-      ))}
-      <LineTool />
+      <ShapeTools />
+      <ArrowTools />
       <ToolButton
         label="Blur"
         pressed={tool === "blur"}
         onClick={() => toggleTool("blur")}
       >
         <BlurIcon />
+      </ToolButton>
+      <ToolButton
+        label="Magnifier"
+        hint="Drag over an area to show it enlarged"
+        pressed={tool === "magnify"}
+        onClick={() => toggleTool("magnify")}
+      >
+        <ZoomIn aria-hidden />
       </ToolButton>
       {showCorners && (
         <>
@@ -411,6 +610,13 @@ export function AnnotationToolbar() {
         <>
           <Divider />
           <BlurStrength />
+        </>
+      ) : magnifyMode ? (
+        <>
+          <Divider />
+          <MagnifyZoom />
+          <Divider />
+          <MagnifyOptions />
         </>
       ) : (
         <>

@@ -561,7 +561,7 @@ describe("editor store: annotations", () => {
   it("styles and bends arrows, and new arrows take the last style", () => {
     state().addArrow({ x: 0.1, y: 0.1 }, { x: 0.4, y: 0.3 });
     const [arrow] = annotations();
-    expect(arrow).toMatchObject({ style: "tapered", bend: 0 });
+    expect(arrow).toMatchObject({ style: "solid", bend: 0 });
     state().setArrowStyle(arrow.id, "halo");
     expect(annotations()[0]).toMatchObject({ style: "halo" });
     state().addArrow({ x: 0.5, y: 0.1 }, { x: 0.6, y: 0.3 });
@@ -584,11 +584,11 @@ describe("editor store: annotations", () => {
     state().addArrow({ x: 0.5, y: 0.4 }, { x: 0.6, y: 0.5 });
     expect(annotations()[1]).toMatchObject({ style: "bar" });
     // Arrows keep their own default.
-    expect(annotations()[2]).toMatchObject({ style: "tapered" });
+    expect(annotations()[2]).toMatchObject({ style: "solid" });
     state().setArrowStyle(line.id, "halo");
     state().setArrowStyle(annotations()[2].id, "dot");
     expect(annotations()[0]).toMatchObject({ style: "bar" });
-    expect(annotations()[2]).toMatchObject({ style: "tapered" });
+    expect(annotations()[2]).toMatchObject({ style: "solid" });
   });
 
   it("draws blur boxes with the last strength, and changes a box's strength", () => {
@@ -606,6 +606,65 @@ describe("editor store: annotations", () => {
     // Other shapes have no strength.
     state().addShape("rect", { x: 0.5, y: 0.4, width: 0.2, height: 0.1 });
     expect(annotations()[2]).not.toHaveProperty("intensity");
+  });
+
+  it("draws magnifiers with the last zoom, and changes a magnifier's zoom", () => {
+    state().addShape("magnify", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    const [magnifier] = annotations();
+    expect(magnifier).toMatchObject({ shape: "magnify", zoom: 2 });
+    later();
+    state().setMagnifyZoom(magnifier.id, 3);
+    state().setMagnifyZoom(magnifier.id, 9);
+    expect(annotations()[0]).toMatchObject({ zoom: 4 });
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ zoom: 2 });
+    state().addShape("magnify", { x: 0.5, y: 0.1, width: 0.2, height: 0.1 });
+    expect(annotations()[1]).toMatchObject({ zoom: 4 });
+    // Other shapes have no zoom.
+    state().addShape("blur", { x: 0.5, y: 0.4, width: 0.2, height: 0.1 });
+    expect(annotations()[2]).not.toHaveProperty("zoom");
+  });
+
+  it("reshapes magnifiers, keeping round ones square", () => {
+    state().addShape("magnify", { x: 0.1, y: 0.1, width: 0.2, height: 0.1 });
+    const [magnifier] = annotations();
+    expect(magnifier).toMatchObject({ lens: "rounded" });
+    state().selectAnnotation(magnifier.id);
+    state().setMagnifyLens("circle");
+    expect(annotations()[0]).toMatchObject({
+      lens: "circle",
+      x: 0.15,
+      width: 0.1,
+      height: 0.1,
+    });
+    state().selectAnnotation(null);
+    state().addShape("magnify", { x: 0.5, y: 0.1, width: 0.1, height: 0.1 });
+    expect(annotations()[1]).toMatchObject({ lens: "circle" });
+  });
+
+  it("draws inset magnifiers beside the area they enlarge, and moves that area", () => {
+    state().setMagnifyInset(true);
+    state().addShape("magnify", { x: 0.1, y: 0.1, width: 0.1, height: 0.05 });
+    const [inset] = annotations();
+    expect(inset).toMatchObject({
+      from: { x: 0.15, y: 0.125 },
+      width: 0.2,
+      height: 0.1,
+    });
+    expect(inset.x).toBeGreaterThan(0.2);
+    later();
+    state().moveMagnifySource(inset.id, { x: 0.3, y: 0.2 });
+    expect(annotations()[0]).toMatchObject({ from: { x: 0.3, y: 0.2 } });
+    state().undo();
+    expect(annotations()[0]).toMatchObject({ from: { x: 0.15, y: 0.125 } });
+    // Back over the area it enlarges.
+    state().selectAnnotation(inset.id);
+    state().setMagnifyInset(false);
+    const placed = annotations()[0];
+    expect(placed).not.toHaveProperty("from");
+    expect(placed.kind === "shape" && placed.x + placed.width / 2).toBeCloseTo(
+      0.15,
+    );
   });
 
   it("rounds a highlight's corners, and new highlights match", () => {

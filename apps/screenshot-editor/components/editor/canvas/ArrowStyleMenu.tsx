@@ -19,10 +19,12 @@ import {
 } from "./nodes/Annotations";
 
 export const ARROW_STYLE_NAMES: Record<ArrowStyle, string> = {
-  tapered: "Tapered",
-  chevron: "Open",
+  solid: "Solid",
+  bold: "Bold",
   halo: "Outlined",
   refined: "Classic",
+  dotted: "Dotted",
+  chevrons: "Chevron",
 };
 
 export const LINE_END_NAMES: Record<LineEnd, string> = {

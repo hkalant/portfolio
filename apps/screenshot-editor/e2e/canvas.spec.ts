@@ -467,6 +467,29 @@ test("the empty editor shows a dotted drop area with the paste tip", async ({
   await expect(page.getByRole("toolbar", { name: "Zoom" })).toHaveCount(0);
 });
 
+test("zooms the canvas from the keyboard", async ({ page }) => {
+  await upload(page, makeSolidPng(1200, 750, RED));
+  const level = page.getByTestId("zoom-level");
+  const percent = async () =>
+    Number((await level.textContent())!.trim().replace("%", ""));
+  const fit = await percent();
+  // Desktop Safari runs at 2x, so compare with the starting ratio, not 1.
+  const ratio = () => page.evaluate(() => window.devicePixelRatio);
+  const startRatio = await ratio();
+  // Playwright's ControlOrMeta is ⌘ on a Mac and Ctrl elsewhere.
+  await page.keyboard.press("ControlOrMeta+Equal");
+  await expect.poll(percent).toBeGreaterThan(fit);
+  const zoomed = await percent();
+  await page.keyboard.press("ControlOrMeta+Shift+Equal");
+  await expect.poll(percent).toBeGreaterThan(zoomed);
+  await page.keyboard.press("ControlOrMeta+Minus");
+  await expect.poll(percent).toBe(zoomed);
+  await page.keyboard.press("ControlOrMeta+0");
+  await expect.poll(percent).toBe(fit);
+  // The browser's own page zoom is left alone.
+  expect(await ratio()).toBe(startRatio);
+});
+
 test("zooms the canvas in, out and back to fit", async ({ page }) => {
   await upload(page, makeSolidPng(1200, 750, RED));
   await expectDesignSize(page, 1344, 894);

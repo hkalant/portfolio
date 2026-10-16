@@ -148,7 +148,8 @@ export const annotationColorSchema = z.enum(ANNOTATION_COLORS);
 
 /**
  * A "highlight" is a see-through rectangle with no border; a
- * "blur" box blurs the screenshot under it instead of drawing a shape.
+ * "blur" box blurs the screenshot under it instead of drawing a shape, and a
+ * "magnify" box shows the screenshot under it enlarged.
  */
 export const SHAPE_KINDS = [
   "rect",
@@ -156,9 +157,19 @@ export const SHAPE_KINDS = [
   "circle",
   "highlight",
   "blur",
+  "magnify",
 ] as const;
+/** The shapes a magnifier can be. */
+export const MAGNIFY_LENSES = ["circle", "rect", "rounded"] as const;
 /** Arrow looks; the first is the default. */
-export const ARROW_STYLES = ["tapered", "chevron", "halo", "refined"] as const;
+export const ARROW_STYLES = [
+  "solid",
+  "bold",
+  "halo",
+  "refined",
+  "dotted",
+  "chevrons",
+] as const;
 /**
  * Line ends; the first is the default. A line is stored as an arrow whose
  * style is one of these, so it moves, stretches and bends the same way.
@@ -201,6 +212,15 @@ export const shapeAnnotationSchema = z.object({
   rounded: z.boolean().optional(),
   /** How strongly a blur box blurs, 0 to 1. Other shapes have none. */
   intensity: z.number().min(0).max(1).optional(),
+  /** How much a magnifier enlarges. Other shapes have none. */
+  zoom: z.number().min(1).max(8).optional(),
+  /** A magnifier's shape. Magnifiers saved before there were shapes are rounded. */
+  lens: z.enum(MAGNIFY_LENSES).optional(),
+  /**
+   * The centre of the area an inset magnifier enlarges. Without it a
+   * magnifier enlarges what is under its own centre.
+   */
+  from: z.object({ x: imagePosition, y: imagePosition }).optional(),
 });
 
 export const arrowAnnotationSchema = z.object({
@@ -213,8 +233,16 @@ export const arrowAnnotationSchema = z.object({
   dx: z.number().min(-200).max(200),
   dy: z.number().min(-200).max(200),
   color: annotationColorSchema,
-  /** A head, or a line end for lines. Arrows saved before there were styles get the default. */
-  style: z.enum([...ARROW_STYLES, ...LINE_ENDS]).default("tapered"),
+  /**
+   * A head, or a line end for lines. Arrows saved before there were styles
+   * get the default; the retired tapered style becomes solid, and the
+   * retired open style becomes bold.
+   */
+  style: z.preprocess(
+    (style) =>
+      style === "tapered" ? "solid" : style === "chevron" ? "bold" : style,
+    z.enum([...ARROW_STYLES, ...LINE_ENDS]).default("solid"),
+  ),
   /** How far the middle is pulled to the left of straight, as a share of the length. */
   bend: z.number().min(-0.5).max(0.5).default(0),
 });
@@ -270,6 +298,7 @@ export type ShotLayer = z.infer<typeof shotLayerSchema>;
 export type ShotStyle = Omit<ShotLayer, "id" | "kind" | "imageId">;
 export type AnnotationColor = (typeof ANNOTATION_COLORS)[number];
 export type ShapeKind = (typeof SHAPE_KINDS)[number];
+export type MagnifyLens = (typeof MAGNIFY_LENSES)[number];
 export type StepAnnotation = z.infer<typeof stepAnnotationSchema>;
 export type ShapeAnnotation = z.infer<typeof shapeAnnotationSchema>;
 export type ArrowStyle = (typeof ARROW_STYLES)[number];

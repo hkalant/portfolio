@@ -1,6 +1,6 @@
 import { isLineEnd, type ArrowStyle, type LineEnd } from "./schema";
 
-// The outlines of the four arrow styles and the four line ends, straight or bent. Everything here is
+// The outlines of the arrow styles and the line ends, straight or bent. Everything here is
 // in canvas px: `unit` is the screenshot's width, and every size is a
 // fraction of it, so an arrow looks the same at every zoom and in the export.
 
@@ -22,9 +22,9 @@ export type PathCommand =
   | { op: "Z" };
 
 export type ArrowShape = {
-  /** A filled outline (tapered, halo, refined; a line's dot or round end), or null. */
+  /** A filled outline (solid, halo, refined; the dotted style's dot; a line's dot or round end), or null. */
   fill: PathCommand[] | null;
-  /** A stroked path (the open chevron, lines), or null. Painted under the fill. */
+  /** A stroked path (the bold, dotted and chevron styles, lines), or null. Painted under the fill. */
   stroke: { path: PathCommand[]; width: number; cap: CanvasLineCap } | null;
   /** The halo style's white outline width on each side; 0 for the others. */
   halo: number;
@@ -343,6 +343,65 @@ function lineShape(end: LineEnd, samples: Sample[], unit: number): ArrowShape {
   };
 }
 
+/** The weight of the bold styles' lines: lighter on short arrows. */
+function boldWidth(length: number, unit: number) {
+  const short = Math.min(1, length / (0.1 * unit));
+  // Never more than a fifth of the arrow, so short ones stay arrows.
+  return Math.min(0.017 * unit * (0.6 + 0.4 * short), length * 0.2);
+}
+
+/** The two ends of an open V whose point is `vertex`, pointing along `d`. */
+function vWings(vertex: Point, d: Point, wing: number, angle: number) {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  return [1, -1].map((sign) => ({
+    x: vertex.x + (-d.x * c + sign * d.y * s) * wing,
+    y: vertex.y + (-d.y * c - sign * d.x * s) * wing,
+  }));
+}
+
+/**
+ * A round-capped line of one weight from `start` px along the curve, with
+ * an open V head on the tip.
+ */
+function openArrow(
+  samples: Sample[],
+  tip: Point,
+  start: number,
+  width: number,
+  unit: number,
+): ArrowShape {
+  const length = samples[samples.length - 1].s;
+  const wing = Math.min(2.6 * width, length * 0.6);
+  // The direction at the tip, and the vertex pulled back so the round
+  // join ends on the tip.
+  const d = unitVector(pointAt(samples, length - wing / 2), tip);
+  const back = Math.min(width / 2, length / 2);
+  const vertex = { x: tip.x - d.x * back, y: tip.y - d.y * back };
+  const wings = vWings(vertex, d, wing, (45 * Math.PI) / 180);
+  const from = Math.min(start, Math.max(0, length - back));
+  const spine = spineBetween(samples, from, Math.max(from, length - back)).map(
+    ({ p }) => p,
+  );
+  spine[spine.length - 1] = vertex;
+  const path: PathCommand[] = [
+    { op: "M", x: spine[0].x, y: spine[0].y },
+    ...spine.slice(1).map((p) => ({ op: "L" as const, x: p.x, y: p.y })),
+    { op: "M", x: wings[0].x, y: wings[0].y },
+    { op: "L", x: vertex.x, y: vertex.y },
+    { op: "L", x: wings[1].x, y: wings[1].y },
+  ];
+  return {
+    fill: null,
+    stroke: { path, width, cap: "round" },
+    halo: 0,
+    shadow: { blur: 0.005 * unit, offsetY: 0.0016 * unit, opacity: 0.28 },
+    spine: [...spine, tip],
+    head: [tip, wings[0], wings[1]],
+    bounds: boundsOf([...spine, ...wings, tip], width / 2),
+  };
+}
+
 /** The outline of an arrow (or line) from `tail` to `tip` in a style, bent by `bend`. */
 export function arrowShape(
   style: ArrowStyle | LineEnd,
@@ -359,94 +418,103 @@ export function arrowShape(
 
   if (isLineEnd(style)) return lineShape(style, samples, unit);
 
-  if (style === "chevron") {
-    // An open V on a round-capped line, one stroke weight. Short arrows get
-    // a little lighter and a wider V, so it stays open.
-    const short = Math.min(1, length / (0.06 * unit));
-    const width = 0.006 * unit * (0.55 + 0.45 * short);
-    const wing = Math.min(3.6 * 0.006 * unit, length * (0.55 - 0.13 * short));
-    // The direction at the tip, and the vertex pulled back so the round
-    // join ends on the tip.
-    const d = unitVector(
-      pointAt(samples, length - Math.min(wing, length) / 2),
-      tip,
-    );
-    const back = Math.min(width / 2, length / 2);
-    const vertex = { x: tip.x - d.x * back, y: tip.y - d.y * back };
-    const angle = ((37 + 5 * (1 - short)) * Math.PI) / 180;
-    const c = Math.cos(angle);
-    const s = Math.sin(angle);
-    const wings = [1, -1].map((sign) => ({
-      x: vertex.x + (-d.x * c + sign * d.y * s) * wing,
-      y: vertex.y + (-d.y * c - sign * d.x * s) * wing,
-    }));
-    const spine = spineBetween(samples, 0, Math.max(0, length - back)).map(
-      ({ p }) => p,
-    );
-    spine[spine.length - 1] = vertex;
-    const path: PathCommand[] = [
-      { op: "M", x: spine[0].x, y: spine[0].y },
-      ...spine.slice(1).map((p) => ({ op: "L" as const, x: p.x, y: p.y })),
-      { op: "M", x: wings[0].x, y: wings[0].y },
-      { op: "L", x: vertex.x, y: vertex.y },
-      { op: "L", x: wings[1].x, y: wings[1].y },
-    ];
+  if (style === "bold" || style === "dotted") {
+    // A heavy round-capped line with an open V head, one stroke weight;
+    // "dotted" starts with a dot and a gap.
+    const width = boldWidth(length, unit);
+    const r = width * 0.6;
+    const gap = width * 0.45;
+    // Where the line starts: after the dot, its gap and the line's round cap.
+    const start =
+      style === "dotted" ? Math.min(2 * r + gap + width / 2, length * 0.45) : 0;
+    const shape = openArrow(samples, tip, start, width, unit);
+    if (style === "bold") return shape;
+    const centre = pointAt(samples, Math.min(r, length / 2));
+    return {
+      ...shape,
+      fill: [
+        { op: "M", x: centre.x + r, y: centre.y },
+        {
+          op: "arc",
+          x: centre.x,
+          y: centre.y,
+          r,
+          start: 0,
+          end: Math.PI * 2,
+          ccw: false,
+        },
+        { op: "Z" },
+      ],
+      spine: [tail, ...shape.spine],
+      bounds: boundsOf(
+        [
+          ...shape.spine,
+          ...shape.head,
+          { x: centre.x - r, y: centre.y - r },
+          { x: centre.x + r, y: centre.y + r },
+        ],
+        width / 2,
+      ),
+    };
+  }
+
+  if (style === "chevrons") {
+    // Three open Vs at the tip, each pointing along the curve; the rest of
+    // the drag only sets their direction. Short arrows shrink them to fit.
+    const count = 3;
+    const angle = (45 * Math.PI) / 180;
+    const size = (width: number) => {
+      const wing = 2.6 * width;
+      const depth = wing * Math.cos(angle);
+      return { wing, depth, spacing: depth + width * 1.15 };
+    };
+    let width = 0.0085 * unit;
+    const full = size(width);
+    const needed = width / 2 + full.depth + (count - 1) * full.spacing;
+    if (needed > length) width *= length / needed;
+    const { wing, depth, spacing } = size(width);
+    const back = width / 2;
+    const path: PathCommand[] = [];
+    const points: Point[] = [];
+    let head: Point[] = [];
+    for (let i = 0; i < count; i += 1) {
+      const at = length - back - i * spacing;
+      const vertex = pointAt(samples, at);
+      const d = unitVector(pointAt(samples, Math.max(0, at - depth)), vertex);
+      const wings = vWings(vertex, d, wing, angle);
+      path.push(
+        { op: "M", x: wings[0].x, y: wings[0].y },
+        { op: "L", x: vertex.x, y: vertex.y },
+        { op: "L", x: wings[1].x, y: wings[1].y },
+      );
+      points.push(vertex, ...wings);
+      if (i === 0) head = [tip, wings[0], wings[1]];
+    }
+    // Pressed along the chevrons only, not the empty stretch behind them.
+    const start = Math.max(0, length - back - (count - 1) * spacing - depth);
+    const spine = spineBetween(samples, start, length).map(({ p }) => p);
     return {
       fill: null,
       stroke: { path, width, cap: "round" },
       halo: 0,
       shadow: { blur: 0.005 * unit, offsetY: 0.0016 * unit, opacity: 0.28 },
-      spine: [...spine, tip],
-      head: [tip, wings[0], wings[1]],
-      bounds: boundsOf([...spine, ...wings, tip], width / 2),
-    };
-  }
-
-  if (style === "tapered") {
-    // One swept shape: a thin round tail widening into a broad, swept-back
-    // head, with the step circles' soft shadow.
-    const full = 0.031 * unit;
-    const head = Math.min(
-      full * Math.min(1, 0.3 + (0.7 * length) / (4 * full)),
-      length * 0.56,
-    );
-    const k = Math.pow(head / full, 0.6);
-    const headHalf = head * 0.6;
-    const neckHalf = Math.min(0.0052 * unit * k, headHalf * 0.4);
-    const shape = filledArrow(samples, tip, {
+      spine,
       head,
-      headHalf,
-      sweep: head * 0.3,
-      neckHalf,
-      tailHalf: Math.min(0.002 * unit * k, neckHalf * 0.5),
-      taper: 0.75,
-      tipRadius: headHalf * 0.08,
-      barbRadius: headHalf * 0.14,
-      neckRadius: neckHalf * 0.6,
-    });
-    return {
-      ...shape,
-      stroke: null,
-      halo: 0,
-      shadow: {
-        blur: 0.015 * unit * Math.max(k, 0.5),
-        offsetY: 0.004 * unit * Math.max(k, 0.5),
-        opacity: 0.28,
-      },
-      bounds: boundsOf(shape.outline, 0),
+      bounds: boundsOf([...points, tip], width / 2),
     };
   }
 
-  if (style === "halo") {
-    // A solid arrow with a white outline and a soft shadow, legible on
-    // anything.
+  if (style === "halo" || style === "solid") {
+    // A solid arrow with a soft shadow; the halo style adds a white outline,
+    // legible on anything.
     const full = 0.03 * unit;
     const k = Math.min(1, Math.max(0.5, Math.sqrt(length / (4 * full))));
     const kw = Math.sqrt(k);
     const head = Math.max(Math.min(full * k, length * 0.62), 0.011 * unit);
     const headHalf = head * 0.52;
     const neckHalf = Math.min(0.0034 * unit * kw, headHalf * 0.42);
-    const halo = Math.min(0.0024 * unit * kw, headHalf * 0.4);
+    const halo =
+      style === "halo" ? Math.min(0.0024 * unit * kw, headHalf * 0.4) : 0;
     const shape = filledArrow(samples, tip, {
       head,
       headHalf,

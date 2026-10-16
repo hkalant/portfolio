@@ -29,6 +29,9 @@ export function shortcutGroups(apple: boolean): ShortcutGroup[] {
         { keys: ["←↑↓→"], action: "Move the selection by 1 px" },
         { keys: [shift, "←↑↓→"], action: "Move the selection by 10 px" },
         { keys: [shift, "Drag"], action: "Straight arrows and lines (45°)" },
+        { keys: [mod, "+"], action: "Zoom in" },
+        { keys: [mod, "−"], action: "Zoom out" },
+        { keys: [mod, "0"], action: "Reset zoom" },
       ],
     },
   ];

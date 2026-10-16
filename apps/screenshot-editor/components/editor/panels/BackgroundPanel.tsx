@@ -95,7 +95,8 @@ function GradientSwatches({ presetId }: { presetId: string | null }) {
   );
   return (
     <SwatchGrid
-      label="Oxford Brookes"
+      label="Gradients"
+      hideLabel
       swatches={GRADIENT_SWATCHES}
       selectedId={presetId}
       onSelect={applyGradientPreset}
