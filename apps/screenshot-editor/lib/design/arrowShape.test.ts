@@ -32,7 +32,8 @@ describe("arrow shapes", () => {
         if (bend === 0)
           for (const p of pathPoints(shape!))
             expect(p.x, style).toBeLessThan(tip.x + 3);
-        expect(shape!.spine[0]).toEqual(tail);
+        // Chevrons sit at the tip, away from the tail.
+        if (style !== "chevrons") expect(shape!.spine[0]).toEqual(tail);
       }
   });
 
@@ -60,13 +61,20 @@ describe("arrow shapes", () => {
     expect(arrowShape("bold", tail, tip, 0, 0)).toBeNull();
   });
 
-  it("repeat chevrons along the arrow, more on longer ones", () => {
-    const count = (to: { x: number; y: number }) =>
-      arrowShape("chevrons", tail, to, 0, 1200)!.stroke!.path.filter(
-        (command) => command.op === "M",
-      ).length;
-    expect(count({ x: 140, y: 300 })).toBeGreaterThanOrEqual(1);
-    expect(count(tip)).toBeGreaterThan(count({ x: 250, y: 300 }));
+  it("draw three chevrons at the tip, however long the arrow", () => {
+    const chevrons = (to: { x: number; y: number }) => {
+      const shape = arrowShape("chevrons", tail, to, 0, 1200)!;
+      const starts = shape.stroke!.path.filter((command) => command.op === "M");
+      return {
+        count: starts.length,
+        left: Math.min(...starts.map((m) => (m.op === "M" ? m.x : 0))),
+      };
+    };
+    expect(chevrons(tip).count).toBe(3);
+    expect(chevrons({ x: 130, y: 300 }).count).toBe(3);
+    // A long arrow keeps them at the tip, not spread back to the tail.
+    expect(chevrons(tip).left).toBeGreaterThan(400);
+    expect(chevrons({ x: 130, y: 300 }).left).toBeGreaterThanOrEqual(tail.x);
   });
 
   it("start the dotted style with a dot, apart from its line", () => {

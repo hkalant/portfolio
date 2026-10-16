@@ -458,18 +458,21 @@ export function arrowShape(
   }
 
   if (style === "chevrons") {
-    // Open Vs repeated evenly from the tail to the tip, each pointing along
-    // the curve; a longer arrow gets more of them.
-    const width = boldWidth(length, unit);
-    const wing = Math.min(2.6 * width, length * 0.6);
+    // Three open Vs at the tip, each pointing along the curve; the rest of
+    // the drag only sets their direction. Short arrows shrink them to fit.
+    const count = 3;
     const angle = (45 * Math.PI) / 180;
-    const depth = wing * Math.cos(angle);
-    const spacing = depth + width * 1.15;
-    const back = Math.min(width / 2, length / 2);
-    const count = Math.max(
-      1,
-      Math.floor((length - back - depth) / spacing) + 1,
-    );
+    const size = (width: number) => {
+      const wing = 2.6 * width;
+      const depth = wing * Math.cos(angle);
+      return { wing, depth, spacing: depth + width * 1.15 };
+    };
+    let width = 0.0085 * unit;
+    const full = size(width);
+    const needed = width / 2 + full.depth + (count - 1) * full.spacing;
+    if (needed > length) width *= length / needed;
+    const { wing, depth, spacing } = size(width);
+    const back = width / 2;
     const path: PathCommand[] = [];
     const points: Point[] = [];
     let head: Point[] = [];
@@ -486,7 +489,9 @@ export function arrowShape(
       points.push(vertex, ...wings);
       if (i === 0) head = [tip, wings[0], wings[1]];
     }
-    const spine = samples.map((sample) => sample.p);
+    // Pressed along the chevrons only, not the empty stretch behind them.
+    const start = Math.max(0, length - back - (count - 1) * spacing - depth);
+    const spine = spineBetween(samples, start, length).map(({ p }) => p);
     return {
       fill: null,
       stroke: { path, width, cap: "round" },
