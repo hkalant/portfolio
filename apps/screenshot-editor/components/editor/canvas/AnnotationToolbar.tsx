@@ -614,46 +614,61 @@ export function AnnotationToolbar() {
             <FillIcon filled={false} />
           </ToolButton>
         </ToolOptions>
-        <ToolOptions show={blurMode}>
-          <Divider />
-          <BlurStrength />
-        </ToolOptions>
-        <ToolOptions show={!blurMode && magnifyMode}>
-          <Divider />
-          <MagnifyZoom />
-          <Divider />
-          <MagnifyOptions />
-        </ToolOptions>
-        <ToolOptions show={!blurMode && !magnifyMode}>
-          <Divider />
+        {/* These replace one another, so they swap at once rather than
+            fading out, which would show two groups side by side. */}
+        {blurMode ? (
           <div
-            role="radiogroup"
-            aria-label="Annotation colour"
-            className="flex items-center gap-1 px-1"
+            key="blur"
+            className="flex animate-tool-options items-center gap-1"
           >
-            {ANNOTATION_COLORS.map((swatch) => (
-              <button
-                key={swatch}
-                type="button"
-                role="radio"
-                aria-checked={color === swatch}
-                aria-label={ANNOTATION_COLOR_NAMES[swatch]}
-                title={ANNOTATION_COLOR_NAMES[swatch]}
-                onClick={() => setColor(swatch)}
-                className="flex size-7 shrink-0 items-center justify-center rounded-full outline-none focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-ring"
-              >
-                <span
-                  className={cn(
-                    "size-5 rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] transition-shadow dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.4)]",
-                    color === swatch &&
-                      "ring-2 ring-foreground ring-offset-2 ring-offset-background",
-                  )}
-                  style={{ backgroundColor: swatch }}
-                />
-              </button>
-            ))}
+            <Divider />
+            <BlurStrength />
           </div>
-        </ToolOptions>
+        ) : magnifyMode ? (
+          <div
+            key="magnify"
+            className="flex animate-tool-options items-center gap-1"
+          >
+            <Divider />
+            <MagnifyZoom />
+            <Divider />
+            <MagnifyOptions />
+          </div>
+        ) : (
+          <div
+            key="colours"
+            className="flex animate-tool-options items-center gap-1"
+          >
+            <Divider />
+            <div
+              role="radiogroup"
+              aria-label="Annotation colour"
+              className="flex items-center gap-1 px-1"
+            >
+              {ANNOTATION_COLORS.map((swatch) => (
+                <button
+                  key={swatch}
+                  type="button"
+                  role="radio"
+                  aria-checked={color === swatch}
+                  aria-label={ANNOTATION_COLOR_NAMES[swatch]}
+                  title={ANNOTATION_COLOR_NAMES[swatch]}
+                  onClick={() => setColor(swatch)}
+                  className="flex size-7 shrink-0 items-center justify-center rounded-full outline-none focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                >
+                  <span
+                    className={cn(
+                      "size-5 rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] transition-shadow dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.4)]",
+                      color === swatch &&
+                        "ring-2 ring-foreground ring-offset-2 ring-offset-background",
+                    )}
+                    style={{ backgroundColor: swatch }}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <ToolOptions show={!!selected}>
           {selected && (
             <>
