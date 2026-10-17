@@ -38,18 +38,18 @@ The keyboard button in the top bar, next to the info button, lists these.
 
 Run these from `apps/screenshot-editor/`. Use Node 22 (see `.nvmrc`).
 
-| Command                           | What it does                                                              |
-| --------------------------------- | ------------------------------------------------------------------------- |
-| `npm install`                     | Install dependencies                                                      |
+| Command                           | What it does                                                               |
+| --------------------------------- | -------------------------------------------------------------------------- |
+| `npm install`                     | Install dependencies                                                       |
 | `npm run dev`                     | Development server at http://localhost:3000 (the site opens on the editor) |
-| `npm run build`                   | Static export into `out/`                                                 |
-| `npm run preview`                 | Serve `out/` the way Bitbucket would (see below)                          |
-| `npm run lint`                    | ESLint (must stay on ESLint 9 for `eslint-config-next`)                   |
-| `npm run typecheck`               | Generate route types, then `tsc --noEmit`                                 |
-| `npm run format` / `format:check` | Prettier                                                                  |
-| `npm test`                        | Unit tests (Vitest)                                                       |
-| `npm run test:e2e`                | Browser tests (Playwright) against the built `out/` folder                |
-| `npm run test:publish`            | Tests the Bitbucket deploy script against local git repos                 |
+| `npm run build`                   | Static export into `out/`                                                  |
+| `npm run preview`                 | Serve `out/` the way Bitbucket would (see below)                           |
+| `npm run lint`                    | ESLint (must stay on ESLint 9 for `eslint-config-next`)                    |
+| `npm run typecheck`               | Generate route types, then `tsc --noEmit`                                  |
+| `npm run format` / `format:check` | Prettier                                                                   |
+| `npm test`                        | Unit tests (Vitest)                                                        |
+| `npm run test:e2e`                | Browser tests (Playwright) against the built `out/` folder                 |
+| `npm run test:publish`            | Tests the Bitbucket deploy script against local git repos                  |
 
 Always run ESLint and TypeScript through these scripts. Global installs of newer versions (ESLint 10, TypeScript 6+) behave differently.
 
