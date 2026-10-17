@@ -23,7 +23,7 @@ const PADDING = 72;
 const IMAGE = { width: 400, height: 300 };
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("./editor/");
+  await page.goto("./");
   await expectEmptyState(page);
   await useAutoSize(page);
 });

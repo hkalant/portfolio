@@ -144,13 +144,19 @@ check_page() { # check_page <path below the subfolder>
     record FAIL "GET $sub_path$1" "expected 200 text/html, got $status ${type:-(no content type)}"
   fi
 }
-check_page ""
-check_page "editor/"
-
-html_files=("$site_dir/index.html")
-if [ -f "$site_dir/editor/index.html" ]; then
-  html_files+=("$site_dir/editor/index.html")
-fi
+# Every page in the build: each index.html outside _next/ and Next's not-found
+# pages ("" is the site root).
+mapfile -t pages < <(
+  cd "$site_dir" &&
+    find . -name index.html -not -path './_next/*' -not -path './404/*' -not -path './_not-found/*' |
+    sed -e 's#^\./##' -e 's#index\.html$##' |
+      LC_ALL=C sort
+)
+html_files=()
+for page in "${pages[@]}"; do
+  check_page "$page"
+  html_files+=("$site_dir/${page}index.html")
+done
 # File URLs only: the class stops at quotes and the backslashes of escaped JSON in inline scripts.
 mapfile -t assets < <(
   cat "${html_files[@]}" |
@@ -179,7 +185,7 @@ for asset in "${assets[@]}"; do
   fi
 done
 if [ "${#assets[@]}" -gt 0 ] && [ "$asset_failures" -eq 0 ]; then
-  record PASS "Static files" "all ${#assets[@]} /_next/static/ files from index.html and editor/index.html load with the right type"
+  record PASS "Static files" "all ${#assets[@]} /_next/static/ files from the pages load with the right type"
 fi
 
 # 3. Warnings only: things that matter less, or that depend on how Bitbucket serves files.
@@ -194,11 +200,11 @@ if [ "${#payloads[@]}" -gt 0 ]; then
   fi
 fi
 
-probe HEAD "${site_url}editor/"
+probe HEAD "$site_url"
 if [[ "$status" == 2?? ]]; then
-  record PASS "HEAD ${sub_path}editor/" "$status"
+  record PASS "HEAD $sub_path" "$status"
 else
-  record WARN "HEAD ${sub_path}editor/" "expected 2xx, got $status"
+  record WARN "HEAD $sub_path" "expected 2xx, got $status"
 fi
 
 no_slash_url="$origin/$SITE_SUBFOLDER"

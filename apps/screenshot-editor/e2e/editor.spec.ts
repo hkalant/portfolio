@@ -22,7 +22,7 @@ import {
 } from "./helpers/png";
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("./editor/");
+  await page.goto("./");
   await expectEmptyState(page);
   await useAutoSize(page);
 });
@@ -222,7 +222,7 @@ test("the More menu lists the tutorials", async ({ page }) => {
   ).toBeVisible();
   await tutorials.getByRole("link", { name: "Read the text tutorial" }).click();
   await expect(tutorials).toHaveCount(0);
-  await expect(page).toHaveURL(/\/editor\/$/);
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test("the More menu lists the shortcuts", async ({ page }) => {

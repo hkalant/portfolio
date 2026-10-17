@@ -16,7 +16,7 @@ import { expect, test } from "./helpers/fixtures";
 import { brightness, isRed, makeSolidPng, samplePixels } from "./helpers/png";
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("./editor/");
+  await page.goto("./");
   await expectEmptyState(page);
   await useAutoSize(page);
 });

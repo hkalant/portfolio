@@ -41,7 +41,7 @@ Run these from `apps/screenshot-editor/`. Use Node 22 (see `.nvmrc`).
 | Command                           | What it does                                                              |
 | --------------------------------- | ------------------------------------------------------------------------- |
 | `npm install`                     | Install dependencies                                                      |
-| `npm run dev`                     | Development server at http://localhost:3000 (the editor is at `/editor/`) |
+| `npm run dev`                     | Development server at http://localhost:3000 (the site opens on the editor) |
 | `npm run build`                   | Static export into `out/`                                                 |
 | `npm run preview`                 | Serve `out/` the way Bitbucket would (see below)                          |
 | `npm run lint`                    | ESLint (must stay on ESLint 9 for `eslint-config-next`)                   |
@@ -61,7 +61,7 @@ The site's path prefix comes from one environment variable, `NEXT_PUBLIC_BASE_PA
 - CI builds with `/screenshot-editor`.
 - It must be empty or match `^/[a-z0-9][a-z0-9-]*$` (one lowercase segment, no trailing slash). Anything else stops the build with an error.
 
-`next.config.ts` turns on `output: "export"`, sets `basePath` from the variable, and uses `trailingSlash: true`, so `/editor/` is served from `editor/index.html`. Next adds the prefix to its own scripts, styles, fonts, links and imported images. A file in `public/` referenced by hand needs `withBasePath()` from `lib/paths.ts`.
+`next.config.ts` turns on `output: "export"`, sets `basePath` from the variable, and uses `trailingSlash: true`, so a folder path is served from its `index.html`. Next adds the prefix to its own scripts, styles, fonts, links and imported images. A file in `public/` referenced by hand needs `withBasePath()` from `lib/paths.ts`.
 
 Because the site is static, these Next.js features are off limits: server actions, route handlers that read the request, middleware, rewrites, redirects, custom headers, ISR, `next/image` optimisation, `next/font/google` and dynamic routes without `generateStaticParams`.
 
@@ -98,7 +98,7 @@ Two GitHub Actions workflows in the repository root handle this:
    | `BITBUCKET_PAGES_BRANCH`   | Variable                | No       | Branch Bitbucket serves. Default: the repository's default branch, or `main` if it is empty |
    | `BITBUCKET_GIT_USERNAME`   | Variable                | No       | Git user name for the token. Default `x-token-auth` (right for repository access tokens)    |
 
-5. **Deploy.** Merge to `main`, or run _Deploy to Bitbucket_ from the Actions tab on `main`. Then open `https://<workspace-id>.bitbucket.io/screenshot-editor/`; the editor is at `…/screenshot-editor/editor/`. Share links with the trailing slash.
+5. **Deploy.** Merge to `main`, or run _Deploy to Bitbucket_ from the Actions tab on `main`. Then open `https://<workspace-id>.bitbucket.io/screenshot-editor/`, which opens straight on the editor. Share links with the trailing slash.
 
 Until both `BITBUCKET_TOKEN` and `BITBUCKET_WORKSPACE` exist, the deploy job is skipped with a notice and the run stays green. If only one of them is set, the run fails and names the missing one.
 

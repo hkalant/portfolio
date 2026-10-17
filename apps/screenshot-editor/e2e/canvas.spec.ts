@@ -23,7 +23,7 @@ import {
 } from "./helpers/png";
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("./editor/");
+  await page.goto("./");
   await expectEmptyState(page);
   await useAutoSize(page);
 });
@@ -282,7 +282,7 @@ test("a tab left untouched doesn't overwrite another tab's work", async ({
   };
   // A second tab opens while nothing is saved, and is never touched.
   const other = await page.context().newPage();
-  await other.goto("./editor/");
+  await other.goto("./");
   await expectEmptyState(other);
 
   await upload(page, makeSolidPng(1200, 750, RED));
@@ -433,23 +433,6 @@ test("copies the design to the clipboard as a PNG", async ({
   // The keyboard shortcut does the same when no text is selected.
   await page.keyboard.press("ControlOrMeta+c");
   await expect(tooltip).toHaveText("Copied!");
-});
-
-test("leaving the editor and coming back keeps the design and its history", async ({
-  page,
-}) => {
-  await upload(page, makeSolidPng(1200, 750, RED));
-  await chooseFrame(page, "macOS");
-  await expectDesignSize(page, FRAMED_W, FRAMED_H);
-  // Straight away, before the autosave delay has passed.
-  await page.getByRole("link", { name: "Screenshot Editor home" }).click();
-  await page.getByRole("link", { name: "Open editor" }).click();
-  await expectDesignSize(page, FRAMED_W, FRAMED_H);
-  await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled();
-
-  // And the change was saved: a full reload restores it.
-  await page.reload();
-  await expectDesignSize(page, FRAMED_W, FRAMED_H);
 });
 
 test("the empty editor shows a dotted drop area with the paste tip", async ({

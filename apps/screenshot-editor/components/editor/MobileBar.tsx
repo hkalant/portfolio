@@ -1,7 +1,6 @@
 "use client";
 
 import { ImageUp } from "lucide-react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { selectActiveImage, useEditorStore } from "@/lib/store/editor";
 import { CopyButton } from "./topbar/CopyButton";
@@ -19,14 +18,10 @@ export function MobileBar({ onReplace }: Props) {
   return (
     // The shared top bar buttons are 36px; at least 40px suits fingers.
     <header className="flex h-13 shrink-0 items-center gap-1 border-b bg-background px-2 [&_[data-slot=button]]:min-h-10 [&_[data-slot=button]]:min-w-10">
-      <Link
-        href="/"
-        aria-label="Screenshot Editor home"
-        // Shortened before any button is pushed off a narrow screen.
-        className="flex h-10 min-w-0 items-center rounded-md px-2 text-sm font-semibold whitespace-nowrap outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      >
+      {/* Shortened before any button is pushed off a narrow screen. */}
+      <div className="flex h-10 min-w-0 items-center px-2 text-sm font-semibold whitespace-nowrap">
         <span className="truncate">Screenshot Editor</span>
-      </Link>
+      </div>
       <HistoryButtons />
       <div className="flex-1" />
       {image && (

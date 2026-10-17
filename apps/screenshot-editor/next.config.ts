@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
   // `next build` writes plain HTML, CSS and JS to ./out. No server is needed.
   output: "export",
   basePath,
-  // Write editor/index.html instead of editor.html, so /editor/ works on any static host.
+  // Write folder/index.html instead of folder.html, so paths with a trailing slash work on any static host.
   trailingSlash: true,
   // There is no image optimisation server in a static export.
   images: { unoptimized: true },
