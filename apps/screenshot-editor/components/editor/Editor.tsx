@@ -72,7 +72,7 @@ export default function Editor() {
         <p
           role="status"
           data-testid="desktop-notice"
-          className="shrink-0 bg-foreground px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] text-center text-xs font-medium text-background"
+          className="shrink-0 bg-[#C70540] px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] text-center text-xs font-medium text-white"
         >
           Screenshot Editor is best viewed on desktop
         </p>
