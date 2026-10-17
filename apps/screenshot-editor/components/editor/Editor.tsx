@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, type ChangeEvent } from "react";
+import { useCallback, useRef, useState, type ChangeEvent } from "react";
 import sample from "@/assets/samples/sample-screenshot.jpg";
 import { useAutosave } from "@/lib/hooks/useAutosave";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { CanvasViewport } from "./canvas/CanvasViewport";
 import { DropOverlay } from "./DropOverlay";
 import { MobileBar } from "./MobileBar";
+import { isPhone } from "@/lib/isPhone";
 import { MobilePanel } from "./MobilePanel";
 import { MobileTabs } from "./MobileTabs";
 import { Notice } from "./Notice";
@@ -39,6 +40,8 @@ export default function Editor() {
   useAutosave();
 
   const desktop = useMediaQuery(DESKTOP_QUERY);
+  // The editor only renders on the client, so the device is known up front.
+  const [phone] = useState(isPhone);
   // Here rather than in the theme toggle, which the mobile layout doesn't
   // show: the theme keeps following the system in both layouts.
   useTheme();
@@ -65,6 +68,15 @@ export default function Editor() {
           : "bg-background pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]",
       )}
     >
+      {phone && (
+        <p
+          role="status"
+          data-testid="desktop-notice"
+          className="shrink-0 bg-foreground px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] text-center text-xs font-medium text-background"
+        >
+          Screenshot Editor is best viewed on desktop
+        </p>
+      )}
       {desktop ? (
         <TopBar onReplace={openFilePicker} />
       ) : (
