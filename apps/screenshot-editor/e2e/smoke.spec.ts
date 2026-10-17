@@ -37,3 +37,25 @@ test("pages answer HEAD requests, which Next's prefetcher sends", async ({
   const response = await request.head("./");
   expect(response.status()).toBe(200);
 });
+
+test.describe("on a phone", () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    userAgent:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+  });
+  test("a notice suggests the desktop", async ({ page }) => {
+    await page.goto("./");
+    await expect(page.getByTestId("desktop-notice")).toHaveText(
+      "Screenshot Editor is best viewed on desktop",
+    );
+  });
+});
+
+test("desktops get no phone notice", async ({ page }) => {
+  await page.goto("./");
+  await expect(
+    page.getByTestId("canvas-stage").or(page.locator("main")),
+  ).toBeVisible();
+  await expect(page.getByTestId("desktop-notice")).toHaveCount(0);
+});
