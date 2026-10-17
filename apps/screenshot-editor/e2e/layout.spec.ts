@@ -12,7 +12,7 @@ import { makeSolidPng, readPngSize } from "./helpers/png";
 test("a new design starts on the Desktop size, listed above Auto", async ({
   page,
 }) => {
-  await page.goto("./editor/");
+  await page.goto("./");
   await expectEmptyState(page);
   const sizeButton = page.getByRole("button", { name: /^Canvas size/ });
   await expect(sizeButton).toHaveAccessibleName(
@@ -32,7 +32,7 @@ test("a new design starts on the Desktop size, listed above Auto", async ({
 });
 
 test("the theme can be switched and is remembered", async ({ page }) => {
-  await page.goto("./editor/");
+  await page.goto("./");
   await expectEmptyState(page);
   const html = page.locator("html");
   const toggle = page.getByRole("button", { name: /^Theme:/ });
@@ -51,7 +51,7 @@ test("the theme can be switched and is remembered", async ({ page }) => {
 
 test("the system theme follows the operating system", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
-  await page.goto("./editor/");
+  await page.goto("./");
   await expectEmptyState(page);
   await expect(page.locator("html")).toHaveClass(/\bdark\b/);
   await page.emulateMedia({ colorScheme: "light" });
@@ -89,7 +89,7 @@ test.describe("on a phone", () => {
   test("panels open from the bottom tabs and the page never scrolls sideways", async ({
     page,
   }) => {
-    await page.goto("./editor/");
+    await page.goto("./");
     await expectEmptyState(page);
     await upload(page, makeSolidPng(1200, 750, RED));
     // A new design starts on the Desktop size.
@@ -128,7 +128,7 @@ test.describe("on a phone", () => {
   }) => {
     // Touch and safe-area emulation go through the Chrome DevTools Protocol.
     test.skip(browserName !== "chromium", "needs Chromium's DevTools Protocol");
-    await page.goto("./editor/");
+    await page.goto("./");
     await upload(page, makeSolidPng(1200, 750, RED));
     await page.getByRole("button", { name: "Style", exact: true }).click();
     const slider = page.getByRole("slider", { name: "Border width" });
@@ -172,7 +172,7 @@ test.describe("on a phone", () => {
     await cdp.send("Emulation.setSafeAreaInsetsOverride", {
       insets: { top: 0, bottom: 21, left: 47, right: 47 },
     });
-    await page.goto("./editor/");
+    await page.goto("./");
     await expectEmptyState(page);
     const header = (await page.locator("header").boundingBox())!;
     expect(header.x).toBe(47);

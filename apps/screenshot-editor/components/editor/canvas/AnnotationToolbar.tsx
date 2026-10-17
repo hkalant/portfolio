@@ -33,6 +33,7 @@ import {
   useEditorStore,
   type AnnotationTool,
 } from "@/lib/store/editor";
+import { useAnimatedWidth } from "@/lib/hooks/useAnimatedWidth";
 import { cn } from "@/lib/utils";
 import {
   Popover,
@@ -43,7 +44,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 
 const buttonClass =
-  "flex size-8 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-selected aria-pressed:text-selected-foreground [&_svg]:size-4";
+  "flex size-8 shrink-0 items-center justify-center rounded-full text-foreground outline-none transition-colors hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-(--tool-active) aria-pressed:shadow-[inset_0_0_0_1px_var(--tool-active-edge)] [&_svg]:size-4";
 
 function ToolButton({
   label,
@@ -93,7 +94,7 @@ function StepIcon({ number }: { number: number }) {
         textAnchor="middle"
         fontSize={text.length > 1 ? 7 : 9}
         fontWeight="700"
-        className="fill-background group-aria-pressed:fill-selected"
+        className="fill-background"
       >
         {text}
       </text>
@@ -257,9 +258,10 @@ function ToolMenu<T extends AnnotationTool>({
       <PopoverContent
         align="start"
         // The menu's icons in line with the tool's: the toolbar icon is 8px
-        // into its button, a menu icon 14px into the menu.
-        alignOffset={-6}
-        className="w-auto p-1"
+        // into its button, a menu icon 20px into the menu. The 10px padding
+        // keeps the rows' 12px corners concentric with the menu's 22px.
+        alignOffset={-12}
+        className="w-auto p-2.5"
         role="menu"
         aria-label={menuLabel}
       >
@@ -270,7 +272,7 @@ function ToolMenu<T extends AnnotationTool>({
             role="menuitemradio"
             aria-checked={item.tool === current.tool}
             onClick={() => pick(item.tool)}
-            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors outline-none hover:bg-accent focus-visible:bg-accent aria-checked:font-medium [&_svg]:size-4"
+            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors outline-none hover:bg-accent focus-visible:bg-accent aria-checked:font-medium [&_svg]:size-4"
           >
             {item.icon}
             {item.label}
@@ -496,6 +498,10 @@ export function AnnotationToolbar() {
   const setRounded = useEditorStore((state) => state.setHighlightRounded);
   const resetStepCount = useEditorStore((state) => state.resetStepCount);
   const removeAnnotation = useEditorStore((state) => state.removeAnnotation);
+  const { boxRef, contentRef } = useAnimatedWidth<
+    HTMLDivElement,
+    HTMLDivElement
+  >();
 
   // Clicking the active tool again goes back to selecting.
   const toggleTool = (next: AnnotationTool) =>
@@ -521,147 +527,171 @@ export function AnnotationToolbar() {
 
   return (
     <div
+      ref={boxRef}
       role="toolbar"
       aria-label="Annotate"
-      className="flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full glass p-1"
+      // A floating dock: more room and a deeper shadow than the other panes.
+      // Its width follows its tools' options smoothly, growing from the
+      // centre because the dock is centred.
+      className="max-w-full [scrollbar-width:none] overflow-x-auto overflow-y-hidden rounded-full glass p-1.5 transition-[width] duration-300 ease-[cubic-bezier(0.3,0.9,0.3,1)] [--glass-drop:0_12px_36px_var(--glass-shadow),0_2px_8px_var(--glass-shadow)] motion-reduce:transition-none"
     >
-      <ToolButton
-        label="Select and move"
-        pressed={tool === "select"}
-        onClick={() => setTool("select")}
-      >
-        <MousePointer2 aria-hidden />
-      </ToolButton>
-      <Divider />
-      <button
-        type="button"
-        aria-label={`Add step ${nextStep}`}
-        title={`Add step ${nextStep}`}
-        aria-pressed={tool === "step"}
-        onClick={() => toggleTool("step")}
-        className={cn(buttonClass, "group")}
-      >
-        <StepIcon number={nextStep} />
-      </button>
-      <ToolButton
-        label="Reset step count"
-        disabled={nextStep === 1}
-        onClick={resetStepCount}
-      >
-        <RotateCcw aria-hidden />
-      </ToolButton>
-      <Divider />
-      <ShapeTools />
-      <ArrowTools />
-      <ToolButton
-        label="Blur"
-        pressed={tool === "blur"}
-        onClick={() => toggleTool("blur")}
-      >
-        <BlurIcon />
-      </ToolButton>
-      <ToolButton
-        label="Magnifier"
-        hint="Drag over an area to show it enlarged"
-        pressed={tool === "magnify"}
-        onClick={() => toggleTool("magnify")}
-      >
-        <ZoomIn aria-hidden />
-      </ToolButton>
-      {showCorners && (
-        <>
-          <Divider />
-          <ToolButton
-            label="Square corners"
-            pressed={!rounded}
-            onClick={() => setRounded(false)}
-          >
-            <SquareIcon />
-          </ToolButton>
-          <ToolButton
-            label="Rounded corners"
-            pressed={rounded}
-            onClick={() => setRounded(true)}
-          >
-            <RoundedIcon />
-          </ToolButton>
-        </>
-      )}
-      {showFill && (
-        <>
-          <Divider />
-          <ToolButton
-            label="Filled shape"
-            pressed={filled}
-            onClick={() => setFilled(true)}
-          >
-            <FillIcon filled />
-          </ToolButton>
-          <ToolButton
-            label="Outline shape"
-            pressed={!filled}
-            onClick={() => setFilled(false)}
-          >
-            <FillIcon filled={false} />
-          </ToolButton>
-        </>
-      )}
-      {blurMode ? (
-        <>
-          <Divider />
-          <BlurStrength />
-        </>
-      ) : magnifyMode ? (
-        <>
-          <Divider />
-          <MagnifyZoom />
-          <Divider />
-          <MagnifyOptions />
-        </>
-      ) : (
-        <>
-          <Divider />
+      <div ref={contentRef} className="flex w-max items-center gap-1">
+        <ToolButton
+          label="Select and move"
+          pressed={tool === "select"}
+          onClick={() => setTool("select")}
+        >
+          <MousePointer2 aria-hidden />
+        </ToolButton>
+        <Divider />
+        <button
+          type="button"
+          aria-label={`Add step ${nextStep}`}
+          title={`Add step ${nextStep}`}
+          aria-pressed={tool === "step"}
+          onClick={() => toggleTool("step")}
+          className={cn(buttonClass, "group")}
+        >
+          <StepIcon number={nextStep} />
+        </button>
+        <ToolButton
+          label="Reset step count"
+          disabled={nextStep === 1}
+          onClick={resetStepCount}
+        >
+          <RotateCcw aria-hidden />
+        </ToolButton>
+        <Divider />
+        <ShapeTools />
+        <ArrowTools />
+        <ToolButton
+          label="Blur"
+          pressed={tool === "blur"}
+          onClick={() => toggleTool("blur")}
+        >
+          <BlurIcon />
+        </ToolButton>
+        <ToolButton
+          label="Magnifier"
+          hint="Drag over an area to show it enlarged"
+          pressed={tool === "magnify"}
+          onClick={() => toggleTool("magnify")}
+        >
+          <ZoomIn aria-hidden />
+        </ToolButton>
+        {showCorners && (
           <div
-            role="radiogroup"
-            aria-label="Annotation colour"
-            className="flex items-center gap-1 px-1"
+            key="corners"
+            className="flex animate-tool-options items-center gap-1"
           >
-            {ANNOTATION_COLORS.map((swatch) => (
-              <button
-                key={swatch}
-                type="button"
-                role="radio"
-                aria-checked={color === swatch}
-                aria-label={ANNOTATION_COLOR_NAMES[swatch]}
-                title={ANNOTATION_COLOR_NAMES[swatch]}
-                onClick={() => setColor(swatch)}
-                className="flex size-7 shrink-0 items-center justify-center rounded-full outline-none focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-ring"
-              >
-                <span
-                  className={cn(
-                    "size-5 rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] transition-shadow dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.4)]",
-                    color === swatch &&
-                      "ring-2 ring-foreground ring-offset-2 ring-offset-background",
-                  )}
-                  style={{ backgroundColor: swatch }}
-                />
-              </button>
-            ))}
+            <Divider />
+            <ToolButton
+              label="Square corners"
+              pressed={!rounded}
+              onClick={() => setRounded(false)}
+            >
+              <SquareIcon />
+            </ToolButton>
+            <ToolButton
+              label="Rounded corners"
+              pressed={rounded}
+              onClick={() => setRounded(true)}
+            >
+              <RoundedIcon />
+            </ToolButton>
           </div>
-        </>
-      )}
-      {selected && (
-        <>
-          <Divider />
-          {selected.kind === "step" && <StepNumberField step={selected} />}
-          <ToolButton
-            label="Delete annotation"
-            onClick={() => removeAnnotation(selected.id)}
+        )}
+        {showFill && (
+          <div
+            key="fill"
+            className="flex animate-tool-options items-center gap-1"
           >
-            <Trash2 aria-hidden />
-          </ToolButton>
-        </>
-      )}
+            <Divider />
+            <ToolButton
+              label="Filled shape"
+              pressed={filled}
+              onClick={() => setFilled(true)}
+            >
+              <FillIcon filled />
+            </ToolButton>
+            <ToolButton
+              label="Outline shape"
+              pressed={!filled}
+              onClick={() => setFilled(false)}
+            >
+              <FillIcon filled={false} />
+            </ToolButton>
+          </div>
+        )}
+        {blurMode ? (
+          <div
+            key="blur"
+            className="flex animate-tool-options items-center gap-1"
+          >
+            <Divider />
+            <BlurStrength />
+          </div>
+        ) : magnifyMode ? (
+          <div
+            key="magnify"
+            className="flex animate-tool-options items-center gap-1"
+          >
+            <Divider />
+            <MagnifyZoom />
+            <Divider />
+            <MagnifyOptions />
+          </div>
+        ) : (
+          <div
+            key="colours"
+            className="flex animate-tool-options items-center gap-1"
+          >
+            <Divider />
+            <div
+              role="radiogroup"
+              aria-label="Annotation colour"
+              className="flex items-center gap-1 px-1"
+            >
+              {ANNOTATION_COLORS.map((swatch) => (
+                <button
+                  key={swatch}
+                  type="button"
+                  role="radio"
+                  aria-checked={color === swatch}
+                  aria-label={ANNOTATION_COLOR_NAMES[swatch]}
+                  title={ANNOTATION_COLOR_NAMES[swatch]}
+                  onClick={() => setColor(swatch)}
+                  className="flex size-7 shrink-0 items-center justify-center rounded-full outline-none focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                >
+                  <span
+                    className={cn(
+                      "size-5 rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] transition-shadow dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.4)]",
+                      color === swatch &&
+                        "ring-2 ring-foreground ring-offset-2 ring-offset-background",
+                    )}
+                    style={{ backgroundColor: swatch }}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {selected && (
+          <div
+            key="selection"
+            className="flex animate-tool-options items-center gap-1"
+          >
+            <Divider />
+            {selected.kind === "step" && <StepNumberField step={selected} />}
+            <ToolButton
+              label="Delete annotation"
+              onClick={() => removeAnnotation(selected.id)}
+            >
+              <Trash2 aria-hidden />
+            </ToolButton>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

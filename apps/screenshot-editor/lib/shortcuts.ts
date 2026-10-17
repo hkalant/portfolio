@@ -10,7 +10,8 @@ export type ShortcutCommand =
   | { type: "delete" }
   | { type: "escape" }
   | { type: "nudge"; dx: number; dy: number }
-  | { type: "zoom"; direction: "in" | "out" | "reset" };
+  | { type: "zoom"; direction: "in" | "out" | "reset" }
+  | { type: "shortcuts" };
 
 export type KeyInput = Pick<
   KeyboardEvent,
@@ -48,6 +49,7 @@ export function matchShortcut(
     if (key === "-" || key === "_") return { type: "zoom", direction: "out" };
     if (key === "0" && !event.shiftKey)
       return { type: "zoom", direction: "reset" };
+    if (key === "/" && !event.shiftKey) return { type: "shortcuts" };
     return null;
   }
   if (event.metaKey || event.ctrlKey) return null;

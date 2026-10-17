@@ -1,19 +1,9 @@
 import { expect, test } from "./helpers/fixtures";
 import { expectEmptyState } from "./helpers/editor";
 
-test("the home page links to the editor", async ({ page }) => {
+test("the site opens straight on the editor", async ({ page }) => {
   await page.goto("./");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Make your screenshots look good.",
-  );
-  await page.getByRole("link", { name: "Open editor" }).click();
-  await expect(page).toHaveURL(/\/editor\/$/);
-  await expectEmptyState(page);
-});
-
-test("the editor loads when opened directly", async ({ page }) => {
-  await page.goto("./editor/");
-  await expect(page).toHaveTitle("Editor · Screenshot Editor");
+  await expect(page).toHaveTitle("Screenshot Editor");
   await expectEmptyState(page);
   await expect(
     page.getByRole("button", { name: "Export PNG 2×" }),
@@ -44,6 +34,6 @@ test("the favicon and assets carry the base path", async ({
 test("pages answer HEAD requests, which Next's prefetcher sends", async ({
   request,
 }) => {
-  const response = await request.head("./editor/");
+  const response = await request.head("./");
   expect(response.status()).toBe(200);
 });

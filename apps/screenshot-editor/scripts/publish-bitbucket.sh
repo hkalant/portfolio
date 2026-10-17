@@ -48,7 +48,7 @@ fi
 
 # The site must be complete. A deploy keeps the old <subfolder>/_next/static/, so the result
 # in the site repository cannot show this; check the folder itself, before anything is
-# deleted. A partly copied out/, or out/editor/ given by mistake, is refused here.
+# deleted. A partly copied out/ is refused here.
 if [ -z "$(find "$SITE_DIR/_next/static" -type f -print -quit 2> /dev/null)" ]; then
   echo "::error::$SITE_DIR/_next/static/ is missing or empty. Publish the whole build output folder (out/), not a part of it." >&2
   exit 1

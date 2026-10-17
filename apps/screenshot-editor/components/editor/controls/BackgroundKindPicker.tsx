@@ -51,13 +51,13 @@ export function BackgroundKindPicker({ value, onChange }: Props) {
         if (choice) onChange(choice.value);
       }}
       // A Liquid Glass capsule, like the toolbar over the canvas.
-      className="grid grid-cols-2 gap-1 rounded-full glass bg-(--glass) p-1 contrast-more:bg-background"
+      className="grid grid-cols-2 gap-1 rounded-md glass bg-(--glass) p-1 contrast-more:bg-background"
     >
       {CHOICES.map(({ value: option, label, icon: Icon }) => (
         <ToggleGroupItem
           key={option}
           value={option}
-          className="h-9 gap-1.5 rounded-full px-3 text-sm"
+          className="h-9 gap-1.5 rounded-sm px-3 text-sm"
         >
           <Icon className="size-4" aria-hidden />
           {label}

@@ -239,18 +239,18 @@ export function SizeMenu() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label={`Canvas size: ${label}${size ? `, ${dimensions(size)}` : ""}`}
-        className="flex h-8 items-center gap-2 rounded-full px-3 text-sm outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring data-[state=open]:bg-accent"
+        className="flex h-8 shrink-0 items-center gap-2 rounded-full px-3 text-sm whitespace-nowrap outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring data-[state=open]:bg-accent"
       >
         <Maximize2 className="size-4 text-muted-foreground" aria-hidden />
         <span className="max-w-36 truncate">{label}</span>
         {size && (
-          <span className="hidden text-xs text-muted-foreground tabular-nums lg:inline">
+          <span className="hidden text-xs text-muted-foreground tabular-nums xl:inline">
             {dimensions(size)}
           </span>
         )}
         <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-2">
+      <PopoverContent align="start" className="w-80 p-2.5">
         <SizeOptions onPick={() => setOpen(false)} />
       </PopoverContent>
     </Popover>

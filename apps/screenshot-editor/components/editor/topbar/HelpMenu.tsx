@@ -42,7 +42,7 @@ const BookIcon = () => (
   />
 );
 
-const itemClass =
+export const itemClass =
   "flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm outline-none hover:bg-accent focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 function TutorialLink({
@@ -76,7 +76,29 @@ function TutorialLink({
   );
 }
 
-/** The top bar's help button: links to the video and text tutorials. */
+/** Links to the video and text tutorials; `onPick` closes the menu around them. */
+export function TutorialLinks({ onPick }: { onPick: () => void }) {
+  return (
+    <nav aria-label="Tutorials" className="flex flex-col gap-0.5">
+      <TutorialLink
+        href={VIDEO_TUTORIAL_URL}
+        icon={<VideoIcon />}
+        onPick={onPick}
+      >
+        Watch the video tutorial
+      </TutorialLink>
+      <TutorialLink
+        href={TEXT_TUTORIAL_URL}
+        icon={<BookIcon />}
+        onPick={onPick}
+      >
+        Read the text tutorial
+      </TutorialLink>
+    </nav>
+  );
+}
+
+/** The phone bar's help button: links to the video and text tutorials. */
 export function HelpMenu() {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -93,23 +115,8 @@ export function HelpMenu() {
           <CircleInfoIcon />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-2">
-        <nav aria-label="Tutorials" className="flex flex-col gap-0.5">
-          <TutorialLink
-            href={VIDEO_TUTORIAL_URL}
-            icon={<VideoIcon />}
-            onPick={close}
-          >
-            Watch the video tutorial
-          </TutorialLink>
-          <TutorialLink
-            href={TEXT_TUTORIAL_URL}
-            icon={<BookIcon />}
-            onPick={close}
-          >
-            Read the text tutorial
-          </TutorialLink>
-        </nav>
+      <PopoverContent align="end" className="w-64 p-2.5">
+        <TutorialLinks onPick={close} />
       </PopoverContent>
     </Popover>
   );

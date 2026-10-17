@@ -86,7 +86,7 @@ function ToggleGroup({
       ref={root}
       data-slot="toggle-group"
       className={cn(
-        "flex w-full items-center gap-0.5 rounded-full bg-muted/80 p-0.5",
+        "flex w-full items-center gap-0.5 rounded-md bg-muted/80 p-0.5",
         glide && "relative isolate",
         className,
       )}
@@ -105,7 +105,7 @@ function ToggleGroup({
         <span
           ref={pill}
           aria-hidden
-          className="pointer-events-none absolute -z-10 rounded-full bg-selected opacity-0 sheen transition-[left,right,opacity] ease-[cubic-bezier(0.3,0.9,0.3,1)] motion-reduce:transition-none"
+          className="pointer-events-none absolute -z-10 rounded-[10px] bg-selected opacity-0 sheen transition-[left,right,opacity] ease-[cubic-bezier(0.3,0.9,0.3,1)] motion-reduce:transition-none"
         />
       )}
       <GlideContext.Provider value={glide}>{children}</GlideContext.Provider>
@@ -122,7 +122,7 @@ function ToggleGroupItem({
     <ToggleGroupPrimitive.Item
       data-slot="toggle-group-item"
       className={cn(
-        "flex h-8 min-w-0 flex-1 items-center justify-center rounded-full px-1.5 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "flex h-8 min-w-0 flex-1 items-center justify-center rounded-[10px] px-1.5 text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-ring",
         // With glide, the highlight behind the items is the fill.
         glide
           ? "duration-300 data-highlight:text-selected-foreground"

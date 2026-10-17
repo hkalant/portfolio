@@ -100,6 +100,7 @@ function GradientSwatches({ presetId }: { presetId: string | null }) {
       swatches={GRADIENT_SWATCHES}
       selectedId={presetId}
       onSelect={applyGradientPreset}
+      columns={5}
     />
   );
 }
@@ -254,7 +255,7 @@ function ImageControls({
       <Button
         variant="outline"
         size="sm"
-        className="w-full"
+        className="w-full rounded-md"
         onClick={() => inputRef.current?.click()}
       >
         <ImageUp aria-hidden />

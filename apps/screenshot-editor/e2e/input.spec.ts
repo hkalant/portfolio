@@ -10,7 +10,7 @@ test.skip(
 );
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("./editor/");
+  await page.goto("./");
   await expectEmptyState(page);
   await useAutoSize(page);
 });
